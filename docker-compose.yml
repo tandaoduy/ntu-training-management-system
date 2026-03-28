@@ -1,0 +1,37 @@
+services:
+  frontend:
+    build: ./ntu-training-management-system-fe
+    container_name: ntu-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./ntu-training-management-system-fe:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  backend:
+    build: ./ntu-training-management-system-be
+    container_name: ntu-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ntu-training-management-system-be:/var/www
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ntu-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ntu_training_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456789
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

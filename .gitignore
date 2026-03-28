@@ -1,0 +1,52 @@
+# =========================
+# Node (Frontend)
+# =========================
+node_modules/
+dist/
+build/
+.vite/
+
+# =========================
+# Laravel (Backend)
+# =========================
+vendor/
+.env
+.env.*
+!.env.example
+
+# Laravel storage
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+
+# =========================
+# Docker
+# =========================
+docker-data/
+*.log
+
+# =========================
+# System files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS
+# =========================
+*.swp
+*.swo
+
+# =========================
+# Testing / misc
+# =========================
+coverage/
+tmp/
