@@ -1,0 +1,82 @@
+# Thành phần Alert
+
+## Cấu trúc thư mục
+
+- Alert.tsx
+- AlertContext.ts
+- AlertProvider.tsx
+- alert.hook.ts
+- docs.mdx
+- index.ts
+- types.ts
+
+## Cách dùng cơ bản
+
+```tsx
+import Alert from '../../components/alert'
+
+export function Example() {
+  return (
+    <Alert
+      variant="success"
+      message="Cập nhật thông tin thành công."
+    />
+  )
+}
+```
+
+## Có tiêu đề
+
+```tsx
+<Alert
+  variant="error"
+  title="Đăng nhập thất bại"
+  message="Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại."
+/>
+```
+
+## Có nút đóng
+
+```tsx
+<Alert
+  variant="warning"
+  title="Lưu ý"
+  message="Thời hạn đăng ký học phần sẽ kết thúc vào 23:59 hôm nay."
+  dismissible
+  onDismiss={() => setShowAlert(false)}
+/>
+```
+
+## Cách dùng AlertProvider và hook
+
+```tsx
+import { AlertProvider, useAlert } from '../../components/alert'
+
+function DemoAction() {
+  const { showAlert } = useAlert()
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        showAlert({
+          variant: 'info',
+          title: 'Thông báo',
+          message: 'Dữ liệu đã được tải xong.',
+          dismissible: true,
+        })
+      }
+    >
+      Hiển thị thông báo
+    </button>
+  )
+}
+
+export function AppRoot() {
+  return (
+    <AlertProvider>
+      <DemoAction />
+    </AlertProvider>
+  )
+}
+```
