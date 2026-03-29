@@ -55,6 +55,7 @@ class RolePermissionSeeder extends Seeder
         }
 
         $studentRole = Role::query()->where('code', 'student')->firstOrFail();
+        $lecturerRole = Role::query()->where('code', 'lecturer')->firstOrFail();
         $studentPermissionIds = Permission::query()->where('module', 'student')->pluck('id');
         $studentRole->permissions()->sync($studentPermissionIds);
 
@@ -96,6 +97,36 @@ class RolePermissionSeeder extends Seeder
                 'class_name' => '65.CNTT-1',
                 'major_name' => 'Cong nghe thong tin',
                 'email' => '65133414@students.ntu.edu.vn',
+                'status' => true,
+            ],
+        );
+
+        $newStudentUser = User::query()->updateOrCreate(
+            ['username' => '65130001'],
+            [
+                'password' => bcrypt('123456789'),
+                'role_id' => $studentRole->id,
+                'status' => true,
+            ],
+        );
+
+        Student::query()->updateOrCreate(
+            ['student_code' => '65130001'],
+            [
+                'user_id' => $newStudentUser->id,
+                'full_name' => 'Sinh vien Moi',
+                'class_name' => '65.CNTT-1',
+                'major_name' => 'Cong nghe thong tin',
+                'email' => '65130001@students.ntu.edu.vn',
+                'status' => true,
+            ],
+        );
+
+        User::query()->updateOrCreate(
+            ['username' => '2025001'],
+            [
+                'password' => bcrypt('123456789'),
+                'role_id' => $lecturerRole->id,
                 'status' => true,
             ],
         );

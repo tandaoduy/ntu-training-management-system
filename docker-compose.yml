@@ -2,6 +2,9 @@ services:
   frontend:
     build: ./ntu-training-management-system-fe
     container_name: ntu-frontend
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=120
     ports:
       - "5173:5173"
     volumes:
@@ -17,6 +20,7 @@ services:
       - "8000:8000"
     volumes:
       - ./ntu-training-management-system-be:/var/www
+      - /var/www/vendor
     depends_on:
       - postgres
 

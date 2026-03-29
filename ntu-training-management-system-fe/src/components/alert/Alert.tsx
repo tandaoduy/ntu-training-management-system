@@ -52,14 +52,22 @@ export default function Alert({
   title,
   message,
   dismissible = false,
+  isExiting = false,
   onDismiss,
   className = '',
 }: AlertProps) {
   const styles = VARIANTS[variant] ?? VARIANTS.info
   const { IconComponent } = styles
 
+  const motionClass = isExiting
+    ? 'translate-x-16 opacity-0 scale-[0.98] pointer-events-none'
+    : 'translate-x-0 opacity-100 scale-100'
+
   return (
-    <div className={`rounded-lg p-4 ${styles.container} ${className}`} role="alert">
+    <div
+      className={`rounded-lg p-4 transition-all duration-300 ease-out will-change-transform ${motionClass} ${styles.container} ${className}`}
+      role="alert"
+    >
       <div className="flex items-start gap-3">
         <IconComponent className={`h-5 w-5 mt-0.5 shrink-0 ${styles.icon}`} />
 
