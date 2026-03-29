@@ -1,0 +1,62 @@
+@baseUrl = http://localhost:8000/api
+@authToken = 7|hlo3nRzsOGL4i3Moz8u7XSr5MseE4Iaqsdve6VX7f50fca4b
+@currentPassword = 123456
+@nextPassword = 123456789
+
+# Quick Guide:
+# 1) Execute block "1) Login".
+# 2) Copy access_token from response and paste into @authToken.
+# 3) Execute blocks 2, 3, 4, 5 in sequence.
+
+### =========================================================
+### 0) Health check
+### =========================================================
+GET {{baseUrl}}/test
+Accept: application/json
+
+### =========================================================
+### 1) Login
+### =========================================================
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "65133414",
+  "password": "{{currentPassword}}"
+}
+
+### =========================================================
+### 2) Get current user information
+### =========================================================
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 3) Change password
+### =========================================================
+POST {{baseUrl}}/auth/change-password
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "old_password": "{{currentPassword}}",
+  "new_password": "{{nextPassword}}",
+  "confirm_password": "{{nextPassword}}"
+}
+
+### =========================================================
+### 4) Logout
+### =========================================================
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 5) Verify token is expired (expect 401)
+### =========================================================
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
+Accept: application/json
