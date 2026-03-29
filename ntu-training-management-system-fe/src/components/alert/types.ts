@@ -5,6 +5,7 @@ export interface AlertProps {
   title?: string
   message: string
   dismissible?: boolean
+  isExiting?: boolean
   onDismiss?: () => void
   className?: string
 }

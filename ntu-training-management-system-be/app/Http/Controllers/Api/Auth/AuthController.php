@@ -19,7 +19,8 @@ class AuthController extends Controller
         ]);
 
         $user = User::query()
-            ->with(['role.permissions', 'student'])
+            ->with('role:id,code')
+            ->select(['id', 'username', 'password', 'status', 'last_login_at', 'role_id'])
             ->where('username', $credentials['username'])
             ->first();
 
