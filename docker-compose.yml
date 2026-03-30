@@ -16,6 +16,11 @@ services:
   backend:
     build: ./ntu-training-management-system-be
     container_name: ntu-backend
+    environment:
+      - APP_AUTO_MIGRATE=true
+      - APP_AUTO_SEED=false
+      - DB_WAIT_TIMEOUT_SECONDS=60
+      - DB_WAIT_INTERVAL_SECONDS=2
     ports:
       - "8000:8000"
     volumes:
