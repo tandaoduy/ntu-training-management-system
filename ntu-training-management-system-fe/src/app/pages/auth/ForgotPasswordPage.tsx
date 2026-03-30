@@ -7,8 +7,6 @@ import './ForgotPasswordPage.css'
 export default function ForgotPasswordPage() {
   return (
     <section className="forgot-page" style={{ backgroundImage: `url(${campusImage})` }}>
-      <div className="forgot-overlay" />
-
       <div className="forgot-card-wrap">
         <article className="forgot-card">
           <div className="forgot-brand">

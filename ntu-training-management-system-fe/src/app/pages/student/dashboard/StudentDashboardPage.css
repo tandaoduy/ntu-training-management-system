@@ -1,0 +1,389 @@
+/* ── Student Dashboard ─────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+.sd-root {
+  min-height: 100vh;
+  background: #f0f4fa;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOPBAR ─────────────────────────────────────────────────────────── */
+
+.sd-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 60px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f5;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  gap: 16px;
+  box-shadow: 0 1px 8px rgba(10, 30, 80, 0.06);
+}
+
+.sd-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.sd-topbar-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.sd-topbar-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0a2a5e;
+  line-height: 1.2;
+}
+
+.sd-topbar-spacer {
+  flex: 1;
+}
+
+.sd-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sd-topbar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1357c4, #2da3dc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sd-topbar-username {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #2d3f5e;
+}
+
+.sd-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #d0daea;
+  background: #fff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #4a5a7a;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.sd-logout-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* ── MAIN CONTENT ───────────────────────────────────────────────────── */
+
+.sd-main {
+  flex: 1;
+  padding: 32px 28px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ── GREETING ───────────────────────────────────────────────────────── */
+
+.sd-greeting {
+  margin-bottom: 28px;
+}
+
+.sd-greeting h1 {
+  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+  font-weight: 800;
+  color: #0a2a5e;
+  margin: 0 0 4px;
+}
+
+.sd-greeting p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #607090;
+}
+
+/* ── STAT CARDS ─────────────────────────────────────────────────────── */
+
+.sd-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.sd-stat-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 2px 12px rgba(10, 30, 80, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #e8eef8;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sd-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(10, 30, 80, 0.12);
+}
+
+.sd-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.sd-stat-icon.blue   { background: #eff6ff; }
+.sd-stat-icon.green  { background: #f0fdf4; }
+.sd-stat-icon.amber  { background: #fffbeb; }
+.sd-stat-icon.purple { background: #faf5ff; }
+
+.sd-stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0a2a5e;
+  line-height: 1;
+}
+
+.sd-stat-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #8090aa;
+}
+
+/* ── GRID 2 COLS ────────────────────────────────────────────────────── */
+
+.sd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .sd-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── PANEL ──────────────────────────────────────────────────────────── */
+
+.sd-panel {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e8eef8;
+  box-shadow: 0 2px 12px rgba(10, 30, 80, 0.07);
+  overflow: hidden;
+}
+
+.sd-panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f4fa;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sd-panel-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0a2a5e;
+}
+
+.sd-panel-link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1357c4;
+  text-decoration: none;
+}
+
+.sd-panel-link:hover {
+  text-decoration: underline;
+}
+
+.sd-panel-body {
+  padding: 16px 20px;
+}
+
+/* ── COURSE LIST ────────────────────────────────────────────────────── */
+
+.sd-course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sd-course-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8fafd;
+  border-radius: 10px;
+  border: 1px solid #e8eef8;
+  gap: 10px;
+}
+
+.sd-course-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1a2740;
+  flex: 1;
+}
+
+.sd-course-credit {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #8090aa;
+  white-space: nowrap;
+}
+
+.sd-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sd-badge.pass   { background: #dcfce7; color: #15803d; }
+.sd-badge.fail   { background: #fee2e2; color: #b91c1c; }
+.sd-badge.active { background: #dbeafe; color: #1d4ed8; }
+
+/* ── SCHEDULE LIST ──────────────────────────────────────────────────── */
+
+.sd-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sd-schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: #f8fafd;
+  border-radius: 10px;
+  border-left: 3px solid #1357c4;
+}
+
+.sd-schedule-day {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1357c4;
+  min-width: 24px;
+  text-align: center;
+}
+
+.sd-schedule-info {
+  flex: 1;
+}
+
+.sd-schedule-subject {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1a2740;
+}
+
+.sd-schedule-time {
+  font-size: 0.78rem;
+  color: #8090aa;
+  margin-top: 2px;
+}
+
+/* ── PROGRESS BAR ───────────────────────────────────────────────────── */
+
+.sd-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sd-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sd-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sd-progress-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2d3f5e;
+}
+
+.sd-progress-pct {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1357c4;
+}
+
+.sd-progress-track {
+  height: 8px;
+  background: #e8eef8;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.sd-progress-bar {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #1357c4, #2da3dc);
+  transition: width 0.6s ease;
+}
+
+/* ── RESPONSIVE TOPBAR ──────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .sd-topbar {
+    padding: 0 16px;
+  }
+
+  .sd-main {
+    padding: 20px 16px;
+  }
+
+  .sd-topbar-username {
+    display: none;
+  }
+}
