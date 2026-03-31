@@ -1,86 +1,26 @@
-import { useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 
 import AuthPage from './app/pages/auth/AuthPage'
+import AdminDashboardPage from './app/pages/admin/dashboard/AdminDashboardPage.tsx'
+import LecturerDashboardPage from './app/pages/lecturer/dashboard/LecturerDashboardPage.tsx'
+import ManagerDashboardPage from './app/pages/manager/dashboard/ManagerDashboardPage.tsx'
 import DashboardStudentPage from './app/pages/student/dashboard/StudentDashboardPage'
 import ForgotPasswordPage from './app/pages/auth/ForgotPasswordPage'
 import AlertTestPage from './app/pages/test/AlertTestPage'
 import ComponentTestPage from './app/pages/test/ComponentTestPage'
 import SubnavTestPage from './app/pages/test/SubnavTestPage'
+import TrainingOfficerDashboardPage from './app/pages/training-officer/dashboard/TrainingOfficerDashboardPage.tsx'
 import { AlertProvider } from './components/alert'
-import { authMutations, authStorage, type AuthUser, type CurrentUserResponse } from './api'
-
-const mapCurrentUser = (input: CurrentUserResponse): AuthUser | null => {
-  if (input.id === null || input.username === null) {
-    return null
-  }
-
-  return {
-    id: input.id,
-    username: input.username,
-    role: input.role,
-  }
-}
-
-const resolveDashboardPath = (role: string | null | undefined): string => {
-  if (role === 'student') {
-    return '/dashboard-student'
-  }
-
-  return '/component-test'
-}
+import { useAuthSession } from './hooks'
 
 function AppShell() {
   const location = useLocation()
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const hasToken = Boolean(authStorage.getToken())
+  const { user, isAuthenticated, isCheckingAuth, redirectForAuthenticatedUser } = useAuthSession(
+    location.pathname,
+  )
 
-  useEffect(() => {
-    if (!hasToken || user !== null) {
-      return
-    }
-
-    let isMounted = true
-
-    const bootstrapSession = async () => {
-      try {
-        const response = await authMutations.me()
-
-        if (!isMounted) {
-          return
-        }
-
-        const mappedUser = mapCurrentUser(response)
-
-        if (!mappedUser) {
-          authMutations.clearSession()
-          setUser(null)
-          return
-        }
-
-        setUser(mappedUser)
-      } catch {
-        if (!isMounted) {
-          return
-        }
-
-        authMutations.clearSession()
-        setUser(null)
-      }
-    }
-
-    void bootstrapSession()
-
-    return () => {
-      isMounted = false
-    }
-  }, [hasToken, location.pathname, user])
-
-  const isAuthRoute = location.pathname.startsWith('/auth')
+  const isAuthRoute = location.pathname.startsWith('/login')
   const isTestRoute = location.pathname.startsWith('/component-test')
-  const isAuthenticated = hasToken && user !== null
-  const isCheckingAuth = hasToken && user === null
-  const redirectForAuthenticatedUser = useMemo(() => resolveDashboardPath(user?.role), [user?.role])
 
   if (isCheckingAuth) {
     return (
@@ -114,39 +54,79 @@ function AppShell() {
       <Routes>
         <Route
           path="/"
-          element={<Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/auth'} replace />}
+          element={<Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />}
         />
         <Route
-          path="/auth"
+          path="/login"
           element={isAuthenticated ? <Navigate to={redirectForAuthenticatedUser} replace /> : <AuthPage />}
         />
         <Route
-          path="/auth/forgot-password"
+          path="/login/forgot-password"
           element={isAuthenticated ? <Navigate to={redirectForAuthenticatedUser} replace /> : <ForgotPasswordPage />}
         />
         <Route
-          path="/dashboard-student"
+          path="/sinhvien"
           element={
-            isAuthenticated && user.role === 'student' ? (
+            isAuthenticated && user?.role === 'student' ? (
               <DashboardStudentPage />
             ) : (
-              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/auth'} replace />
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
+          path="/canbo"
+          element={
+            isAuthenticated && user?.role === 'lecturer' ? (
+              <LecturerDashboardPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
+          path="/quanly"
+          element={
+            isAuthenticated && user?.role === 'manager' ? (
+              <ManagerDashboardPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
+          path="/chuyenvien"
+          element={
+            isAuthenticated && user?.role === 'training_officer' ? (
+              <TrainingOfficerDashboardPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
+          path="/quantri"
+          element={
+            isAuthenticated && user?.role === 'admin' ? (
+              <AdminDashboardPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
             )
           }
         />
         <Route
           path="/component-test"
-          element={isAuthenticated ? <ComponentTestPage /> : <Navigate to="/auth" replace />}
+          element={isAuthenticated ? <ComponentTestPage /> : <Navigate to="/login" replace />}
         />
         <Route
           path="/component-test/alert"
-          element={isAuthenticated ? <AlertTestPage /> : <Navigate to="/auth" replace />}
+          element={isAuthenticated ? <AlertTestPage /> : <Navigate to="/login" replace />}
         />
         <Route
           path="/component-test/subnav"
-          element={isAuthenticated ? <SubnavTestPage /> : <Navigate to="/auth" replace />}
+          element={isAuthenticated ? <SubnavTestPage /> : <Navigate to="/login" replace />}
         />
-        <Route path="*" element={<Navigate to="/auth" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </>
   )

@@ -18,6 +18,23 @@ const defaultForm: LoginFormState = {
   password: '',
 }
 
+const resolveDashboardPath = (role: string | null | undefined): string => {
+  switch (role) {
+    case 'student':
+      return '/sinhvien'
+    case 'lecturer':
+      return '/canbo'
+    case 'manager':
+      return '/quanly'
+    case 'training_officer':
+      return '/chuyenvien'
+    case 'admin':
+      return '/quantri'
+    default:
+      return '/component-test'
+  }
+}
+
 // Eye icons
 const EyeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -64,15 +81,10 @@ export default function AuthPage() {
       message: `Xin chào ${user.username}!`,
     })
 
-    if (user.role === 'student') {
-      navigate('/dashboard-student', {
-        replace: true,
-        state: { username: user.username },
-      })
-      return
-    }
-
-    navigate('/component-test', { replace: true })
+    navigate(resolveDashboardPath(user.role), {
+      replace: true,
+      state: { username: user.username },
+    })
   }
 
   return (
@@ -151,7 +163,7 @@ export default function AuthPage() {
             </div>
 
             <div className="auth-forgot-password">
-              <Link to="/auth/forgot-password">Quên mật khẩu?</Link>
+              <Link to="/login/forgot-password">Quên mật khẩu?</Link>
             </div>
 
             <button type="submit" className="auth-submit" disabled={loading}>

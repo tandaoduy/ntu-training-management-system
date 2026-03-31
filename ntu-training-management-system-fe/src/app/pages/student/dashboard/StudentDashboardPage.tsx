@@ -60,7 +60,7 @@ export default function StudentDashboardPage() {
 
   const handleLogout = async () => {
     await logout()
-    navigate('/auth', { replace: true })
+    navigate('/login', { replace: true })
   }
 
   const displayName = user?.username ?? 'Sinh viên'

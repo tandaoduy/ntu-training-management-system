@@ -21,6 +21,12 @@ services:
       - APP_AUTO_SEED=false
       - DB_WAIT_TIMEOUT_SECONDS=60
       - DB_WAIT_INTERVAL_SECONDS=2
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=ntu_training_management
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456789
     ports:
       - "8000:8000"
     volumes:
