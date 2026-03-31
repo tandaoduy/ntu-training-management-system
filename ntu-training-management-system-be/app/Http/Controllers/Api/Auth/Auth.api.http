@@ -1,12 +1,25 @@
 @baseUrl = http://localhost:8000/api
-@authToken = 7|hlo3nRzsOGL4i3Moz8u7XSr5MseE4Iaqsdve6VX7f50fca4b
-@currentPassword = 123456
+@authToken = 60|IRr57x3XF9EnmF25v6gAd9AZQ8Hio7s0FbESKGcq7a20bc95
+@currentPassword = 123456789
 @nextPassword = 123456789
+@verificationUrl = http:\/\/localhost:8000\/api\/auth\/email\/verify\/13\/d076d20118d0b4510ef8af6300f5ae182e274cfa?expires=1774975050&signature=3bc86a6067421def4bae970b0c4bf14048a6f1c72c4540862a4e941f10900e42
+@resetToken = XeIhkMjMPvSiKrDvAXgJuVSy4i7tIKj9Kyk1K44aM4TLUPCflVRiYKpVqzsyD0x4
+@resetEmail = linh.lk.65cntt@ntu.edu.vn
+@captchaId = 58a94ddd-1376-4bd6-83ab-b77d7be22177
+@captchaCode =8D8Z7T
 
 # Quick Guide:
 # 1) Execute block "1) Login".
 # 2) Copy access_token from response and paste into @authToken.
-# 3) Execute blocks 2, 3, 4, 5 in sequence.
+# 3) Execute blocks 2, 3, 4, 5, 6, 7 in sequence.
+# 4) Copy verification_url from response of block 7, paste into @verificationUrl, then run block 8.
+#
+# For Forgot Password flow:
+# 9) Execute block "9) Get captcha" and copy challenge_id/captcha_code into @captchaId/@captchaCode
+# 10) Execute block "10) Forgot password" with username + captcha
+# 11) Copy reset_token and email from response block 10, paste into @resetToken and @resetEmail
+# 12) Execute block "11) Verify reset token"
+# 13) Execute block "12) Reset password" with new password
 
 ### =========================================================
 ### 0) Health check
@@ -22,7 +35,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "username": "65133414",
+  "username": "65131708",
   "password": "{{currentPassword}}"
 }
 
@@ -31,6 +44,27 @@ Accept: application/json
 ### =========================================================
 GET {{baseUrl}}/auth/me
 Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 6) Email verification status
+### =========================================================
+GET {{baseUrl}}/auth/email/verification-status
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 7) Send verification email (signed URL)
+### =========================================================
+POST {{baseUrl}}/auth/email/verification-notification
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 8) Verify email via signed URL
+### Note: Paste verification_url from block 7 into @verificationUrl
+### =========================================================
+GET {{verificationUrl}}
 Accept: application/json
 
 ### =========================================================
@@ -60,3 +94,50 @@ Accept: application/json
 GET {{baseUrl}}/auth/me
 Authorization: Bearer {{authToken}}
 Accept: application/json
+
+### =========================================================
+### 9) Get forgot-password captcha
+### =========================================================
+GET {{baseUrl}}/auth/forgot-password/captcha
+Accept: application/json
+
+### =========================================================
+### 10) Forgot password - Request reset link
+### Note: Paste challenge_id/captcha_code from block 9 into @captchaId/@captchaCode
+### =========================================================
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+Accept: application/json
+
+{
+  "identifier": "65131708",
+  "captcha_id": "{{captchaId}}",
+  "captcha_code": "{{captchaCode}}"
+}
+
+### =========================================================
+### 11) Verify reset token
+### Note: Copy token from response of block 10 and paste into @resetToken
+### =========================================================
+POST {{baseUrl}}/auth/verify-reset-token
+Content-Type: application/json
+Accept: application/json
+
+{
+  "token": "{{resetToken}}",
+  "email": "{{resetEmail}}"
+}
+
+### =========================================================
+### 12) Reset password with token
+### =========================================================
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+Accept: application/json
+
+{
+  "token": "{{resetToken}}",
+  "email": "{{resetEmail}}",
+  "password": "123456789",
+  "password_confirmation": "123456789"
+}

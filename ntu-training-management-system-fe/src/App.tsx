@@ -6,6 +6,7 @@ import LecturerDashboardPage from './app/pages/lecturer/dashboard/LecturerDashbo
 import ManagerDashboardPage from './app/pages/manager/dashboard/ManagerDashboardPage.tsx'
 import DashboardStudentPage from './app/pages/student/dashboard/StudentDashboardPage'
 import ForgotPasswordPage from './app/pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from './app/pages/auth/ResetPasswordPage'
 import AlertTestPage from './app/pages/test/AlertTestPage'
 import ComponentTestPage from './app/pages/test/ComponentTestPage'
 import SubnavTestPage from './app/pages/test/SubnavTestPage'
@@ -63,6 +64,10 @@ function AppShell() {
         <Route
           path="/login/forgot-password"
           element={isAuthenticated ? <Navigate to={redirectForAuthenticatedUser} replace /> : <ForgotPasswordPage />}
+        />
+        <Route
+          path="/login/reset-password"
+          element={isAuthenticated ? <Navigate to={redirectForAuthenticatedUser} replace /> : <ResetPasswordPage />}
         />
         <Route
           path="/sinhvien"

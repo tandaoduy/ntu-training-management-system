@@ -30,3 +30,45 @@ export interface ChangePasswordRequest {
 export interface MessageResponse {
   message: string;
 }
+
+export interface ForgotPasswordRequest {
+  identifier: string;
+  captcha_id: string;
+  captcha_code: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+  email: string;
+  reset_token?: string | null;
+  reset_url?: string | null;
+}
+
+export interface ForgotPasswordCaptchaResponse {
+  challenge_id: string;
+  captcha_image: string;
+  expires_in_seconds: number;
+  captcha_code?: string | null;
+}
+
+export interface ResetTokenVerifyRequest {
+  token: string;
+  email: string;
+}
+
+export interface ResetTokenVerifyResponse {
+  message: string;
+  user_id: number;
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+}
