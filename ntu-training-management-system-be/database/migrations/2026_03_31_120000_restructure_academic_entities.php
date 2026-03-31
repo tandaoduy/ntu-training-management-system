@@ -19,7 +19,7 @@ return new class extends Migration
             $table->id();
             $table->string('ma_don_vi', 50)->unique();
             $table->string('ten_don_vi', 255);
-            $table->enum('loai_don_vi', ['dao_tao', 'quan_ly']);
+            $table->enum('loai_don_vi', ['Đào tạo', 'Quản lý']);
             $table->timestamps();
         });
 
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('ma_nganh', 50)->unique();
             $table->string('ten_nganh', 255);
             $table->foreignId('don_vi_id')->nullable()->constrained('don_vis')->nullOnDelete();
-            $table->enum('he_dao_tao', ['chinh_quy', 'vua_hoc_vua_lam', 'dao_tao_tu_xa']);
+            $table->enum('he_dao_tao', ['Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa']);
             $table->timestamps();
         });
 
@@ -38,12 +38,13 @@ return new class extends Migration
             $table->string('anh', 500)->nullable();
             $table->string('ten_sinh_vien', 255);
             $table->date('ngay_sinh')->nullable();
+            $table->string('gioi_tinh', 20)->nullable();
             $table->string('email', 255)->nullable();
             $table->string('so_dien_thoai', 20)->nullable();
-            $table->string('ten_lop', 100)->nullable();
+            $table->string('ma_lop', 100)->nullable();
             $table->foreignId('nganh_dao_tao_id')->nullable()->constrained('nganh_dao_taos')->nullOnDelete();
             $table->foreignId('don_vi_id')->nullable()->constrained('don_vis')->nullOnDelete();
-            $table->enum('he_dao_tao', ['chinh_quy', 'vua_hoc_vua_lam', 'dao_tao_tu_xa'])->nullable();
+            $table->enum('he_dao_tao', ['Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])->nullable();
             $table->string('so_cccd', 20)->nullable();
             $table->date('ngay_cap_cccd')->nullable();
             $table->string('noi_cap_cccd', 255)->nullable();
