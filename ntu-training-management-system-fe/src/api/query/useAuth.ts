@@ -7,6 +7,7 @@ import type {
   LoginRequest,
   MessageResponse,
 } from '../features/auth';
+import { authStorage } from '../features/auth';
 import type { ApiError } from '../core/apiError';
 
 interface AuthState {
@@ -65,6 +66,14 @@ export const useAuth = () => {
   }, []);
 
   const me = useCallback(async (): Promise<AuthUser | null> => {
+    const token = authStorage.getToken();
+
+    // Không gọi /auth/me nếu chưa có token để tránh 401 không cần thiết.
+    if (!token) {
+      setState((prev) => ({ ...prev, user: null, loading: false, error: null }));
+      return null;
+    }
+
     // Dùng để phục hồi thông tin user từ token hiện tại.
     setLoading(true);
     setError(null);

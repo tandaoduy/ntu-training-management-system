@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
             <p>Điện thoại: (0258) 3831149</p>
           </div>
 
-          <Link to="/auth" className="forgot-back-link">
+          <Link to="/login" className="forgot-back-link">
             Quay lại trang đăng nhập
           </Link>
         </article>
