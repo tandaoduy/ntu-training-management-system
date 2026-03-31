@@ -19,8 +19,8 @@ class AuthController extends Controller
         ]);
 
         $user = User::query()
-            ->with('role:id,code')
-            ->select(['id', 'username', 'password', 'status', 'last_login_at', 'role_id'])
+            ->with(['role:id,code', 'profile', 'emailVerification'])
+            ->select(['id', 'username', 'password', 'status', 'last_login_at', 'role_id', 'profile_id', 'profile_type'])
             ->where('username', $credentials['username'])
             ->first();
 
@@ -45,6 +45,8 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'username' => $user->username,
                 'role' => $user->role?->code,
+                'email' => $user->profileEmail(),
+                'email_verified' => $user->isEmailVerified(),
             ],
         ]);
     }
@@ -62,12 +64,14 @@ class AuthController extends Controller
     // API: Lấy thông tin người dùng hiện tại
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()?->loadMissing('role');
+        $user = $request->user()?->loadMissing(['role', 'profile', 'emailVerification']);
 
         return response()->json([
             'id' => $user?->id,
             'username' => $user?->username,
             'role' => $user?->role?->code,
+            'email' => $user?->profileEmail(),
+            'email_verified' => $user?->isEmailVerified() ?? false,
         ]);
     }
 

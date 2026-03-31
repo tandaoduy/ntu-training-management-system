@@ -2,9 +2,16 @@ import { apiGet, apiPost } from '../../core/request';
 import type {
   ChangePasswordRequest,
   CurrentUserResponse,
+  ForgotPasswordCaptchaResponse,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
   LoginRequest,
   LoginResponse,
   MessageResponse,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
+  ResetTokenVerifyRequest,
+  ResetTokenVerifyResponse,
 } from './auth.types';
 
 const AUTH_BASE_PATH = '/auth';
@@ -25,5 +32,21 @@ export const authApi = {
 
   logout(): Promise<MessageResponse> {
     return apiPost<MessageResponse>(`${AUTH_BASE_PATH}/logout`);
+  },
+
+  forgotPassword(payload: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
+    return apiPost<ForgotPasswordResponse, ForgotPasswordRequest>(`${AUTH_BASE_PATH}/forgot-password`, payload, { skipAuth: true });
+  },
+
+  forgotPasswordCaptcha(): Promise<ForgotPasswordCaptchaResponse> {
+    return apiGet<ForgotPasswordCaptchaResponse>(`${AUTH_BASE_PATH}/forgot-password/captcha`, { skipAuth: true });
+  },
+
+  verifyResetToken(payload: ResetTokenVerifyRequest): Promise<ResetTokenVerifyResponse> {
+    return apiPost<ResetTokenVerifyResponse, ResetTokenVerifyRequest>(`${AUTH_BASE_PATH}/verify-reset-token`, payload, { skipAuth: true });
+  },
+
+  resetPassword(payload: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+    return apiPost<ResetPasswordResponse, ResetPasswordRequest>(`${AUTH_BASE_PATH}/reset-password`, payload, { skipAuth: true });
   },
 };
