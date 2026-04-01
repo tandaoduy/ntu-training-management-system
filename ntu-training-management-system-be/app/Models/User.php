@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -134,12 +136,25 @@ class User extends Authenticatable
 
     public function hasPermission(string $code): bool
     {
-        if (! $this->relationLoaded('role')) {
-            $this->load('role');
+        return $this->permissionCodes()->contains($code);
+    }
+
+    public function permissionCodes(): Collection
+    {
+        if (! $this->role_id) {
+            return collect();
         }
 
-        return $this->role
-            ? $this->role->permissions()->where('code', $code)->exists()
-            : false;
+        $cacheKey = sprintf('role_permissions:%d', $this->role_id);
+
+        $codes = Cache::remember($cacheKey, now()->addMinutes(5), function (): array {
+            return $this->role()
+                ->first()
+                ?->permissions()
+                ->pluck('code')
+                ->toArray() ?? [];
+        });
+
+        return collect($codes);
     }
 }

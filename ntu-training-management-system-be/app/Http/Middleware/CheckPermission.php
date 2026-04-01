@@ -19,11 +19,7 @@ class CheckPermission
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $hasPermission = $user->role()
-            ->first()
-            ?->permissions()
-            ->where('code', $permission)
-            ->exists();
+        $hasPermission = $user->hasPermission($permission);
 
         if (! $hasPermission) {
             return response()->json(['message' => 'Unauthorized'], 403);

@@ -10,12 +10,12 @@ class StudentDashboardController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user()?->loadMissing(['student']);
 
         return response()->json([
             'message' => 'Student dashboard data',
             'student' => $user?->student,
-            'permissions' => $user?->role?->permissions?->pluck('code')->values() ?? [],
+            'permissions' => $user?->permissionCodes()->values() ?? [],
         ]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\NoSqlInjection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -80,7 +81,7 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'old_password' => ['required', 'string'],
-            'new_password' => ['required', 'string', 'min:6'],
+            'new_password' => ['required', 'string', 'min:6', new NoSqlInjection()],
             'confirm_password' => ['required', 'same:new_password'],
         ]);
 
@@ -91,7 +92,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Old password is incorrect'], 422);
         }
 
-        $user->password = $validated['new_password'];
+        $user->password = Hash::make($validated['new_password']);
         $user->save();
 
         return response()->json([

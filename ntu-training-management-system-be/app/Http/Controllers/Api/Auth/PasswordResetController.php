@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\PasswordResetToken;
 use App\Models\User;
+use App\Rules\NoSqlInjection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -60,7 +61,7 @@ class PasswordResetController extends Controller
 
             $user = User::query()
                 ->select(['id', 'username', 'role_id', 'profile_id', 'profile_type'])
-                ->with('role')
+                ->with('profile')
                 ->where('username', $identifier)
                 ->first();
 
@@ -80,7 +81,7 @@ class PasswordResetController extends Controller
 
             $token = Str::random(64);
             $now = now();
-            $expiresAt = $now->copy()->addHours(5);
+            $expiresAt = $now->copy()->addMinutes(5);
 
             PasswordResetToken::query()->updateOrCreate(
                 ['user_id' => $user->id],
@@ -101,46 +102,27 @@ class PasswordResetController extends Controller
             $displayName = $this->resolveDisplayName($user);
             $safeName = e($displayName);
             $safeCode = e((string) $user->username);
-            $safeResetUrl = e($resetUrl);
 
-            $emailBody = <<<HTML
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Đặt lại mật khẩu</title>
-</head>
-<body style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #222; line-height: 1.5; margin: 0; padding: 0;">
-    <p style="margin: 0 0 16px 0;">
-        Xin chào Ông/Bà <strong><em>{$safeName}</em></strong> - mã số: <strong><em>{$safeCode}</em></strong>,
-    </p>
-
-    <p style="margin: 0 0 16px 0;">
-        Ông/Bà vừa yêu cầu khởi tạo lại mật khẩu cổng truy cập thông tin Trường Đại học Nha Trang. Xin vui lòng nhấn vào link sau đây để thực hiện:
-        <a href="{$safeResetUrl}">{$safeResetUrl}</a>
-    </p>
-
-    <p style="margin: 0 0 0 0;">Chú ý rằng đường dẫn trên chỉ có hiệu lực trong vòng 5 giờ.</p>
-    <p style="margin: 0 0 24px 0;">Nếu Ông/Bà không thực hiện yêu cầu khởi tạo lại mật khẩu, xin vui lòng bỏ qua email này.</p>
-
-    <p style="margin: 0;">Trân trọng cảm ơn,</p>
-    <p style="margin: 0;">Trường Đại học Nha Trang</p>
-</body>
-</html>
-HTML;
+            $emailBody = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;font-size:14px;color:#000;margin:0;padding:0;">'
+                . 'Xin chào Ông/Bà <strong>' . $safeName . ' - mã số: ' . $safeCode . '</strong>,<br>'
+                . 'Ông/Bà vừa yêu cầu khởi tạo lại mật khẩu cổng truy cập thông tin Trường Đại học Nha Trang. Xin vui lòng nhấn vào link sau đây để thực hiện: <a href="' . $resetUrl . '">' . $resetUrl . '</a><br>'
+                . 'Chú ý rằng đường dẫn trên chỉ có hiệu lực trong vòng 5 phút.<br>'
+                . 'Nếu Ông/Bà không thực hiện yêu cầu khởi tạo lại mật khẩu, xin vui lòng bỏ qua email này.<br>'
+                . '<br>Trân trọng cảm ơn,<br>'
+                . 'Trường Đại học Nha Trang.'
+                . '</body></html>';
 
             try {
-                Mail::html($emailBody, function ($message) use ($email) {
-                    $message->to($email)
-                        ->subject('Đặt lại mật khẩu - NTU Training Management System')
-                        ->from(env('MAIL_FROM_ADDRESS', 'duytandao071205@gmail.com'));
-                });
-            } catch (\Exception $e) {
-                Log::warning('Failed to send password reset email: ' . $e->getMessage());
-                return $this->jsonResponse([
-                    'message' => 'Không gửi được email đặt lại mật khẩu. Vui lòng kiểm tra cấu hình SMTP.',
-                    'error' => app()->environment('local') ? $e->getMessage() : null,
-                ], 500);
+                // Send email after HTTP response to avoid blocking forgot-password latency.
+                dispatch(function () use ($emailBody, $email): void {
+                    Mail::html($emailBody, function ($message) use ($email) {
+                        $message->to($email)
+                            ->subject('Đặt lại mật khẩu - NTU Training Management System')
+                            ->from(env('MAIL_FROM_ADDRESS', 'duytandao071205@gmail.com'));
+                    });
+                })->afterResponse();
+            } catch (\Throwable $e) {
+                Log::warning('Failed to queue password reset email dispatch: ' . $e->getMessage());
             }
 
             return $this->jsonResponse([
@@ -221,7 +203,7 @@ HTML;
         $request->validate([
             'token' => 'required|string',
             'email' => 'required|email',
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'password' => ['required', 'confirmed', new NoSqlInjection(), Password::defaults()],
         ]);
 
         $token = $request->input('token');
@@ -262,16 +244,18 @@ HTML;
 
         try {
             $changedAt = now()->format('d/m/Y H:i:s');
-            Mail::raw(
-                "Mật khẩu tài khoản của bạn đã được thay đổi thành công vào {$changedAt}. Nếu bạn không thực hiện thao tác này, vui lòng liên hệ quản trị hệ thống ngay.",
-                function ($message) use ($email) {
-                    $message->to($email)
-                        ->subject('Xác nhận thay đổi mật khẩu - NTU Training Management System')
-                        ->from(env('MAIL_FROM_ADDRESS', 'duytandao071205@gmail.com'));
-                }
-            );
-        } catch (\Exception $e) {
-            Log::warning('Failed to send password changed confirmation email: ' . $e->getMessage());
+            dispatch(function () use ($email, $changedAt): void {
+                Mail::raw(
+                    "Mật khẩu tài khoản của bạn đã được thay đổi thành công vào {$changedAt}. Nếu bạn không thực hiện thao tác này, vui lòng liên hệ quản trị hệ thống ngay.",
+                    function ($message) use ($email) {
+                        $message->to($email)
+                            ->subject('Xác nhận thay đổi mật khẩu - NTU Training Management System')
+                            ->from(env('MAIL_FROM_ADDRESS', 'duytandao071205@gmail.com'));
+                    }
+                );
+            })->afterResponse();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to queue password changed confirmation email: ' . $e->getMessage());
         }
 
         return $this->jsonResponse([
