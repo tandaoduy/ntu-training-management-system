@@ -37,6 +37,16 @@ export interface ForgotPasswordRequest {
   captcha_code: string;
 }
 
+export interface CheckEmailRequest {
+  email: string;
+}
+
+export interface CheckEmailResponse {
+  message: string;
+  exists: boolean;
+  username?: string;
+}
+
 export interface ForgotPasswordResponse {
   message: string;
   email: string;
