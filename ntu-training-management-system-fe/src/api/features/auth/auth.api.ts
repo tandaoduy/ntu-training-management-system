@@ -1,5 +1,7 @@
 import { apiGet, apiPost } from '../../core/request';
 import type {
+  CheckEmailRequest,
+  CheckEmailResponse,
   ChangePasswordRequest,
   CurrentUserResponse,
   ForgotPasswordCaptchaResponse,
@@ -36,6 +38,10 @@ export const authApi = {
 
   forgotPassword(payload: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
     return apiPost<ForgotPasswordResponse, ForgotPasswordRequest>(`${AUTH_BASE_PATH}/forgot-password`, payload, { skipAuth: true });
+  },
+
+  checkEmail(payload: CheckEmailRequest): Promise<CheckEmailResponse> {
+    return apiPost<CheckEmailResponse, CheckEmailRequest>(`${AUTH_BASE_PATH}/check-email`, payload, { skipAuth: true });
   },
 
   forgotPasswordCaptcha(): Promise<ForgotPasswordCaptchaResponse> {

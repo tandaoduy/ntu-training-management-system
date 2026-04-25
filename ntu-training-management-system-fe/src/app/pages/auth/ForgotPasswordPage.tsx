@@ -32,8 +32,12 @@ export default function ForgotPasswordPage() {
   const [captchaLoading, setCaptchaLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [identifierError, setIdentifierError] = useState('')
+  const [captchaError, setCaptchaError] = useState('')
+  const [generalError, setGeneralError] = useState('')
   const [submitted, setSubmitted] = useState(false)
+
+  const isEmailIdentifier = (value: string): boolean => /^\S+@\S+\.\S+$/.test(value)
 
   const loadCaptcha = useCallback(async () => {
     setCaptchaLoading(true)
@@ -43,8 +47,9 @@ export default function ForgotPasswordPage() {
       setCaptchaId(response.challenge_id)
       setCaptchaImage(response.captcha_image)
       setCaptchaCode('')
+      setCaptchaError('')
     } catch (error: unknown) {
-      setError(getErrorMessage(error, 'Không tải được mã bảo vệ, vui lòng thử lại'))
+      setGeneralError(getErrorMessage(error, 'Không tải được mã bảo vệ, vui lòng thử lại'))
     } finally {
       setCaptchaLoading(false)
     }
@@ -54,17 +59,50 @@ export default function ForgotPasswordPage() {
     void loadCaptcha()
   }, [loadCaptcha])
 
+  const handleIdentifierBlur = async () => {
+    const trimmedIdentifier = identifier.trim()
+
+    if (!trimmedIdentifier || !isEmailIdentifier(trimmedIdentifier)) {
+      return
+    }
+
+    try {
+      await authApi.checkEmail({ email: trimmedIdentifier })
+      setIdentifierError('')
+    } catch (error: unknown) {
+      setIdentifierError(getErrorMessage(error, 'Không tìm thấy tài khoản với email này'))
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setIdentifierError('')
+    setCaptchaError('')
+    setGeneralError('')
+
+    const trimmedIdentifier = identifier.trim()
+
+    if (!trimmedIdentifier) {
+      setIdentifierError('Vui lòng nhập tên người dùng hoặc email')
+      return
+    }
+
+    if (isEmailIdentifier(trimmedIdentifier)) {
+      try {
+        await authApi.checkEmail({ email: trimmedIdentifier })
+      } catch (error: unknown) {
+        setIdentifierError(getErrorMessage(error, 'Không tìm thấy tài khoản với email này'))
+        return
+      }
+    }
 
     if (!captchaId) {
-      setError('Mã bảo vệ chưa sẵn sàng, vui lòng tải lại trang')
+      setCaptchaError('Mã bảo vệ chưa sẵn sàng, vui lòng tải lại trang')
       return
     }
 
     if (captchaCode.trim().length < 4) {
-      setError('Vui lòng nhập mã bảo vệ hợp lệ')
+      setCaptchaError('Vui lòng nhập mã bảo vệ hợp lệ')
       return
     }
 
@@ -72,7 +110,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const response = await authApi.forgotPassword({
-        identifier: identifier.trim(),
+        identifier: trimmedIdentifier,
         captcha_id: captchaId,
         captcha_code: captchaCode.trim(),
       })
@@ -80,7 +118,16 @@ export default function ForgotPasswordPage() {
       setEmail(response.email)
       setSubmitted(true)
     } catch (error: unknown) {
-      setError(getErrorMessage(error, 'Có lỗi xảy ra, vui lòng thử lại'))
+      const message = getErrorMessage(error, 'Có lỗi xảy ra, vui lòng thử lại')
+
+      if (message.toLowerCase().includes('không tìm thấy tài khoản')) {
+        setIdentifierError(message)
+      } else if (message.toLowerCase().includes('mã bảo vệ')) {
+        setCaptchaError(message)
+      } else {
+        setGeneralError(message)
+      }
+
       await loadCaptcha()
     } finally {
       setLoading(false)
@@ -100,15 +147,33 @@ export default function ForgotPasswordPage() {
           {!submitted ? (
             <form className="forgot-form" onSubmit={handleSubmit}>
               <div className="form-group">
+                {identifierError && (
+                  <div className="field-alert" role="alert" aria-live="polite">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{identifierError}</span>
+                  </div>
+                )}
                 <input
                   id="identifier"
                   type="text"
                   value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value)
+                    if (identifierError) {
+                      setIdentifierError('')
+                    }
+                  }}
+                  onBlur={() => {
+                    void handleIdentifierBlur()
+                  }}
                   placeholder="Nhập tên người dùng hoặc email"
                   disabled={loading}
                   required
-                  className="form-input"
+                  className={`form-input ${identifierError ? 'input-error' : ''}`}
                 />
               </div>
 
@@ -118,11 +183,16 @@ export default function ForgotPasswordPage() {
                     id="captchaCode"
                     type="text"
                     value={captchaCode}
-                    onChange={(e) => setCaptchaCode(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      setCaptchaCode(e.target.value.toUpperCase())
+                      if (captchaError) {
+                        setCaptchaError('')
+                      }
+                    }}
                     placeholder="Nhập mã bảo vệ"
                     disabled={loading || captchaLoading}
                     required
-                    className="form-input captcha-input"
+                    className={`form-input captcha-input ${captchaError ? 'input-error' : ''}`}
                   />
 
                   <div className="captcha-side">
@@ -146,9 +216,10 @@ export default function ForgotPasswordPage() {
                     </button>
                   </div>
                 </div>
+                {captchaError && <div className="field-error">{captchaError}</div>}
               </div>
 
-              {error && <div className="error-message">{error}</div>}
+              {generalError && <div className="error-message">{generalError}</div>}
 
               <button type="submit" disabled={loading} className="btn-submit">
                 {loading ? 'Đang xử lý...' : 'Gửi liên kết'}

@@ -16,6 +16,7 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login']);
     Route::get('/forgot-password/captcha', [PasswordResetController::class, 'captcha'])
         ->middleware('throttle:15,1');
+    Route::post('/check-email', [PasswordResetController::class, 'checkEmail'])->name('auth.check-email');
     Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])->name('password.forgot');
     Route::post('/verify-reset-token', [PasswordResetController::class, 'verify'])->name('password.verify');
     Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.reset');

@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\CanBo;
+use App\Models\ChuyenVien;
 use App\Models\PasswordResetToken;
+use App\Models\QuanLy;
+use App\Models\SinhVien;
 use App\Models\User;
 use App\Rules\NoSqlInjection;
 use Illuminate\Http\JsonResponse;
@@ -49,7 +53,7 @@ class PasswordResetController extends Controller
                 'captcha_code' => 'required|string|min:4|max:10',
             ]);
 
-            $identifier = $request->input('identifier');
+            $identifier = trim((string) $request->input('identifier'));
             $captchaId = (string) $request->input('captcha_id');
             $captchaCode = (string) $request->input('captcha_code');
 
@@ -59,11 +63,7 @@ class PasswordResetController extends Controller
                 ], 422);
             }
 
-            $user = User::query()
-                ->select(['id', 'username', 'role_id', 'profile_id', 'profile_type'])
-                ->with('profile')
-                ->where('username', $identifier)
-                ->first();
+            $user = $this->findUserByIdentifier($identifier);
 
             if (! $user) {
                 return $this->jsonResponse([
@@ -138,6 +138,29 @@ class PasswordResetController extends Controller
                 'message' => 'Lỗi xảy ra: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function checkEmail(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $email = trim((string) $request->input('email'));
+        $username = $this->findUsernameByEmail($email);
+
+        if (! $username) {
+            return $this->jsonResponse([
+                'message' => 'Không tìm thấy tài khoản với email này',
+                'exists' => false,
+            ], 422);
+        }
+
+        return $this->jsonResponse([
+            'message' => 'Email hợp lệ',
+            'exists' => true,
+            'username' => $username,
+        ]);
     }
 
     private function resolveDisplayName(User $user): string
@@ -275,6 +298,60 @@ class PasswordResetController extends Controller
         }
 
         return $query->first();
+    }
+
+    private function findUserByIdentifier(string $identifier): ?User
+    {
+        $query = User::query()
+            ->select(['id', 'username', 'role_id', 'profile_id', 'profile_type'])
+            ->with('profile');
+
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            $username = $this->findUsernameByEmail($identifier);
+
+            if (! $username) {
+                return null;
+            }
+
+            return $query->where('username', $username)->first();
+        }
+
+        return $query->where('username', $identifier)->first();
+    }
+
+    private function findUsernameByEmail(string $email): ?string
+    {
+        $normalizedEmail = mb_strtolower(trim($email));
+
+        $username = SinhVien::query()
+            ->whereRaw('LOWER(email) = ?', [$normalizedEmail])
+            ->value('user_id');
+
+        if ($username) {
+            return (string) $username;
+        }
+
+        $username = CanBo::query()
+            ->whereRaw('LOWER(email) = ?', [$normalizedEmail])
+            ->value('user_id');
+
+        if ($username) {
+            return (string) $username;
+        }
+
+        $username = ChuyenVien::query()
+            ->whereRaw('LOWER(email) = ?', [$normalizedEmail])
+            ->value('user_id');
+
+        if ($username) {
+            return (string) $username;
+        }
+
+        $username = QuanLy::query()
+            ->whereRaw('LOWER(email) = ?', [$normalizedEmail])
+            ->value('user_id');
+
+        return $username ? (string) $username : null;
     }
 
     private function captchaCacheKey(string $challengeId): string
