@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../../../api/query'
 import logoImage from '../../../../assets/Logo_NTU.png'
 import './StudentDashboardPage.css'
@@ -10,6 +10,22 @@ const stats = [
   { icon: '✅', label: 'Môn đã qua', value: '24', colorClass: 'green' },
   { icon: '⏳', label: 'Môn đang học', value: '5', colorClass: 'amber' },
   { icon: '🎯', label: 'GPA tích lũy', value: '3.2', colorClass: 'purple' },
+]
+
+const quickAccessLinks = [
+  { label: 'Thời khóa biểu', icon: '📅', colorClass: 'blue', link: '/student/schedule' },
+  { label: 'Đánh giá rèn luyện', icon: '📋', colorClass: 'teal', link: '/student/conduct' },
+  { label: 'Thông tin sinh viên', icon: '👤', colorClass: 'indigo', link: '/student/profile' },
+  { label: 'Kế hoạch học tập', icon: '🗺️', colorClass: 'amber', link: '/student/study-plan' },
+  { label: 'Đăng ký học phần', icon: '✍️', colorClass: 'purple', link: '/student/registration' },
+  { label: 'Xem lịch thi', icon: '⏰', colorClass: 'rose', link: '/student/exam-schedule' },
+  { label: 'Nhận xét học phần', icon: '📝', colorClass: 'cyan', link: '/student/feedback' },
+  { label: 'Kết quả học tập', icon: '📊', colorClass: 'emerald', link: '/student/grades' },
+  { label: 'Ký túc xá', icon: '🏢', colorClass: 'orange', link: '/student/dormitory' },
+  { label: 'Học phí', icon: '💵', colorClass: 'green', link: '/student/tuition' },
+  { label: 'Xét tốt nghiệp', icon: '🎓', colorClass: 'blue', link: '/student/graduation' },
+  { label: 'Đề tài luận văn', icon: '📚', colorClass: 'violet', link: '/student/thesis' },
+  { label: 'Tiến độ học tập', icon: '📈', colorClass: 'pink', link: '/student/progress' },
 ]
 
 const currentCourses = [
@@ -50,6 +66,7 @@ const statusLabel: Record<string, string> = {
 export default function StudentDashboardPage() {
   const navigate = useNavigate()
   const { user, logout, me } = useAuth()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   // Lấy thông tin user khi vào trang
   useEffect(() => {
@@ -64,32 +81,72 @@ export default function StudentDashboardPage() {
   }
 
   const displayName = user?.username ?? 'Sinh viên'
-  const avatarLetter = displayName.charAt(0).toUpperCase()
 
   return (
     <div className="sd-root">
-      {/* ── TOPBAR ── */}
-      <header className="sd-topbar">
-        <div className="sd-topbar-brand">
-          <img src={logoImage} alt="NTU" className="sd-topbar-logo" />
-          <span className="sd-topbar-title">NTU – Quản lý đào tạo</span>
+      {/* ── HEADER HIỆN ĐẠI ── */}
+      <header className="sd-header-modern">
+        {/* Main Topbar */}
+        <div className="sd-topbar-main">
+          <div className="sd-brand-group">
+            <img src={logoImage} alt="NTU" className="sd-brand-logo" />
+            <div className="sd-brand-text">
+              <h1 className="sd-brand-title">TRƯỜNG ĐẠI HỌC NHA TRANG</h1>
+              <span className="sd-brand-subtitle">Hệ thống Tích hợp Thông tin</span>
+            </div>
+          </div>
+
+          <div className="sd-user-group">
+            <div className="sd-user-info">
+              <span className="sd-user-role">SINH VIÊN</span>
+            </div>
+          </div>
         </div>
 
-        <div className="sd-topbar-spacer" />
-
-        <div className="sd-topbar-user">
-          <div className="sd-topbar-avatar">{avatarLetter}</div>
-          <span className="sd-topbar-username">{displayName}</span>
-          <button type="button" className="sd-logout-btn" onClick={handleLogout}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            Đăng xuất
-          </button>
+        {/* Academic Info Bar */}
+        <div className="sd-academic-bar">
+          <div className="sd-academic-left">
+            <div className="sd-academic-badge">
+              <span className="sd-academic-label">Hệ đào tạo:</span>
+              <span className="sd-academic-value">{(user as any)?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
+            </div>
+            <div className="sd-academic-dot"></div>
+            <div className="sd-academic-badge">
+              <span className="sd-academic-label">Năm học:</span>
+              <span className="sd-academic-value">2025-2026</span>
+            </div>
+            <div className="sd-academic-dot"></div>
+            <div className="sd-academic-badge">
+              <span className="sd-academic-label">Học kỳ:</span>
+              <span className="sd-academic-value">2</span>
+            </div>
+          </div>
+          <div className="sd-academic-right">
+            <a href="#" className="sd-academic-link">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              Trang thông tin
+            </a>
+            <div className="sd-academic-divider"></div>
+            <button type="button" className="sd-btn-logout-small" onClick={() => setShowLogoutConfirm(true)} title="Đăng xuất">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* MODAL XÁC NHẬN ĐĂNG XUẤT */}
+      {showLogoutConfirm && (
+        <div className="sd-modal-overlay">
+          <div className="sd-modal-content">
+            <h3 className="sd-modal-title">Xác nhận đăng xuất</h3>
+            <p className="sd-modal-desc">Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?</p>
+            <div className="sd-modal-actions">
+              <button className="sd-modal-btn sd-modal-btn-cancel" onClick={() => setShowLogoutConfirm(false)}>Hủy</button>
+              <button className="sd-modal-btn sd-modal-btn-confirm" onClick={handleLogout}>Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── MAIN ── */}
       <main className="sd-main">
@@ -97,6 +154,21 @@ export default function StudentDashboardPage() {
         <div className="sd-greeting">
           <h1>Xin chào, {displayName} 👋</h1>
           <p>Chào mừng bạn đến với hệ thống quản lý đào tạo Trường Đại học Nha Trang.</p>
+        </div>
+
+        {/* Quick Access */}
+        <div className="sd-quick-access-section">
+          <h2 className="sd-section-title">Chức năng chính</h2>
+          <div className="sd-qa-grid">
+            {quickAccessLinks.map((item) => (
+              <Link to={item.link} key={item.label} className="sd-qa-card">
+                <div className={`sd-qa-icon ${item.colorClass}`}>
+                  {item.icon}
+                </div>
+                <span className="sd-qa-label">{item.label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Stat cards */}

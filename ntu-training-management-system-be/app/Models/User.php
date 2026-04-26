@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use App\Models\Permission;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -136,6 +137,10 @@ class User extends Authenticatable
 
     public function hasPermission(string $code): bool
     {
+        if ($this->role?->code === 'admin') {
+            return true;
+        }
+
         return $this->permissionCodes()->contains($code);
     }
 
@@ -148,11 +153,13 @@ class User extends Authenticatable
         $cacheKey = sprintf('role_permissions:%d', $this->role_id);
 
         $codes = Cache::remember($cacheKey, now()->addMinutes(5), function (): array {
-            return $this->role()
-                ->first()
-                ?->permissions()
-                ->pluck('code')
-                ->toArray() ?? [];
+            $role = $this->role()->first();
+
+            if ($role?->code === 'admin') {
+                return Permission::query()->pluck('code')->toArray();
+            }
+
+            return $role?->permissions()->pluck('code')->toArray() ?? [];
         });
 
         return collect($codes);
