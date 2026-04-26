@@ -1,0 +1,81 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_ADMIN_TOKEN
+@academicTermId = 1
+@namHocId = 1
+
+### =========================================================
+### 0) Login admin va copy access_token vao @authToken
+### =========================================================
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "Admin",
+  "password": "Admin@123456789"
+}
+
+### =========================================================
+### 1) Danh sach nam hoc hoc ky + current_academic_term_id
+### Co them mang nam_hoc_options, hoc_ky_options va current_academic_term
+### =========================================================
+GET {{baseUrl}}/admin/academic-terms
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 2) Lay nam hoc hoc ky hien tai cua he thong
+### current_academic_term duoc luu dang JSON array/object trong he_thong_cau_hinhs
+### =========================================================
+GET {{baseUrl}}/admin/academic-terms/current
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 3) Chuyen nam hoc hoc ky hien tai (khong ghi de du lieu cu)
+### Se tao moi neu cap (nam_hoc, hoc_ky) chua ton tai
+### =========================================================
+POST {{baseUrl}}/admin/academic-terms/switch
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "nam_hoc": "2026-2027",
+  "hoc_ky": "1"
+}
+
+### =========================================================
+### 4) Chuyen theo route PUT hien co (giu tuong thich)
+### Luu y: body van quyet dinh nam hoc hoc ky hien tai moi
+### =========================================================
+PUT {{baseUrl}}/admin/academic-terms/{{academicTermId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "nam_hoc": "2025-2026",
+  "hoc_ky": "Hè"
+}
+
+### =========================================================
+### 5) Kiem tra lai current sau khi switch
+### =========================================================
+GET {{baseUrl}}/admin/academic-terms/current
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 6) Danh sach nam hoc (read-only cho dropdown cap 1)
+### =========================================================
+GET {{baseUrl}}/academic-catalog/nam-hocs
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 7) Danh sach hoc ky theo nam_hoc_id (dropdown cap 2)
+### =========================================================
+GET {{baseUrl}}/academic-catalog/hoc-kys?nam_hoc_id={{namHocId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
