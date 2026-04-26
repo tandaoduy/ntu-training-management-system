@@ -47,6 +47,8 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
 Route::middleware(['auth:sanctum', 'permission:admin.academic-term.manage'])->group(function (): void {
     Route::get('/admin/academic-terms', [AcademicTermController::class, 'index']);
     Route::get('/admin/academic-terms/current', [AcademicTermController::class, 'current']);
+    Route::post('/admin/academic-years', [AcademicTermController::class, 'storeAcademicYear']);
+    Route::post('/admin/academic-terms/current', [AcademicTermController::class, 'switchCurrent']);
     Route::post('/admin/academic-terms/switch', [AcademicTermController::class, 'switchCurrent']);
     Route::put('/admin/academic-terms/{academicTerm}', [AcademicTermController::class, 'update']);
 });

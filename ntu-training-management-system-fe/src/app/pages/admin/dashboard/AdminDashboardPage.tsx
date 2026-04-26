@@ -16,7 +16,7 @@ const quickAccessLinks = [
   { label: 'Quản lý người dùng', icon: '👤', colorClass: 'blue', link: '/admin/users' },
   { label: 'Phân quyền hệ thống', icon: '🔑', colorClass: 'purple', link: '/admin/roles' },
   { label: 'Quản lý phòng ban', icon: '🏢', colorClass: 'cyan', link: '/admin/departments' },
-  { label: 'Cấu hình hệ thống', icon: '⚙️', colorClass: 'gray', link: '/admin/settings' },
+  { label: 'Cấu hình hệ thống', icon: '⚙️', colorClass: 'gray', link: '/quantri/cauhinh' },
   { label: 'Nhật ký truy cập', icon: '📋', colorClass: 'indigo', link: '/admin/logs' },
   { label: 'Sao lưu dữ liệu', icon: '💾', colorClass: 'teal', link: '/admin/backups' },
   { label: 'Quản lý thông báo', icon: '📢', colorClass: 'amber', link: '/admin/notifications' },
@@ -52,69 +52,8 @@ const stateLabel: Record<string, string> = {
 }
 
 export default function AdminDashboardPage() {
-  const navigate = useNavigate()
-  const { user, logout, me } = useAuth()
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-
-  // Lấy thông tin user khi vào trang
-  useEffect(() => {
-    if (!user) {
-      void me()
-    }
-  }, [me, user])
-
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login', { replace: true })
-  }
-
-  const displayName = user?.username ?? 'Quản trị viên'
-
   return (
     <div className="ad-root">
-      {/* ── HEADER HIỆN ĐẠI ── */}
-      <header className="ad-header-modern">
-        {/* Main Topbar */}
-        <div className="ad-topbar-main">
-          <div className="ad-brand-group">
-            <img src={logoImage} alt="NTU" className="ad-brand-logo" />
-            <div className="ad-brand-text">
-              <h1 className="ad-brand-title">TRƯỜNG ĐẠI HỌC NHA TRANG</h1>
-              <span className="ad-brand-subtitle">Hệ thống Quản trị</span>
-            </div>
-          </div>
-
-          <div className="ad-user-group">
-            <div className="ad-user-info">
-              <span className="ad-user-role">ADMINISTRATOR</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Greeting Bar */}
-        <div className="ad-system-bar" style={{ justifyContent: 'flex-end', gap: '16px' }}>
-          <span style={{ fontWeight: 600, color: '#2d3748', fontSize: '0.95rem' }}>
-            Xin chào, Quản trị viên
-          </span>
-          <button type="button" className="ad-btn-logout-small" onClick={() => setShowLogoutConfirm(true)} title="Đăng xuất">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          </button>
-        </div>
-      </header>
-
-      {/* MODAL XÁC NHẬN ĐĂNG XUẤT */}
-      {showLogoutConfirm && (
-        <div className="ad-modal-overlay">
-          <div className="ad-modal-content">
-            <h3 className="ad-modal-title">Xác nhận đăng xuất</h3>
-            <p className="ad-modal-desc">Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?</p>
-            <div className="ad-modal-actions">
-              <button className="ad-modal-btn ad-modal-btn-cancel" onClick={() => setShowLogoutConfirm(false)}>Hủy</button>
-              <button className="ad-modal-btn ad-modal-btn-confirm" onClick={handleLogout}>Đăng xuất</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── MAIN ── */}
       <main className="ad-main">

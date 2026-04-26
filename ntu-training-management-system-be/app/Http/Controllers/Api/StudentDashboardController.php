@@ -45,10 +45,6 @@ class StudentDashboardController extends Controller
                 : null;
         }
 
-        if (! $hocKyHienHanh) {
-            $hocKyHienHanh = HocKy::query()->orderByDesc('id')->first();
-        }
-
         $hocKyHienHanh?->loadMissing('namHoc:id,nam_hoc');
 
         $hocKyPayload = $hocKyHienHanh ? [
@@ -63,6 +59,7 @@ class StudentDashboardController extends Controller
             'student' => $user?->student,
             'permissions' => $user?->permissionCodes()->values() ?? [],
             'hoc_ky_hien_hanh' => $hocKyPayload,
+            'hoc_ky_hien_hanh_configured' => $hocKyPayload !== null,
         ]);
     }
 }
