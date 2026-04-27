@@ -1,6 +1,7 @@
 export interface AuthUser {
   id: number;
   username: string;
+  display_name?: string | null;
   role: string | null;
 }
 
@@ -18,6 +19,7 @@ export interface LoginResponse {
 export interface CurrentUserResponse {
   id: number | null;
   username: string | null;
+  display_name?: string | null;
   role: string | null;
 }
 

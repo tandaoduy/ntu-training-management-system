@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8000/api
-@authToken = REPLACE_WITH_ADMIN_TOKEN
+@authToken = 16|v96UAlGX2v7qSm2BVPFwIoBmpipMNSF3cPgCvssn64494660
 @academicTermId = 1
 @namHocId = 1
 
@@ -16,8 +16,7 @@ Accept: application/json
 }
 
 ### =========================================================
-### 1) Danh sach nam hoc hoc ky + current_academic_term_id
-### Co them mang nam_hoc_options, hoc_ky_options va current_academic_term
+### 1) Danh sach nam hoc + 3 hoc ky moi nam + current_academic_term
 ### =========================================================
 GET {{baseUrl}}/admin/academic-terms
 Authorization: Bearer {{authToken}}
@@ -25,15 +24,44 @@ Accept: application/json
 
 ### =========================================================
 ### 2) Lay nam hoc hoc ky hien tai cua he thong
-### current_academic_term duoc luu dang JSON array/object trong he_thong_cau_hinhs
+### FE/BE cac module khac co the dung id nay de loc du lieu theo hoc_ky_id
 ### =========================================================
 GET {{baseUrl}}/admin/academic-terms/current
 Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### =========================================================
-### 3) Chuyen nam hoc hoc ky hien tai (khong ghi de du lieu cu)
-### Se tao moi neu cap (nam_hoc, hoc_ky) chua ton tai
+### 3) Tao nam hoc moi, backend tao san 3 hoc ky: 1, 2, He
+### set_current=true thi dong thoi cap nhat hoc ky hien tai toan he thong
+### =========================================================
+POST {{baseUrl}}/admin/academic-years
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "nam_hoc": "2026-2027",
+  "set_current": true,
+  "hoc_ky": "1"
+}
+
+### =========================================================
+### 4) Chuyen hoc ky hien tai bang nam_hoc_id + hoc_ky
+### Du lieu cu khong bi ghi de; cac module loc theo hoc_ky_id se tu tach du lieu
+### =========================================================
+POST {{baseUrl}}/admin/academic-terms/current
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "nam_hoc_id": 1,
+  "hoc_ky": "2"
+}
+
+### =========================================================
+### 5) Chuyen nam hoc hoc ky hien tai route cu (giu tuong thich)
+### Neu nam_hoc chua ton tai se tao nam hoc va tao san 3 hoc ky
 ### =========================================================
 POST {{baseUrl}}/admin/academic-terms/switch
 Content-Type: application/json
@@ -46,7 +74,7 @@ Accept: application/json
 }
 
 ### =========================================================
-### 4) Chuyen theo route PUT hien co (giu tuong thich)
+### 6) Chuyen theo route PUT hien co (giu tuong thich)
 ### Luu y: body van quyet dinh nam hoc hoc ky hien tai moi
 ### =========================================================
 PUT {{baseUrl}}/admin/academic-terms/{{academicTermId}}
@@ -60,21 +88,21 @@ Accept: application/json
 }
 
 ### =========================================================
-### 5) Kiem tra lai current sau khi switch
+### 7) Kiem tra lai current sau khi switch
 ### =========================================================
 GET {{baseUrl}}/admin/academic-terms/current
 Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### =========================================================
-### 6) Danh sach nam hoc (read-only cho dropdown cap 1)
+### 8) Danh sach nam hoc (read-only cho dropdown cap 1)
 ### =========================================================
 GET {{baseUrl}}/academic-catalog/nam-hocs
 Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### =========================================================
-### 7) Danh sach hoc ky theo nam_hoc_id (dropdown cap 2)
+### 9) Danh sach hoc ky theo nam_hoc_id (dropdown cap 2)
 ### =========================================================
 GET {{baseUrl}}/academic-catalog/hoc-kys?nam_hoc_id={{namHocId}}
 Authorization: Bearer {{authToken}}

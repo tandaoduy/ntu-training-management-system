@@ -1,7 +1,11 @@
 import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 
 import AuthPage from './app/pages/auth/AuthPage'
+import AdminLayout from './app/layout/admin/AdminLayout.tsx'
 import AdminDashboardPage from './app/pages/admin/dashboard/AdminDashboardPage.tsx'
+import AdminConfigurationPage from './app/pages/admin/configuration/AdminConfigurationPage.tsx'
+import AdminAccountPage from './app/pages/admin/account/AdminAccountPage.tsx'
+import AdminClassPage from './app/pages/admin/class/AdminClassPage.tsx'
 import LecturerDashboardPage from './app/pages/lecturer/dashboard/LecturerDashboardPage.tsx'
 import ManagerDashboardPage from './app/pages/manager/dashboard/ManagerDashboardPage.tsx'
 import DashboardStudentPage from './app/pages/student/dashboard/StudentDashboardPage'
@@ -113,12 +117,17 @@ function AppShell() {
           path="/quantri"
           element={
             isAuthenticated && user?.role === 'admin' ? (
-              <AdminDashboardPage />
+              <AdminLayout />
             ) : (
               <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
             )
           }
-        />
+        >
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="cauhinh" element={<AdminConfigurationPage />} />
+          <Route path="taikhoan" element={<AdminAccountPage />} />
+          <Route path="lop" element={<AdminClassPage />} />
+        </Route>
         <Route
           path="/component-test"
           element={isAuthenticated ? <ComponentTestPage /> : <Navigate to="/login" replace />}

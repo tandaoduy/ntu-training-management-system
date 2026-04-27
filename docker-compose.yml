@@ -19,6 +19,16 @@ services:
     environment:
       - APP_AUTO_MIGRATE=true
       - APP_AUTO_SEED=true
+      - APP_TIMEZONE=Asia/Ho_Chi_Minh
+      - TZ=Asia/Ho_Chi_Minh
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_SCHEME=${MAIL_SCHEME:-smtps}
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-465}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-NTU Training Management System}
       - DB_WAIT_TIMEOUT_SECONDS=60
       - DB_WAIT_INTERVAL_SECONDS=2
       - DB_CONNECTION=pgsql
@@ -43,6 +53,8 @@ services:
       POSTGRES_DB: ntu_training_management
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123456789
+      TZ: Asia/Ho_Chi_Minh
+      PGTZ: Asia/Ho_Chi_Minh
     ports:
       - "5433:5432"
     volumes:

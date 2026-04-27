@@ -63,10 +63,16 @@ const statusLabel: Record<string, string> = {
   active: 'Đang học',
 }
 
+interface StudentDashboardUserExtras {
+  educationSystem?: string
+}
+
 export default function StudentDashboardPage() {
   const navigate = useNavigate()
   const { user, logout, me } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const sysAcademicYear = localStorage.getItem('sys_academic_year') || '2025-2026'
+  const sysSemester = localStorage.getItem('sys_semester') || '2'
 
   // Lấy thông tin user khi vào trang
   useEffect(() => {
@@ -80,7 +86,7 @@ export default function StudentDashboardPage() {
     navigate('/login', { replace: true })
   }
 
-  const displayName = user?.username ?? 'Sinh viên'
+  const displayName = user?.display_name?.trim() || user?.username || 'Sinh viên'
 
   return (
     <div className="sd-root">
@@ -108,24 +114,24 @@ export default function StudentDashboardPage() {
           <div className="sd-academic-left">
             <div className="sd-academic-badge">
               <span className="sd-academic-label">Hệ đào tạo:</span>
-              <span className="sd-academic-value">{(user as any)?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
+              <span className="sd-academic-value">{(user as StudentDashboardUserExtras | null)?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
             </div>
             <div className="sd-academic-dot"></div>
             <div className="sd-academic-badge">
               <span className="sd-academic-label">Năm học:</span>
-              <span className="sd-academic-value">2025-2026</span>
+              <span className="sd-academic-value">{sysAcademicYear}</span>
             </div>
             <div className="sd-academic-dot"></div>
             <div className="sd-academic-badge">
               <span className="sd-academic-label">Học kỳ:</span>
-              <span className="sd-academic-value">2</span>
+              <span className="sd-academic-value">{sysSemester}</span>
             </div>
           </div>
           <div className="sd-academic-right">
-            <a href="#" className="sd-academic-link">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-              Trang thông tin
-            </a>
+            <span className="sd-academic-greeting" style={{ fontWeight: 600, color: '#2b6cb0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Xin chào, {displayName}
+            </span>
             <div className="sd-academic-divider"></div>
             <button type="button" className="sd-btn-logout-small" onClick={() => setShowLogoutConfirm(true)} title="Đăng xuất">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -150,11 +156,6 @@ export default function StudentDashboardPage() {
 
       {/* ── MAIN ── */}
       <main className="sd-main">
-        {/* Greeting */}
-        <div className="sd-greeting">
-          <h1>Xin chào, {displayName} 👋</h1>
-          <p>Chào mừng bạn đến với hệ thống quản lý đào tạo Trường Đại học Nha Trang.</p>
-        </div>
 
         {/* Quick Access */}
         <div className="sd-quick-access-section">

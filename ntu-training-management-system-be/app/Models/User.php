@@ -96,6 +96,30 @@ class User extends Authenticatable
         return $email !== '' ? $email : null;
     }
 
+    public function profileName(): ?string
+    {
+        $this->syncProfileFromRole();
+
+        $profile = $this->relationLoaded('profile')
+            ? $this->profile
+            : $this->profile()->first();
+
+        if (! $profile) {
+            return null;
+        }
+
+        $name = trim((string) (
+            $profile->getAttribute('ten_sinh_vien')
+            ?? $profile->getAttribute('ten_giang_vien')
+            ?? $profile->getAttribute('ten_chuyen_vien')
+            ?? $profile->getAttribute('ten_nguoi_quan_ly')
+            ?? $profile->getAttribute('full_name')
+            ?? ''
+        ));
+
+        return $name !== '' ? $name : null;
+    }
+
     public function isEmailVerified(): bool
     {
         $verification = $this->relationLoaded('emailVerification')

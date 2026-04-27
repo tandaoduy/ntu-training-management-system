@@ -159,7 +159,7 @@ export function AlertProvider({ children, maxAlerts = 3 }: AlertProviderProps) {
       {children}
 
       {alerts.length > 0 && (
-        <div className="fixed right-4 top-4 z-50 w-[min(420px,calc(100vw-2rem))] space-y-2">
+        <div className="pointer-events-none fixed right-4 top-4 z-[1100] w-[min(420px,calc(100vw-2rem))] space-y-2">
           {alerts.map((alert) => (
             <Alert
               key={alert.id}
