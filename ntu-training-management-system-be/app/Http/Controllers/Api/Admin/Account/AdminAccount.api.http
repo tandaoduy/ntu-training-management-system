@@ -1,0 +1,283 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_ADMIN_TOKEN
+@accountId = 1
+
+### Login admin va copy access_token vao @authToken
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "Admin",
+  "password": "Admin@123456789"
+}
+
+### Danh sach tai khoan
+GET {{baseUrl}}/admin/accounts
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Loc tai khoan sinh vien
+GET {{baseUrl}}/admin/accounts?role=student
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Danh muc don vi va lop cho form sinh vien
+GET {{baseUrl}}/admin/accounts/student-catalog
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Danh sach don vi
+GET {{baseUrl}}/admin/don-vis
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Danh sach lop hanh chinh
+GET {{baseUrl}}/admin/lops
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Tao lop hanh chinh
+POST {{baseUrl}}/admin/lops
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "don_vi_id": 1,
+  "lop_hoc_phan": "65.QTKD-1 (65.QTKD-1)",
+  "ma_khoi": "65.QTKD"
+}
+
+### Xoa lop hanh chinh
+DELETE {{baseUrl}}/admin/lops/1
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Tao tai khoan tong quat
+POST {{baseUrl}}/admin/accounts
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "role": "student",
+  "username": "65139999",
+  "password": "123456789",
+  "name": "Sinh viên Test",
+  "email": "student.test@ntu.edu.vn",
+  "phone": "0900000000"
+}
+
+### Tao sinh vien
+POST {{baseUrl}}/admin/accounts/students
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "username": "65138888",
+  "password": "123456789",
+  "ten_sinh_vien": "Nguyễn Văn Test",
+  "email": "nguyenvantest.65cntt@ntu.edu.vn",
+  "don_vi_id": 1,
+  "lop_id": 1,
+  "gioi_tinh": "Nam",
+  "ngay_sinh": "2005-12-07",
+  "noi_sinh": "Khánh Hòa",
+  "ten_don_vi": "Khoa Công nghệ thông tin",
+  "ten_nganh_hoc": "Công nghệ thông tin",
+  "he_dao_tao": "Chính quy",
+  "so_cccd": "056205004525",
+  "ngay_cap_cccd": "2021-11-11",
+  "noi_cap_cccd": "Cục cảnh sát QLHC về TTXH",
+  "ho_khau_tinh_thanh_pho": "Khánh Hòa",
+  "ho_khau_quan_huyen": "Thành phố Nha Trang",
+  "que_quan_tinh_thanh_pho": "Khánh Hòa",
+  "que_quan_quan_huyen": "Thành phố Nha Trang",
+  "que_quan": "38/17/B1 Lê Hồng Phong",
+  "dan_toc": "Kinh",
+  "ton_giao": "Không"
+}
+
+### Tao can bo / giang vien
+POST {{baseUrl}}/admin/accounts/lecturers
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "username": "2025999",
+  "password": "123456789",
+  "ten_giang_vien": "Giảng viên Test",
+  "email": "lecturer.test@ntu.edu.vn",
+  "chuc_danh": "Giảng viên"
+}
+
+### Tao quan ly
+POST {{baseUrl}}/admin/accounts/managers
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "username": "qltest",
+  "password": "123456789",
+  "ten_nguoi_quan_ly": "Quản lý Test",
+  "email": "manager.test@ntu.edu.vn",
+  "chuc_vu": "Trưởng khoa"
+}
+
+### Tao chuyen vien
+POST {{baseUrl}}/admin/accounts/training-officers
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "username": "cvtest",
+  "password": "123456789",
+  "ten_chuyen_vien": "Chuyên viên Test",
+  "email": "officer.test@ntu.edu.vn",
+  "chuc_vu": "Chuyên viên"
+}
+
+### Cap nhat tai khoan / profile
+PUT {{baseUrl}}/admin/accounts/{{accountId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{
+  "status": true,
+  "profile": {
+    "email": "updated.test@ntu.edu.vn",
+    "so_dien_thoai": "0911111111"
+  }
+}
+
+### Dat lai mat khau ve 123456789 neu khong truyen password
+POST {{baseUrl}}/admin/accounts/{{accountId}}/reset-password
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+{}
+
+### Khoa tai khoan
+POST {{baseUrl}}/admin/accounts/{{accountId}}/lock
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Mo khoa tai khoan
+POST {{baseUrl}}/admin/accounts/{{accountId}}/unlock
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+####################################
+### SINH VIEN - ANH DAI DIEN
+####################################
+
+### Upload anh sinh vien (form-data)
+POST {{baseUrl}}/admin/accounts/{{accountId}}/upload-image
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="anh"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< /path/to/your/image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Tao sinh vien voi anh (form-data)
+POST {{baseUrl}}/admin/accounts/students
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="username"
+
+65137777
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="password"
+
+123456789
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="ten_sinh_vien"
+
+Trần Thị Bích Ngân
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="email"
+
+bichngann.65cntt@ntu.edu.vn
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="ma_lop"
+
+65.CNTT-1
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="gioi_tinh"
+
+Nữ
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="ngay_sinh"
+
+2006-03-15
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="noi_sinh"
+
+Hà Nội
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="anh"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< /path/to/your/image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+####################################
+### VI TRI HANH CHINH - TINH/THANH PHO - QUAN/HUYEN - XA/PHUONG
+####################################
+
+### Lay danh sach tat ca tinh thanh pho
+GET {{baseUrl}}/admin/locations/provinces
+Accept: application/json
+
+### Tim kiem tinh thanh pho theo ten
+GET {{baseUrl}}/admin/locations/provinces/search?q=Ha%20Noi
+Accept: application/json
+
+### Lay chi tiet tinh thanh pho + danh sach quan huyen (code=79 la Khanh Hoa)
+GET {{baseUrl}}/admin/locations/provinces/79
+Accept: application/json
+
+### Lay danh sach quan huyen cua tinh (79 = Khanh Hoa)
+GET {{baseUrl}}/admin/locations/provinces/79/districts
+Accept: application/json
+
+### Lay chi tiet quan huyen (code=1574 la TP Nha Trang)
+GET {{baseUrl}}/admin/locations/districts/1574
+Accept: application/json
+
+### Lay danh sach xa phuong cua tinh (khong chi dinh province_code = lay tat ca)
+GET {{baseUrl}}/admin/locations/wards
+Accept: application/json
+
+### Lay danh sach xa phuong cua tinh Khanh Hoa (province_code=79)
+GET {{baseUrl}}/admin/locations/wards?province_code=79
+Accept: application/json
+
+### Tim kiem xa phuong theo ten
+GET {{baseUrl}}/admin/locations/wards?q=Ba%20Ria
+Accept: application/json
+
+### Tim kiem xa phuong cua tinh Khanh Hoa theo ten
+GET {{baseUrl}}/admin/locations/wards?province_code=79&q=phuong
+Accept: application/json
+
+### Lay chi tiet xa phuong (code=26560 la Phuong Ba Ria)
+GET {{baseUrl}}/admin/locations/wards/26560
+Accept: application/json
+
+### Tim xa phuong tu ma luu dep (backward compatibility)
+GET {{baseUrl}}/admin/locations/wards/legacy?legacy_name=Xã%20Tân%20Hải&legacy_code=22855
+Accept: application/json

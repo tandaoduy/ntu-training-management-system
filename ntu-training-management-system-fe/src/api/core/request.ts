@@ -28,3 +28,28 @@ export const apiPost = async <TResponse, TBody = unknown>(
     throw toApiError(error);
   }
 };
+
+export const apiPut = async <TResponse, TBody = unknown>(
+  url: string,
+  body?: TBody,
+  config?: AxiosRequestConfig,
+): Promise<TResponse> => {
+  try {
+    const response = await httpClient.put<TResponse>(url, body, config);
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+};
+
+export const apiDelete = async <TResponse>(
+  url: string,
+  config?: AxiosRequestConfig,
+): Promise<TResponse> => {
+  try {
+    const response = await httpClient.delete<TResponse>(url, config);
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+};

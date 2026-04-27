@@ -1,7 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../../../api/query'
-import logoImage from '../../../../assets/Logo_NTU.png'
+import { Link } from 'react-router-dom'
 import './AdminDashboardPage.css'
 
 // ── Placeholder data (thay bằng API thật sau) ────────────────────────
@@ -13,7 +10,8 @@ const stats = [
 ]
 
 const quickAccessLinks = [
-  { label: 'Quản lý người dùng', icon: '👤', colorClass: 'blue', link: '/admin/users' },
+  { label: 'Quản lý người dùng', icon: '👤', colorClass: 'blue', link: '/quantri/taikhoan' },
+  { label: 'Quản lý lớp', icon: '🏫', colorClass: 'emerald', link: '/quantri/lop' },
   { label: 'Phân quyền hệ thống', icon: '🔑', colorClass: 'purple', link: '/admin/roles' },
   { label: 'Quản lý phòng ban', icon: '🏢', colorClass: 'cyan', link: '/admin/departments' },
   { label: 'Cấu hình hệ thống', icon: '⚙️', colorClass: 'gray', link: '/quantri/cauhinh' },
