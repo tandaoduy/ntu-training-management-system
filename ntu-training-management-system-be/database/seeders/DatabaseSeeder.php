@@ -16,11 +16,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolePermissionSeeder::class,
-<<<<<<< Updated upstream
-=======
             DonViSeeder::class,
             NganhDaoTaoSeeder::class,
->>>>>>> Stashed changes
         ]);
     }
 }

@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Admin\Account\AdminAccountController;
 use App\Http\Controllers\Api\Admin\AcademicTerm\AcademicTermController;
+use App\Http\Controllers\Api\Admin\Classes\LopController;
 use App\Http\Controllers\Api\AcademicCatalogController;
 use App\Http\Controllers\Api\StudentDashboardController;
 use Illuminate\Support\Facades\Route;
@@ -51,4 +53,26 @@ Route::middleware(['auth:sanctum', 'permission:admin.academic-term.manage'])->gr
     Route::post('/admin/academic-terms/current', [AcademicTermController::class, 'switchCurrent']);
     Route::post('/admin/academic-terms/switch', [AcademicTermController::class, 'switchCurrent']);
     Route::put('/admin/academic-terms/{academicTerm}', [AcademicTermController::class, 'update']);
+});
+
+Route::middleware(['auth:sanctum'])->group(function (): void {
+    Route::get('/admin/accounts', [AdminAccountController::class, 'index']);
+    Route::get('/admin/accounts/student-catalog', [AdminAccountController::class, 'studentCatalog']);
+    Route::post('/admin/accounts', [AdminAccountController::class, 'store']);
+    Route::post('/admin/accounts/students', [AdminAccountController::class, 'storeStudent']);
+    Route::post('/admin/accounts/lecturers', [AdminAccountController::class, 'storeLecturer']);
+    Route::post('/admin/accounts/managers', [AdminAccountController::class, 'storeManager']);
+    Route::post('/admin/accounts/training-officers', [AdminAccountController::class, 'storeTrainingOfficer']);
+    Route::put('/admin/accounts/{user}', [AdminAccountController::class, 'update']);
+    Route::post('/admin/accounts/{user}/reset-password', [AdminAccountController::class, 'resetPassword']);
+    Route::post('/admin/accounts/{user}/lock', [AdminAccountController::class, 'lock']);
+    Route::post('/admin/accounts/{user}/unlock', [AdminAccountController::class, 'unlock']);
+    Route::post('/admin/accounts/{user}/upload-image', [AdminAccountController::class, 'uploadStudentImage']);
+
+    Route::get('/admin/don-vis', [LopController::class, 'donVis']);
+    Route::get('/admin/lops', [LopController::class, 'index']);
+    Route::post('/admin/lops', [LopController::class, 'store']);
+    Route::put('/admin/lops/{lop}', [LopController::class, 'update']);
+    Route::post('/admin/lops/{lop}/toggle-status', [LopController::class, 'toggleStatus']);
+    Route::delete('/admin/lops/{lop}', [LopController::class, 'destroy']);
 });

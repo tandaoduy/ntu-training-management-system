@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, FormEvent, ReactNode } from 'react'
 
 import { apiGet, apiPost } from '../../../../api/core/request'
@@ -173,7 +173,7 @@ export default function AdminAccountPage() {
   const [donVis, setDonVis] = useState<DonViOption[]>([])
   const [isCatalogLoading, setIsCatalogLoading] = useState(false)
 
-  const loadAccounts = async () => {
+  const loadAccounts = useCallback(async () => {
     setIsLoading(true)
 
     try {
@@ -188,13 +188,13 @@ export default function AdminAccountPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [showAlert])
 
   useEffect(() => {
     void loadAccounts()
-  }, [])
+  }, [loadAccounts])
 
-  const loadStudentCatalog = async () => {
+  const loadStudentCatalog = useCallback(async () => {
     setIsCatalogLoading(true)
 
     try {
@@ -209,13 +209,13 @@ export default function AdminAccountPage() {
     } finally {
       setIsCatalogLoading(false)
     }
-  }
+  }, [showAlert])
 
   useEffect(() => {
     if (showModal && selectedRole === 'student') {
       void loadStudentCatalog()
     }
-  }, [showModal, selectedRole])
+  }, [loadStudentCatalog, showModal, selectedRole])
 
   const accountCounts = useMemo(() => {
     return ROLES.reduce<Record<RoleId, number>>((acc, role) => {
