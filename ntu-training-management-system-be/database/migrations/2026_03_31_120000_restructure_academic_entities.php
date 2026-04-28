@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('ma_nganh', 50)->unique();
             $table->string('ten_nganh', 255);
             $table->foreignId('don_vi_id')->nullable()->constrained('don_vis')->nullOnDelete();
-            $table->enum('he_dao_tao', ['Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa']);
+            $table->enum('he_dao_tao', ['Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa']);
             $table->timestamps();
         });
 
@@ -44,7 +44,7 @@ return new class extends Migration
             $table->string('ma_lop', 100)->nullable();
             $table->foreignId('nganh_dao_tao_id')->nullable()->constrained('nganh_dao_taos')->nullOnDelete();
             $table->foreignId('don_vi_id')->nullable()->constrained('don_vis')->nullOnDelete();
-            $table->enum('he_dao_tao', ['Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])->nullable();
+            $table->enum('he_dao_tao', ['Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])->nullable();
             $table->string('so_cccd', 20)->nullable();
             $table->date('ngay_cap_cccd')->nullable();
             $table->string('noi_cap_cccd', 255)->nullable();
