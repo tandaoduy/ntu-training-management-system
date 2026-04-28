@@ -45,6 +45,7 @@ class AuthController extends Controller
             'user' => [
                 'id' => $user->id,
                 'username' => $user->username,
+                'display_name' => $user->profileName(),
                 'role' => $user->role?->code,
                 'email' => $user->profileEmail(),
                 'email_verified' => $user->isEmailVerified(),
@@ -70,6 +71,7 @@ class AuthController extends Controller
         return response()->json([
             'id' => $user?->id,
             'username' => $user?->username,
+            'display_name' => $user?->profileName(),
             'role' => $user?->role?->code,
             'email' => $user?->profileEmail(),
             'email_verified' => $user?->isEmailVerified() ?? false,

@@ -63,24 +63,22 @@ const statusLabel: Record<string, string> = {
   active: 'Đang học',
 }
 
+interface StudentDashboardUserExtras {
+  educationSystem?: string
+}
+
 export default function StudentDashboardPage() {
   const navigate = useNavigate()
   const { user, logout, me } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [sysAcademicYear, setSysAcademicYear] = useState('2025-2026')
-  const [sysSemester, setSysSemester] = useState('2')
+  const sysAcademicYear = localStorage.getItem('sys_academic_year') || '2025-2026'
+  const sysSemester = localStorage.getItem('sys_semester') || '2'
 
   // Lấy thông tin user khi vào trang
   useEffect(() => {
     if (!user) {
       void me()
     }
-    
-    // Đọc cấu hình hệ thống từ localStorage
-    const savedYear = localStorage.getItem('sys_academic_year')
-    const savedSemester = localStorage.getItem('sys_semester')
-    if (savedYear) setSysAcademicYear(savedYear)
-    if (savedSemester) setSysSemester(savedSemester)
   }, [me, user])
 
   const handleLogout = async () => {
@@ -88,18 +86,7 @@ export default function StudentDashboardPage() {
     navigate('/login', { replace: true })
   }
 
-  // Helper giả lập truy vấn tên sinh viên từ mã sinh viên
-  const getStudentName = (code?: string) => {
-    if (!code) return 'Sinh viên'
-    const studentDb: Record<string, string> = {
-      '65133141': 'Nguyễn Văn A',
-      '65133142': 'Trần Thị B',
-      '65133143': 'Lê Văn C',
-    }
-    return studentDb[code] || `Sinh viên (${code})`
-  }
-
-  const displayName = getStudentName(user?.username)
+  const displayName = user?.display_name?.trim() || user?.username || 'Sinh viên'
 
   return (
     <div className="sd-root">
@@ -127,7 +114,7 @@ export default function StudentDashboardPage() {
           <div className="sd-academic-left">
             <div className="sd-academic-badge">
               <span className="sd-academic-label">Hệ đào tạo:</span>
-              <span className="sd-academic-value">{(user as any)?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
+              <span className="sd-academic-value">{(user as StudentDashboardUserExtras | null)?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
             </div>
             <div className="sd-academic-dot"></div>
             <div className="sd-academic-badge">
@@ -169,11 +156,6 @@ export default function StudentDashboardPage() {
 
       {/* ── MAIN ── */}
       <main className="sd-main">
-        {/* Greeting */}
-        <div className="sd-greeting">
-          <h1>Xin chào, {displayName} 👋</h1>
-          <p>Chào mừng bạn đến với hệ thống quản lý đào tạo Trường Đại học Nha Trang.</p>
-        </div>
 
         {/* Quick Access */}
         <div className="sd-quick-access-section">
