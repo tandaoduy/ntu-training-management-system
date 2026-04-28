@@ -4,9 +4,8 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Admin\Account\AdminAccountController;
-use App\Http\Controllers\Api\Admin\Classes\LopController;
-use App\Http\Controllers\Api\Admin\LocationController;
 use App\Http\Controllers\Api\Admin\AcademicTerm\AcademicTermController;
+use App\Http\Controllers\Api\Admin\Classes\LopController;
 use App\Http\Controllers\Api\AcademicCatalogController;
 use App\Http\Controllers\Api\StudentDashboardController;
 use Illuminate\Support\Facades\Route;
@@ -56,7 +55,7 @@ Route::middleware(['auth:sanctum', 'permission:admin.academic-term.manage'])->gr
     Route::put('/admin/academic-terms/{academicTerm}', [AcademicTermController::class, 'update']);
 });
 
-Route::middleware(['auth:sanctum', 'permission:admin.account.manage'])->group(function (): void {
+Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::get('/admin/accounts', [AdminAccountController::class, 'index']);
     Route::get('/admin/accounts/student-catalog', [AdminAccountController::class, 'studentCatalog']);
     Route::post('/admin/accounts', [AdminAccountController::class, 'store']);
@@ -69,27 +68,11 @@ Route::middleware(['auth:sanctum', 'permission:admin.account.manage'])->group(fu
     Route::post('/admin/accounts/{user}/lock', [AdminAccountController::class, 'lock']);
     Route::post('/admin/accounts/{user}/unlock', [AdminAccountController::class, 'unlock']);
     Route::post('/admin/accounts/{user}/upload-image', [AdminAccountController::class, 'uploadStudentImage']);
+
     Route::get('/admin/don-vis', [LopController::class, 'donVis']);
     Route::get('/admin/lops', [LopController::class, 'index']);
     Route::post('/admin/lops', [LopController::class, 'store']);
     Route::put('/admin/lops/{lop}', [LopController::class, 'update']);
     Route::post('/admin/lops/{lop}/toggle-status', [LopController::class, 'toggleStatus']);
     Route::delete('/admin/lops/{lop}', [LopController::class, 'destroy']);
-});
-
-// Location endpoints - Vietnamese administrative divisions
-Route::prefix('admin/locations')->group(function (): void {
-    // Provinces
-    Route::get('/provinces', [LocationController::class, 'getProvinces']);
-    Route::get('/provinces/search', [LocationController::class, 'searchProvinces']);
-    Route::get('/provinces/{code}', [LocationController::class, 'getProvince']);
-    
-    // Districts by province
-    Route::get('/provinces/{provinceCode}/districts', [LocationController::class, 'getDistrictsByProvince']);
-    Route::get('/districts/{code}', [LocationController::class, 'getDistrict']);
-    
-    // Wards
-    Route::get('/wards', [LocationController::class, 'getWards']);
-    Route::get('/wards/legacy', [LocationController::class, 'lookupWardFromLegacy']);
-    Route::get('/wards/{code}', [LocationController::class, 'getWard']);
 });

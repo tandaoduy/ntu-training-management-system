@@ -16,16 +16,16 @@ return new class extends Migration
         DB::statement("ALTER TABLE don_vis ADD CONSTRAINT don_vis_loai_don_vi_check CHECK (loai_don_vi IN ('Đào tạo', 'Quản lý'))");
 
         DB::statement('ALTER TABLE nganh_dao_taos DROP CONSTRAINT IF EXISTS nganh_dao_taos_he_dao_tao_check');
-        DB::statement("UPDATE nganh_dao_taos SET he_dao_tao = 'Chính quy' WHERE he_dao_tao = 'chinh_quy'");
+        DB::statement("UPDATE nganh_dao_taos SET he_dao_tao = 'Đại học Chính quy' WHERE he_dao_tao = 'chinh_quy'");
         DB::statement("UPDATE nganh_dao_taos SET he_dao_tao = 'Vừa học vừa làm' WHERE he_dao_tao = 'vua_hoc_vua_lam'");
         DB::statement("UPDATE nganh_dao_taos SET he_dao_tao = 'Đào tạo từ xa' WHERE he_dao_tao = 'dao_tao_tu_xa'");
-        DB::statement("ALTER TABLE nganh_dao_taos ADD CONSTRAINT nganh_dao_taos_he_dao_tao_check CHECK (he_dao_tao IN ('Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'))");
+        DB::statement("ALTER TABLE nganh_dao_taos ADD CONSTRAINT nganh_dao_taos_he_dao_tao_check CHECK (he_dao_tao IN ('Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'))");
 
         DB::statement('ALTER TABLE sinh_viens DROP CONSTRAINT IF EXISTS sinh_viens_he_dao_tao_check');
-        DB::statement("UPDATE sinh_viens SET he_dao_tao = 'Chính quy' WHERE he_dao_tao = 'chinh_quy'");
+        DB::statement("UPDATE sinh_viens SET he_dao_tao = 'Đại học Chính quy' WHERE he_dao_tao = 'chinh_quy'");
         DB::statement("UPDATE sinh_viens SET he_dao_tao = 'Vừa học vừa làm' WHERE he_dao_tao = 'vua_hoc_vua_lam'");
         DB::statement("UPDATE sinh_viens SET he_dao_tao = 'Đào tạo từ xa' WHERE he_dao_tao = 'dao_tao_tu_xa'");
-        DB::statement("ALTER TABLE sinh_viens ADD CONSTRAINT sinh_viens_he_dao_tao_check CHECK (he_dao_tao IS NULL OR he_dao_tao IN ('Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'))");
+        DB::statement("ALTER TABLE sinh_viens ADD CONSTRAINT sinh_viens_he_dao_tao_check CHECK (he_dao_tao IS NULL OR he_dao_tao IN ('Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'))");
     }
 
     /**
@@ -34,13 +34,13 @@ return new class extends Migration
     public function down(): void
     {
         DB::statement('ALTER TABLE sinh_viens DROP CONSTRAINT IF EXISTS sinh_viens_he_dao_tao_check');
-        DB::statement("UPDATE sinh_viens SET he_dao_tao = 'chinh_quy' WHERE he_dao_tao = 'Chính quy'");
+        DB::statement("UPDATE sinh_viens SET he_dao_tao = 'chinh_quy' WHERE he_dao_tao = 'Đại học Chính quy'");
         DB::statement("UPDATE sinh_viens SET he_dao_tao = 'vua_hoc_vua_lam' WHERE he_dao_tao = 'Vừa học vừa làm'");
         DB::statement("UPDATE sinh_viens SET he_dao_tao = 'dao_tao_tu_xa' WHERE he_dao_tao = 'Đào tạo từ xa'");
         DB::statement("ALTER TABLE sinh_viens ADD CONSTRAINT sinh_viens_he_dao_tao_check CHECK (he_dao_tao IS NULL OR he_dao_tao IN ('chinh_quy', 'vua_hoc_vua_lam', 'dao_tao_tu_xa'))");
 
         DB::statement('ALTER TABLE nganh_dao_taos DROP CONSTRAINT IF EXISTS nganh_dao_taos_he_dao_tao_check');
-        DB::statement("UPDATE nganh_dao_taos SET he_dao_tao = 'chinh_quy' WHERE he_dao_tao = 'Chính quy'");
+        DB::statement("UPDATE nganh_dao_taos SET he_dao_tao = 'chinh_quy' WHERE he_dao_tao = 'Đại học Chính quy'");
         DB::statement("UPDATE nganh_dao_taos SET he_dao_tao = 'vua_hoc_vua_lam' WHERE he_dao_tao = 'Vừa học vừa làm'");
         DB::statement("UPDATE nganh_dao_taos SET he_dao_tao = 'dao_tao_tu_xa' WHERE he_dao_tao = 'Đào tạo từ xa'");
         DB::statement("ALTER TABLE nganh_dao_taos ADD CONSTRAINT nganh_dao_taos_he_dao_tao_check CHECK (he_dao_tao IN ('chinh_quy', 'vua_hoc_vua_lam', 'dao_tao_tu_xa'))");

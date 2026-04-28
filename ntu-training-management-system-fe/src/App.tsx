@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 're
 
 import AuthPage from './app/pages/auth/AuthPage'
 import AdminLayout from './app/layout/admin/AdminLayout.tsx'
+import AdminAccountPage from './app/pages/admin/account/AdminAccountPage.tsx'
 import AdminDashboardPage from './app/pages/admin/dashboard/AdminDashboardPage.tsx'
 import AdminConfigurationPage from './app/pages/admin/configuration/AdminConfigurationPage.tsx'
 import AdminAccountPage from './app/pages/admin/account/AdminAccountPage.tsx'
@@ -124,6 +125,7 @@ function AppShell() {
           }
         >
           <Route index element={<AdminDashboardPage />} />
+          <Route path="taikhoan" element={<AdminAccountPage />} />
           <Route path="cauhinh" element={<AdminConfigurationPage />} />
           <Route path="taikhoan" element={<AdminAccountPage />} />
           <Route path="lop" element={<AdminClassPage />} />

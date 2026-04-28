@@ -7,9 +7,6 @@ use Illuminate\Database\Seeder;
 
 class DonViSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $donVis = [
@@ -61,12 +58,12 @@ class DonViSeeder extends Seeder
         ];
 
         foreach ($donVis as $donVi) {
-            DonVi::firstOrCreate(
+            DonVi::query()->updateOrCreate(
                 ['ma_don_vi' => $donVi['ma_don_vi']],
-                $donVi
+                $donVi,
             );
         }
 
-        $this->command->info('✓ 9 đơn vị đã được thêm vào hệ thống.');
+        $this->command->info('✓ 9 đơn vị đã được cập nhật.');
     }
 }

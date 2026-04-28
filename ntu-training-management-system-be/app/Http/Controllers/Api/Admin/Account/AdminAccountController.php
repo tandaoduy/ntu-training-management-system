@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin\Account;
 use App\Http\Controllers\Controller;
 use App\Models\DonVi;
 use App\Models\Lop;
+use App\Models\NganhDaoTao;
 use App\Models\User;
 use App\Services\Admin\AccountProvisioningService;
 use Illuminate\Http\JsonResponse;
@@ -62,6 +63,12 @@ class AdminAccountController extends Controller
             ->get()
             ->groupBy('don_vi_id');
 
+        $nganhDaoTaosByDonViId = NganhDaoTao::query()
+            ->select(['id', 'ma_nganh', 'ten_nganh', 'don_vi_id', 'he_dao_tao'])
+            ->orderBy('ma_nganh')
+            ->get()
+            ->groupBy('don_vi_id');
+
         $donVis = DonVi::query()
             ->select(['id', 'ma_don_vi', 'ten_don_vi', 'loai_don_vi'])
             ->orderBy('ma_don_vi')
@@ -72,6 +79,7 @@ class AdminAccountController extends Controller
                 'ten_don_vi' => $donVi->ten_don_vi,
                 'loai_don_vi' => $donVi->loai_don_vi,
                 'lops' => $lopsByDonViId->get($donVi->id, collect())->values(),
+                'nganh_dao_taos' => $nganhDaoTaosByDonViId->get($donVi->id, collect())->values(),
             ])
             ->values();
 
@@ -98,10 +106,15 @@ class AdminAccountController extends Controller
             'ma_lop' => ['nullable', 'string', 'max:100'],
             'lop_id' => ['nullable', 'integer', 'exists:lops,id'],
             'don_vi_id' => ['nullable', 'integer', 'exists:don_vis,id'],
-            'nganh_dao_tao_id' => ['nullable', 'integer', 'exists:nganh_dao_taos,id'],
+            'nganh_dao_tao_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('nganh_dao_taos', 'id')
+                    ->where(fn ($query) => $query->where('don_vi_id', $request->input('don_vi_id'))),
+            ],
             'ten_don_vi' => ['nullable', 'string', 'max:255'],
             'ten_nganh_hoc' => ['nullable', 'string', 'max:255'],
-            'he_dao_tao' => ['nullable', Rule::in(['Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
+            'he_dao_tao' => ['nullable', Rule::in(['Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
             'so_cccd' => ['nullable', 'string', 'max:20'],
             'ngay_cap_cccd' => ['nullable', 'date'],
             'noi_cap_cccd' => ['nullable', 'string', 'max:255'],
@@ -129,7 +142,7 @@ class AdminAccountController extends Controller
 
     public function storeStudent(Request $request): JsonResponse
     {
-        $payload = $request->validate($this->studentRules());
+        $payload = $request->validate($this->studentRules($request));
         $user = $this->accountProvisioningService->createStudentAccount($payload);
 
         // Handle image upload if provided
@@ -196,7 +209,7 @@ class AdminAccountController extends Controller
             'profile.chuc_danh' => ['nullable', 'string', 'max:255'],
             'profile.ma_lop' => ['nullable', 'string', 'max:100'],
             'profile.lop_id' => ['nullable', 'integer', 'exists:lops,id'],
-            'profile.he_dao_tao' => ['nullable', Rule::in(['Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
+            'profile.he_dao_tao' => ['nullable', Rule::in(['Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
             'profile.so_cccd' => ['nullable', 'string', 'max:20'],
             'profile.ngay_cap_cccd' => ['nullable', 'date'],
             'profile.noi_cap_cccd' => ['nullable', 'string', 'max:255'],
@@ -351,17 +364,22 @@ class AdminAccountController extends Controller
         ];
     }
 
-    private function studentRules(): array
+    private function studentRules(Request $request): array
     {
         return [
             ...$this->baseCreateRules(),
             'ten_sinh_vien' => ['required', 'string', 'max:255'],
             'ma_lop' => ['nullable', 'string', 'max:100'],
             'lop_id' => ['nullable', 'integer', 'exists:lops,id'],
-            'nganh_dao_tao_id' => ['nullable', 'integer', 'exists:nganh_dao_taos,id'],
+            'nganh_dao_tao_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('nganh_dao_taos', 'id')
+                    ->where(fn ($query) => $query->where('don_vi_id', $request->input('don_vi_id'))),
+            ],
             'ten_nganh_hoc' => ['nullable', 'string', 'max:255'],
             'ten_don_vi' => ['nullable', 'string', 'max:255'],
-            'he_dao_tao' => ['nullable', Rule::in(['Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
+            'he_dao_tao' => ['nullable', Rule::in(['Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
             'noi_sinh' => ['nullable', 'string', 'max:255'],
             'so_cccd' => ['nullable', 'string', 'max:20'],
             'ngay_cap_cccd' => ['nullable', 'date'],

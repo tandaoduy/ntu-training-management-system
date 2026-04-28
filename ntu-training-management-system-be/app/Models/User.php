@@ -79,6 +79,32 @@ class User extends Authenticatable
         return $this->hasOne(EmailVerification::class);
     }
 
+    public function profileName(): ?string
+    {
+        $this->syncProfileFromRole();
+
+        $profile = $this->relationLoaded('profile')
+            ? $this->profile
+            : $this->profile()->first();
+
+        if (! $profile) {
+            return null;
+        }
+
+        // Get the display name based on profile type
+        $nameAttribute = match ($this->role?->code) {
+            'student' => 'ten_sinh_vien',
+            'lecturer' => 'ten_giang_vien',
+            'training_officer' => 'ten_chuyen_vien',
+            'manager' => 'ten_nguoi_quan_ly',
+            default => 'name',
+        };
+
+        $name = trim((string) ($profile->getAttribute($nameAttribute) ?? ''));
+
+        return $name !== '' ? $name : null;
+    }
+
     public function profileEmail(): ?string
     {
         $this->syncProfileFromRole();

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, FormEvent, ReactNode } from 'react'
 
 import { apiGet, apiPost } from '../../../../api/core/request'
@@ -40,12 +40,21 @@ interface LopOption {
   ten_don_vi: string
 }
 
+interface NganhDaoTaoOption {
+  id: number
+  ma_nganh: string
+  ten_nganh: string
+  don_vi_id: number | null
+  he_dao_tao: string
+}
+
 interface DonViOption {
   id: number
   ma_don_vi: string
   ten_don_vi: string
   loai_don_vi: string
   lops: LopOption[]
+  nganh_dao_taos: NganhDaoTaoOption[]
 }
 
 interface StudentCatalogResponse {
@@ -65,6 +74,7 @@ interface NewAccountState {
   lopId: string
   maLop: string
   tenDonVi: string
+  nganhDaoTaoId: string
   tenNganhHoc: string
   heDaoTao: string
   soCccd: string
@@ -91,8 +101,9 @@ const EMPTY_ACCOUNT: NewAccountState = {
   lopId: '',
   maLop: '',
   tenDonVi: '',
+  nganhDaoTaoId: '',
   tenNganhHoc: '',
-  heDaoTao: 'Chính quy',
+  heDaoTao: 'Đại học Chính quy',
   soCccd: '',
   noiSinh: '',
   ngayCapCccd: '',
@@ -162,7 +173,7 @@ export default function AdminAccountPage() {
   const [donVis, setDonVis] = useState<DonViOption[]>([])
   const [isCatalogLoading, setIsCatalogLoading] = useState(false)
 
-  const loadAccounts = async () => {
+  const loadAccounts = useCallback(async () => {
     setIsLoading(true)
 
     try {
@@ -177,13 +188,13 @@ export default function AdminAccountPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [showAlert])
 
   useEffect(() => {
     void loadAccounts()
-  }, [])
+  }, [loadAccounts])
 
-  const loadStudentCatalog = async () => {
+  const loadStudentCatalog = useCallback(async () => {
     setIsCatalogLoading(true)
 
     try {
@@ -198,13 +209,13 @@ export default function AdminAccountPage() {
     } finally {
       setIsCatalogLoading(false)
     }
-  }
+  }, [showAlert])
 
   useEffect(() => {
     if (showModal && selectedRole === 'student') {
       void loadStudentCatalog()
     }
-  }, [showModal, selectedRole])
+  }, [loadStudentCatalog, showModal, selectedRole])
 
   const accountCounts = useMemo(() => {
     return ROLES.reduce<Record<RoleId, number>>((acc, role) => {
@@ -224,6 +235,9 @@ export default function AdminAccountPage() {
     : []
   const selectedDonVi = donVis.find((donVi) => String(donVi.id) === newAccount.donViId)
   const selectedLop = selectedDonVi?.lops.find((lop) => String(lop.id) === newAccount.lopId)
+  const selectedNganhDaoTao = selectedDonVi?.nganh_dao_taos.find(
+    (nganhDaoTao) => String(nganhDaoTao.id) === newAccount.nganhDaoTaoId,
+  )
 
   const handleCreateAccount = async (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault()
@@ -245,9 +259,10 @@ export default function AdminAccountPage() {
         ngay_sinh: selectedRole === 'student' ? newAccount.ngaySinh || null : undefined,
         don_vi_id: selectedRole === 'student' ? Number(newAccount.donViId) || null : undefined,
         lop_id: selectedRole === 'student' ? Number(newAccount.lopId) || null : undefined,
+        nganh_dao_tao_id: selectedRole === 'student' ? Number(newAccount.nganhDaoTaoId) || null : undefined,
         ma_lop: selectedRole === 'student' ? selectedLop?.ma_khoi ?? null : undefined,
         ten_don_vi: selectedRole === 'student' ? selectedDonVi?.ten_don_vi ?? null : undefined,
-        ten_nganh_hoc: selectedRole === 'student' ? newAccount.tenNganhHoc.trim() || null : undefined,
+        ten_nganh_hoc: selectedRole === 'student' ? selectedNganhDaoTao?.ten_nganh ?? null : undefined,
         he_dao_tao: selectedRole === 'student' ? newAccount.heDaoTao || null : undefined,
         so_cccd: selectedRole === 'student' ? newAccount.soCccd.trim() || null : undefined,
         noi_sinh: selectedRole === 'student' ? newAccount.noiSinh.trim() || null : undefined,
@@ -491,6 +506,8 @@ export default function AdminAccountPage() {
                             lopId: '',
                             maLop: '',
                             tenDonVi: donVi?.ten_don_vi ?? '',
+                            nganhDaoTaoId: '',
+                            tenNganhHoc: '',
                           })
                         }}
                         disabled={isCatalogLoading}
@@ -537,13 +554,36 @@ export default function AdminAccountPage() {
                     </div>
                     <div className="aa-form-group">
                       <label>Tên ngành học</label>
-                      <input
-                        type="text"
+                      <select
                         className="aa-input"
-                        placeholder="VD: Công nghệ thông tin"
-                        value={newAccount.tenNganhHoc}
-                        onChange={(event) => setNewAccount({ ...newAccount, tenNganhHoc: event.target.value })}
-                      />
+                        value={newAccount.nganhDaoTaoId}
+                        onChange={(event) => {
+                          const nganhDaoTao = selectedDonVi?.nganh_dao_taos.find(
+                            (item) => String(item.id) === event.target.value,
+                          )
+
+                          setNewAccount({
+                            ...newAccount,
+                            nganhDaoTaoId: event.target.value,
+                            tenNganhHoc: nganhDaoTao?.ten_nganh ?? '',
+                            heDaoTao: nganhDaoTao?.he_dao_tao ?? newAccount.heDaoTao,
+                          })
+                        }}
+                        disabled={!newAccount.donViId || isCatalogLoading}
+                      >
+                        <option value="">
+                          {!newAccount.donViId
+                            ? 'Chọn đơn vị trước'
+                            : selectedDonVi?.nganh_dao_taos.length
+                              ? 'Chọn ngành học'
+                              : 'Đơn vị này chưa có ngành'}
+                        </option>
+                        {selectedDonVi?.nganh_dao_taos.map((nganhDaoTao) => (
+                          <option key={nganhDaoTao.id} value={nganhDaoTao.id}>
+                            {nganhDaoTao.ma_nganh} - {nganhDaoTao.ten_nganh}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="aa-form-group">
                       <label>Hệ đào tạo</label>
@@ -552,7 +592,7 @@ export default function AdminAccountPage() {
                         value={newAccount.heDaoTao}
                         onChange={(event) => setNewAccount({ ...newAccount, heDaoTao: event.target.value })}
                       >
-                        <option value="Chính quy">Đại học và Cao đẳng chính quy</option>
+                        <option value="Đại học Chính quy">Đại học Chính quy</option>
                         <option value="Vừa học vừa làm">Vừa học vừa làm</option>
                         <option value="Đào tạo từ xa">Đào tạo từ xa</option>
                       </select>

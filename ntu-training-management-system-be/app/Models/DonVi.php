@@ -35,4 +35,9 @@ class DonVi extends Model
     {
         return $this->hasMany(Lop::class, 'don_vi_id');
     }
+
+    public function nganhDaoTaos(): HasMany
+    {
+        return $this->hasMany(NganhDaoTao::class, 'don_vi_id');
+    }
 }

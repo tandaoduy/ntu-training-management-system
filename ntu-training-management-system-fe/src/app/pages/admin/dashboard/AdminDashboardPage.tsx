@@ -11,7 +11,6 @@ const stats = [
 
 const quickAccessLinks = [
   { label: 'Quản lý người dùng', icon: '👤', colorClass: 'blue', link: '/quantri/taikhoan' },
-  { label: 'Quản lý lớp', icon: '🏫', colorClass: 'emerald', link: '/quantri/lop' },
   { label: 'Phân quyền hệ thống', icon: '🔑', colorClass: 'purple', link: '/admin/roles' },
   { label: 'Quản lý phòng ban', icon: '🏢', colorClass: 'cyan', link: '/admin/departments' },
   { label: 'Cấu hình hệ thống', icon: '⚙️', colorClass: 'gray', link: '/quantri/cauhinh' },

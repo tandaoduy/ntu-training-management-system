@@ -7,7 +7,6 @@ use App\Models\DonVi;
 use App\Models\Lop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class LopController extends Controller
 {
@@ -30,20 +29,22 @@ class LopController extends Controller
                 $keyword = trim((string) $payload['q']);
 
                 if ($keyword !== '') {
-                    $query->where(function ($classQuery) use ($keyword): void {
-                        $classQuery
+                    $query->where(function ($subQuery) use ($keyword): void {
+                        $subQuery
                             ->where('lop_hoc_phan', 'like', "%{$keyword}%")
                             ->orWhere('ma_khoi', 'like', "%{$keyword}%")
-                            ->orWhere('ten_khoi', 'like', "%{$keyword}%")
                             ->orWhere('ma_don_vi', 'like', "%{$keyword}%")
                             ->orWhere('ten_don_vi', 'like', "%{$keyword}%");
                     });
                 }
             })
+            ->orderBy('ma_don_vi')
             ->orderBy('ma_khoi')
-            ->get();
+            ->get()
+            ->map(fn (Lop $lop): array => $this->toPayload($lop))
+            ->values();
 
-        return $this->jsonResponse(['data' => $lops->map(fn (Lop $lop) => $this->toPayload($lop))->values()->all()]);
+        return $this->jsonResponse(['data' => $lops->all()]);
     }
 
     public function donVis(): JsonResponse
@@ -53,9 +54,7 @@ class LopController extends Controller
             ->orderBy('ma_don_vi')
             ->get();
 
-        return $this->jsonResponse([
-            'data' => $donVis,
-        ]);
+        return $this->jsonResponse(['data' => $donVis->all()]);
     }
 
     public function store(Request $request): JsonResponse
@@ -64,37 +63,24 @@ class LopController extends Controller
             'don_vi_id' => ['required', 'integer', 'exists:don_vis,id'],
             'lop_hoc_phan' => ['required', 'string', 'max:255'],
             'ma_khoi' => ['required', 'string', 'max:100'],
-            'ten_khoi' => ['nullable', 'string', 'max:255'],
-            'mo_hinh_dao_tao' => ['sometimes', 'string', 'max:50'],
-            'trang_thai' => ['sometimes', 'boolean'],
         ]);
 
         $donVi = DonVi::query()->findOrFail($payload['don_vi_id']);
 
-        $attributes = [
-            'don_vi_id' => $payload['don_vi_id'],
+        $lop = Lop::query()->create([
+            'don_vi_id' => $donVi->id,
             'lop_hoc_phan' => trim($payload['lop_hoc_phan']),
             'si_so' => 0,
-            'mo_hinh_dao_tao' => trim((string) ($payload['mo_hinh_dao_tao'] ?? '')) ?: 'Tín chỉ',
+            'mo_hinh_dao_tao' => 'Theo tín chỉ',
             'ma_khoi' => trim($payload['ma_khoi']),
-            'ten_khoi' => trim((string) ($payload['ten_khoi'] ?? '')) ?: trim($payload['ma_khoi']),
+            'ten_khoi' => trim($payload['ma_khoi']),
             'ma_don_vi' => $donVi->ma_don_vi,
             'ten_don_vi' => $donVi->ten_don_vi,
-            'trang_thai' => (bool) ($payload['trang_thai'] ?? true),
-        ];
-
-        if (Schema::hasColumn('lops', 'ma_lop')) {
-            $attributes['ma_lop'] = $attributes['lop_hoc_phan'];
-        }
-
-        if (Schema::hasColumn('lops', 'ten_lop')) {
-            $attributes['ten_lop'] = $attributes['ten_khoi'];
-        }
-
-        $lop = Lop::query()->create($attributes);
+            'trang_thai' => true,
+        ]);
 
         return $this->jsonResponse([
-            'message' => 'Đã tạo lớp hành chính thành công',
+            'message' => 'Đã tạo lớp thành công',
             'data' => $this->toPayload($lop->fresh('donVi')),
         ], 201);
     }
@@ -105,31 +91,18 @@ class LopController extends Controller
             'don_vi_id' => ['required', 'integer', 'exists:don_vis,id'],
             'lop_hoc_phan' => ['required', 'string', 'max:255'],
             'ma_khoi' => ['required', 'string', 'max:100'],
-            'ten_khoi' => ['nullable', 'string', 'max:255'],
-            'trang_thai' => ['sometimes', 'boolean'],
         ]);
 
         $donVi = DonVi::query()->findOrFail($payload['don_vi_id']);
 
         $lop->fill([
-            'don_vi_id' => $payload['don_vi_id'],
+            'don_vi_id' => $donVi->id,
             'lop_hoc_phan' => trim($payload['lop_hoc_phan']),
             'ma_khoi' => trim($payload['ma_khoi']),
-            'ten_khoi' => trim((string) ($payload['ten_khoi'] ?? '')) ?: trim($payload['ma_khoi']),
+            'ten_khoi' => trim($payload['ma_khoi']),
             'ma_don_vi' => $donVi->ma_don_vi,
             'ten_don_vi' => $donVi->ten_don_vi,
-            'trang_thai' => (bool) ($payload['trang_thai'] ?? $lop->trang_thai),
-        ]);
-
-        if (Schema::hasColumn('lops', 'ma_lop')) {
-            $lop->setAttribute('ma_lop', $lop->lop_hoc_phan);
-        }
-
-        if (Schema::hasColumn('lops', 'ten_lop')) {
-            $lop->setAttribute('ten_lop', $lop->ten_khoi);
-        }
-
-        $lop->save();
+        ])->save();
 
         return $this->jsonResponse([
             'message' => 'Đã cập nhật lớp thành công',
@@ -142,24 +115,16 @@ class LopController extends Controller
         $lop->forceFill(['trang_thai' => ! $lop->trang_thai])->save();
 
         return $this->jsonResponse([
-            'message' => $lop->trang_thai ? 'Đã mở khóa lớp' : 'Đã khóa lớp',
+            'message' => 'Đã cập nhật trạng thái lớp',
             'data' => $this->toPayload($lop->fresh('donVi')),
         ]);
     }
 
     public function destroy(Lop $lop): JsonResponse
     {
-        if ($lop->sinhViens()->exists()) {
-            return $this->jsonResponse([
-                'message' => 'Không thể xóa lớp vì đã có sinh viên thuộc lớp này.',
-            ], 422);
-        }
-
         $lop->delete();
 
-        return $this->jsonResponse([
-            'message' => 'Đã xóa lớp thành công',
-        ]);
+        return $this->jsonResponse(['message' => 'Đã xóa lớp thành công']);
     }
 
     private function toPayload(Lop $lop): array
@@ -176,10 +141,8 @@ class LopController extends Controller
             'ten_khoi' => $lop->ten_khoi,
             'ma_don_vi' => $lop->ma_don_vi,
             'ten_don_vi' => $lop->ten_don_vi,
-            'trang_thai' => (bool) $lop->trang_thai,
+            'trang_thai' => $lop->trang_thai,
             'don_vi' => $lop->donVi,
-            'created_at' => $lop->created_at,
-            'updated_at' => $lop->updated_at,
         ];
     }
 }

@@ -6,27 +6,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Lop extends Model
+class NganhDaoTao extends Model
 {
     use HasFactory;
 
-    protected $table = 'lops';
+    protected $table = 'nganh_dao_taos';
 
     protected $fillable = [
+        'ma_nganh',
+        'ten_nganh',
         'don_vi_id',
-        'lop_hoc_phan',
-        'si_so',
-        'mo_hinh_dao_tao',
-        'ma_khoi',
-        'ten_khoi',
-        'ma_don_vi',
-        'ten_don_vi',
-        'trang_thai',
-    ];
-
-    protected $casts = [
-        'si_so' => 'integer',
-        'trang_thai' => 'boolean',
+        'he_dao_tao',
     ];
 
     public function donVi(): BelongsTo
