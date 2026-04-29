@@ -9,6 +9,7 @@ use App\Models\QuanLy;
 use App\Models\Role;
 use App\Models\SinhVien;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Seeder;
 
 class RolePermissionSeeder extends Seeder
@@ -46,6 +47,7 @@ class RolePermissionSeeder extends Seeder
             ['code' => 'student.grade.view', 'name' => 'Xem diem', 'module' => 'student'],
             ['code' => 'student.enrollment.view', 'name' => 'Xem dang ky hoc phan', 'module' => 'student'],
             ['code' => 'student.enrollment.edit', 'name' => 'Dang ky hoc phan', 'module' => 'student'],
+            ['code' => 'admin.account.manage', 'name' => 'Quan ly tai khoan nguoi dung', 'module' => 'admin'],
             ['code' => 'admin.academic-term.manage', 'name' => 'Quan ly nam hoc hoc ky', 'module' => 'admin'],
             ['code' => 'admin.window.manage', 'name' => 'Quan ly cua so thoi gian hoc vu', 'module' => 'admin'],
             ['code' => 'admin.grade-entry.lock.manage', 'name' => 'Khoa mo nhap diem theo hoc ky', 'module' => 'admin'],
@@ -70,24 +72,51 @@ class RolePermissionSeeder extends Seeder
         $studentPermissionIds = Permission::query()->where('module', 'student')->pluck('id');
         $studentRole->permissions()->sync($studentPermissionIds);
         $adminRole->permissions()->sync(Permission::query()->pluck('id'));
+        Cache::forget(sprintf('role_permissions:%d', $studentRole->id));
+        Cache::forget(sprintf('role_permissions:%d', $adminRole->id));
 
-        User::query()->updateOrCreate(
-            ['username' => '65133141'],
-            [
-                'password' => bcrypt(self::DEFAULT_PASSWORD),
-                'role_id' => $studentRole->id,
-                'status' => true,
-            ],
-        );
+        User::query()
+            ->whereIn('username', ['65130001', '65133414'])
+            ->where('role_id', $studentRole->id)
+            ->delete();
 
-        SinhVien::query()->updateOrCreate(
-            ['user_id' => '65133141'],
+        $studentAccounts = [
             [
-                'ten_sinh_vien' => 'Sinh vien 65133141',
-                'ma_lop' => '65.CNTT-1',
-                'email' => '65133141@students.ntu.edu.vn',
+                'username' => '65133141',
+                'ten_sinh_vien' => 'Đào Duy Tấn',
+                'email' => 'tan.dd.65cntt@ntu.edu.vn',
             ],
-        );
+            [
+                'username' => '65131708',
+                'ten_sinh_vien' => 'Lê Kim Linh',
+                'email' => 'linh.lk.65cntt@ntu.edu.vn',
+            ],
+        ];
+
+        foreach ($studentAccounts as $studentAccount) {
+            $user = User::query()->updateOrCreate(
+                ['username' => $studentAccount['username']],
+                [
+                    'password' => bcrypt(self::DEFAULT_PASSWORD),
+                    'role_id' => $studentRole->id,
+                    'status' => true,
+                ],
+            );
+
+            $profile = SinhVien::query()->updateOrCreate(
+                ['user_id' => $studentAccount['username']],
+                [
+                    'ten_sinh_vien' => $studentAccount['ten_sinh_vien'],
+                    'ma_lop' => '65.CNTT-1',
+                    'email' => $studentAccount['email'],
+                ],
+            );
+
+            $user->forceFill([
+                'profile_id' => $profile->id,
+                'profile_type' => SinhVien::class,
+            ])->save();
+        }
 
         User::query()->updateOrCreate(
             ['username' => '2025001'],

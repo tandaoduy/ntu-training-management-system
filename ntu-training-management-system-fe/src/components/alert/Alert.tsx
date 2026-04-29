@@ -65,7 +65,7 @@ export default function Alert({
 
   return (
     <div
-      className={`rounded-lg p-4 transition-all duration-300 ease-out will-change-transform ${motionClass} ${styles.container} ${className}`}
+      className={`pointer-events-auto rounded-lg p-4 transition-all duration-300 ease-out will-change-transform ${motionClass} ${styles.container} ${className}`}
       role="alert"
     >
       <div className="flex items-start gap-3">

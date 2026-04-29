@@ -85,12 +85,6 @@ export default function StudentDashboardPage() {
     if (!user) {
       void me()
     }
-    
-    // Đọc cấu hình hệ thống từ localStorage
-    const savedYear = localStorage.getItem('sys_academic_year')
-    const savedSemester = localStorage.getItem('sys_semester')
-    if (savedYear) setSysAcademicYear(savedYear)
-    if (savedSemester) setSysSemester(savedSemester)
   }, [me, user])
 
   useEffect(() => {

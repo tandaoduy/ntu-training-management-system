@@ -6,6 +6,8 @@ import AdminAccountPage from './app/pages/admin/account/AdminAccountPage.tsx'
 import AdminClassPage from './app/pages/admin/classes/AdminClassPage.tsx'
 import AdminDashboardPage from './app/pages/admin/dashboard/AdminDashboardPage.tsx'
 import AdminConfigurationPage from './app/pages/admin/configuration/AdminConfigurationPage.tsx'
+import AdminAccountPage from './app/pages/admin/account/AdminAccountPage.tsx'
+import AdminClassPage from './app/pages/admin/class/AdminClassPage.tsx'
 import LecturerDashboardPage from './app/pages/lecturer/dashboard/LecturerDashboardPage.tsx'
 import ManagerDashboardPage from './app/pages/manager/dashboard/ManagerDashboardPage.tsx'
 import DashboardStudentPage from './app/pages/student/dashboard/StudentDashboardPage'
@@ -127,6 +129,8 @@ function AppShell() {
           <Route path="taikhoan" element={<AdminAccountPage />} />
           <Route path="lophoc" element={<AdminClassPage />} />
           <Route path="cauhinh" element={<AdminConfigurationPage />} />
+          <Route path="taikhoan" element={<AdminAccountPage />} />
+          <Route path="lop" element={<AdminClassPage />} />
         </Route>
         <Route
           path="/component-test"
