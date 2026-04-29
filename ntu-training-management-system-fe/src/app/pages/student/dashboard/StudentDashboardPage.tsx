@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { apiGet } from '../../../../api/core/request'
 import { useAuth } from '../../../../api/query'
 import logoImage from '../../../../assets/Logo_NTU.png'
 import './StudentDashboardPage.css'
@@ -63,12 +64,21 @@ const statusLabel: Record<string, string> = {
   active: 'Đang học',
 }
 
+interface StudentDashboardResponse {
+  student?: {
+    ten_sinh_vien?: string | null
+    he_dao_tao?: string | null
+  } | null
+}
+
 export default function StudentDashboardPage() {
   const navigate = useNavigate()
   const { user, logout, me } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [sysAcademicYear, setSysAcademicYear] = useState('2025-2026')
   const [sysSemester, setSysSemester] = useState('2')
+  const [studentName, setStudentName] = useState<string | null>(null)
+  const [educationSystem, setEducationSystem] = useState<string | null>(null)
 
   // Lấy thông tin user khi vào trang
   useEffect(() => {
@@ -83,23 +93,44 @@ export default function StudentDashboardPage() {
     if (savedSemester) setSysSemester(savedSemester)
   }, [me, user])
 
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchStudentDashboard = async () => {
+      try {
+        const response = await apiGet<StudentDashboardResponse>('/student/dashboard')
+        const name = response.student?.ten_sinh_vien?.trim() || null
+        const heDaoTao = response.student?.he_dao_tao?.trim() || null
+
+        if (!isMounted) {
+          return
+        }
+
+        setStudentName(name)
+        setEducationSystem(heDaoTao)
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setStudentName(null)
+        setEducationSystem(null)
+      }
+    }
+
+    void fetchStudentDashboard()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
   }
 
-  // Helper giả lập truy vấn tên sinh viên từ mã sinh viên
-  const getStudentName = (code?: string) => {
-    if (!code) return 'Sinh viên'
-    const studentDb: Record<string, string> = {
-      '65133141': 'Nguyễn Văn A',
-      '65133142': 'Trần Thị B',
-      '65133143': 'Lê Văn C',
-    }
-    return studentDb[code] || `Sinh viên (${code})`
-  }
-
-  const displayName = getStudentName(user?.username)
+  const displayName = studentName || user?.name?.trim() || 'Sinh viên'
 
   return (
     <div className="sd-root">
@@ -127,7 +158,7 @@ export default function StudentDashboardPage() {
           <div className="sd-academic-left">
             <div className="sd-academic-badge">
               <span className="sd-academic-label">Hệ đào tạo:</span>
-              <span className="sd-academic-value">{(user as any)?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
+              <span className="sd-academic-value">{educationSystem || user?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
             </div>
             <div className="sd-academic-dot"></div>
             <div className="sd-academic-badge">
@@ -172,7 +203,6 @@ export default function StudentDashboardPage() {
         {/* Greeting */}
         <div className="sd-greeting">
           <h1>Xin chào, {displayName} 👋</h1>
-          <p>Chào mừng bạn đến với hệ thống quản lý đào tạo Trường Đại học Nha Trang.</p>
         </div>
 
         {/* Quick Access */}

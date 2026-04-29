@@ -1,7 +1,9 @@
 export interface AuthUser {
   id: number;
   username: string;
+  name?: string | null;
   role: string | null;
+  educationSystem?: string | null;
 }
 
 export interface LoginRequest {
@@ -18,7 +20,9 @@ export interface LoginResponse {
 export interface CurrentUserResponse {
   id: number | null;
   username: string | null;
+  name?: string | null;
   role: string | null;
+  education_system?: string | null;
 }
 
 export interface ChangePasswordRequest {

@@ -62,7 +62,9 @@ class LopController extends Controller
         $payload = $request->validate([
             'don_vi_id' => ['required', 'integer', 'exists:don_vis,id'],
             'lop_hoc_phan' => ['required', 'string', 'max:255'],
+            'mo_hinh_dao_tao' => ['nullable', 'string', 'max:100'],
             'ma_khoi' => ['required', 'string', 'max:100'],
+            'ten_khoi' => ['nullable', 'string', 'max:255'],
         ]);
 
         $donVi = DonVi::query()->findOrFail($payload['don_vi_id']);
@@ -71,9 +73,9 @@ class LopController extends Controller
             'don_vi_id' => $donVi->id,
             'lop_hoc_phan' => trim($payload['lop_hoc_phan']),
             'si_so' => 0,
-            'mo_hinh_dao_tao' => 'Theo tín chỉ',
+            'mo_hinh_dao_tao' => trim($payload['mo_hinh_dao_tao'] ?? 'Tín chỉ') ?: 'Tín chỉ',
             'ma_khoi' => trim($payload['ma_khoi']),
-            'ten_khoi' => trim($payload['ma_khoi']),
+            'ten_khoi' => trim($payload['ten_khoi'] ?? $payload['ma_khoi']),
             'ma_don_vi' => $donVi->ma_don_vi,
             'ten_don_vi' => $donVi->ten_don_vi,
             'trang_thai' => true,
@@ -90,7 +92,9 @@ class LopController extends Controller
         $payload = $request->validate([
             'don_vi_id' => ['required', 'integer', 'exists:don_vis,id'],
             'lop_hoc_phan' => ['required', 'string', 'max:255'],
+            'mo_hinh_dao_tao' => ['nullable', 'string', 'max:100'],
             'ma_khoi' => ['required', 'string', 'max:100'],
+            'ten_khoi' => ['nullable', 'string', 'max:255'],
         ]);
 
         $donVi = DonVi::query()->findOrFail($payload['don_vi_id']);
@@ -99,7 +103,8 @@ class LopController extends Controller
             'don_vi_id' => $donVi->id,
             'lop_hoc_phan' => trim($payload['lop_hoc_phan']),
             'ma_khoi' => trim($payload['ma_khoi']),
-            'ten_khoi' => trim($payload['ma_khoi']),
+            'ten_khoi' => trim($payload['ten_khoi'] ?? $payload['ma_khoi']),
+            'mo_hinh_dao_tao' => trim($payload['mo_hinh_dao_tao'] ?? $lop->mo_hinh_dao_tao ?: 'Tín chỉ'),
             'ma_don_vi' => $donVi->ma_don_vi,
             'ten_don_vi' => $donVi->ten_don_vi,
         ])->save();

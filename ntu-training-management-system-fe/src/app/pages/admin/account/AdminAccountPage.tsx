@@ -57,6 +57,27 @@ interface DonViOption {
   nganh_dao_taos: NganhDaoTaoOption[]
 }
 
+interface Province {
+  id: number
+  name: string
+  code: string | null
+}
+
+interface District {
+  id: number
+  province_id: number
+  name: string
+  code: string | null
+}
+
+interface ProvinceResponse {
+  data: Province[]
+}
+
+interface DistrictResponse {
+  data: District[]
+}
+
 interface StudentCatalogResponse {
   data: {
     don_vis: DonViOption[]
@@ -81,6 +102,10 @@ interface NewAccountState {
   noiSinh: string
   ngayCapCccd: string
   noiCapCccd: string
+  hoKhauTinhThanhPhoId: string
+  hoKhauQuanHuyenId: string
+  queQuanTinhThanhPhoId: string
+  queQuanQuanHuyenId: string
   hoKhauTinhThanhPho: string
   hoKhauQuanHuyen: string
   queQuanTinhThanhPho: string
@@ -108,6 +133,10 @@ const EMPTY_ACCOUNT: NewAccountState = {
   noiSinh: '',
   ngayCapCccd: '',
   noiCapCccd: '',
+  hoKhauTinhThanhPhoId: '',
+  hoKhauQuanHuyenId: '',
+  queQuanTinhThanhPhoId: '',
+  queQuanQuanHuyenId: '',
   hoKhauTinhThanhPho: '',
   hoKhauQuanHuyen: '',
   queQuanTinhThanhPho: '',
@@ -161,6 +190,10 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   return fallback
 }
 
+const formatProvinceOption = (province: Province): string => {
+  return province.code ? `${province.code} - ${province.name}` : province.name
+}
+
 export default function AdminAccountPage() {
   const { showAlert } = useAlert()
   const [selectedRole, setSelectedRole] = useState<RoleId | null>(null)
@@ -172,6 +205,10 @@ export default function AdminAccountPage() {
   const [newAccount, setNewAccount] = useState<NewAccountState>(EMPTY_ACCOUNT)
   const [donVis, setDonVis] = useState<DonViOption[]>([])
   const [isCatalogLoading, setIsCatalogLoading] = useState(false)
+  const [provinces, setProvinces] = useState<Province[]>([])
+  const [hoKhauDistricts, setHoKhauDistricts] = useState<District[]>([])
+  const [queQuanDistricts, setQueQuanDistricts] = useState<District[]>([])
+  const [isProvincesLoading, setIsProvincesLoading] = useState(false)
 
   const loadAccounts = useCallback(async () => {
     setIsLoading(true)
@@ -211,11 +248,60 @@ export default function AdminAccountPage() {
     }
   }, [showAlert])
 
+  const loadProvinces = useCallback(async () => {
+    setIsProvincesLoading(true)
+    try {
+      const response = await apiGet<ProvinceResponse>('/provinces')
+      setProvinces(response.data)
+    } catch (error: unknown) {
+      showAlert({
+        title: 'Không tải được danh sách tỉnh thành',
+        message: getErrorMessage(error, 'Vui lòng thử lại sau.'),
+        variant: 'error',
+      })
+    } finally {
+      setIsProvincesLoading(false)
+    }
+  }, [showAlert])
+
+  const loadDistrictsByProvince = useCallback(
+    async (province: Province, type: 'hokhau' | 'quequan') => {
+      if (type === 'hokhau') {
+        setHoKhauDistricts([])
+      } else {
+        setQueQuanDistricts([])
+      }
+
+      try {
+        const response = await apiGet<DistrictResponse>('/districts', {
+          params: {
+            province_id: String(province.id),
+            province_code: province.code ?? '',
+            province_name: province.name,
+          },
+        })
+        if (type === 'hokhau') {
+          setHoKhauDistricts(response.data)
+        } else {
+          setQueQuanDistricts(response.data)
+        }
+      } catch (error: unknown) {
+        showAlert({
+          title: 'Không tải được danh sách xã/phường/đặc khu',
+          message: getErrorMessage(error, 'Vui lòng thử lại sau.'),
+          variant: 'error',
+        })
+      }
+    },
+    [showAlert],
+  )
+
   useEffect(() => {
     if (showModal && selectedRole === 'student') {
       void loadStudentCatalog()
+      void loadProvinces()
     }
-  }, [loadStudentCatalog, showModal, selectedRole])
+  }, [loadStudentCatalog, loadProvinces, showModal, selectedRole])
 
   const accountCounts = useMemo(() => {
     return ROLES.reduce<Record<RoleId, number>>((acc, role) => {
@@ -635,39 +721,123 @@ export default function AdminAccountPage() {
                     </div>
                     <div className="aa-form-group">
                       <label>Hộ khẩu tỉnh/thành phố</label>
-                      <input
-                        type="text"
+                      <select
                         className="aa-input"
-                        value={newAccount.hoKhauTinhThanhPho}
-                        onChange={(event) => setNewAccount({ ...newAccount, hoKhauTinhThanhPho: event.target.value })}
-                      />
+                        value={newAccount.hoKhauTinhThanhPhoId}
+                        onChange={(event) => {
+                          const selectedProvince = provinces.find((p) => String(p.id) === event.target.value)
+                          setNewAccount({
+                            ...newAccount,
+                            hoKhauTinhThanhPhoId: event.target.value,
+                            hoKhauTinhThanhPho: selectedProvince?.name || '',
+                            hoKhauQuanHuyenId: '',
+                            hoKhauQuanHuyen: '',
+                          })
+                          if (selectedProvince) {
+                            void loadDistrictsByProvince(selectedProvince, 'hokhau')
+                          } else {
+                            setHoKhauDistricts([])
+                          }
+                        }}
+                        disabled={isProvincesLoading}
+                      >
+                        <option value="">
+                          {isProvincesLoading ? 'Đang tải...' : 'Chọn tỉnh/thành phố'}
+                        </option>
+                        {provinces.map((province) => (
+                          <option key={province.id} value={province.id}>
+                            {formatProvinceOption(province)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="aa-form-group">
-                      <label>Hộ khẩu quận/huyện</label>
-                      <input
-                        type="text"
+                      <label>Hộ khẩu xã/phường/đặc khu</label>
+                      <select
                         className="aa-input"
-                        value={newAccount.hoKhauQuanHuyen}
-                        onChange={(event) => setNewAccount({ ...newAccount, hoKhauQuanHuyen: event.target.value })}
-                      />
+                        value={newAccount.hoKhauQuanHuyenId}
+                        onChange={(event) => {
+                          setNewAccount({
+                            ...newAccount,
+                            hoKhauQuanHuyenId: event.target.value,
+                            hoKhauQuanHuyen: hoKhauDistricts.find((d) => String(d.id) === event.target.value)?.name || '',
+                          })
+                        }}
+                        disabled={!newAccount.hoKhauTinhThanhPhoId || hoKhauDistricts.length === 0}
+                      >
+                        <option value="">
+                          {!newAccount.hoKhauTinhThanhPhoId
+                            ? 'Chọn tỉnh/thành phố trước'
+                            : hoKhauDistricts.length === 0
+                              ? 'Chưa có xã/phường/đặc khu'
+                              : 'Chọn xã/phường/đặc khu'}
+                        </option>
+                        {hoKhauDistricts.map((district) => (
+                          <option key={district.id} value={district.id}>
+                            {district.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="aa-form-group">
                       <label>Tỉnh/thành phố quê quán</label>
-                      <input
-                        type="text"
+                      <select
                         className="aa-input"
-                        value={newAccount.queQuanTinhThanhPho}
-                        onChange={(event) => setNewAccount({ ...newAccount, queQuanTinhThanhPho: event.target.value })}
-                      />
+                        value={newAccount.queQuanTinhThanhPhoId}
+                        onChange={(event) => {
+                          const selectedProvince = provinces.find((p) => String(p.id) === event.target.value)
+                          setNewAccount({
+                            ...newAccount,
+                            queQuanTinhThanhPhoId: event.target.value,
+                            queQuanTinhThanhPho: selectedProvince?.name || '',
+                            queQuanQuanHuyenId: '',
+                            queQuanQuanHuyen: '',
+                          })
+                          if (selectedProvince) {
+                            void loadDistrictsByProvince(selectedProvince, 'quequan')
+                          } else {
+                            setQueQuanDistricts([])
+                          }
+                        }}
+                        disabled={isProvincesLoading}
+                      >
+                        <option value="">
+                          {isProvincesLoading ? 'Đang tải...' : 'Chọn tỉnh/thành phố'}
+                        </option>
+                        {provinces.map((province) => (
+                          <option key={province.id} value={province.id}>
+                            {formatProvinceOption(province)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="aa-form-group">
-                      <label>Quận/huyện quê quán</label>
-                      <input
-                        type="text"
+                      <label>Xã/phường/đặc khu quê quán</label>
+                      <select
                         className="aa-input"
-                        value={newAccount.queQuanQuanHuyen}
-                        onChange={(event) => setNewAccount({ ...newAccount, queQuanQuanHuyen: event.target.value })}
-                      />
+                        value={newAccount.queQuanQuanHuyenId}
+                        onChange={(event) => {
+                          setNewAccount({
+                            ...newAccount,
+                            queQuanQuanHuyenId: event.target.value,
+                            queQuanQuanHuyen: queQuanDistricts.find((d) => String(d.id) === event.target.value)?.name || '',
+                          })
+                        }}
+                        disabled={!newAccount.queQuanTinhThanhPhoId || queQuanDistricts.length === 0}
+                      >
+                        <option value="">
+                          {!newAccount.queQuanTinhThanhPhoId
+                            ? 'Chọn tỉnh/thành phố trước'
+                            : queQuanDistricts.length === 0
+                              ? 'Chưa có xã/phường/đặc khu'
+                              : 'Chọn xã/phường/đặc khu'}
+                        </option>
+                        {queQuanDistricts.map((district) => (
+                          <option key={district.id} value={district.id}>
+                            {district.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="aa-form-group aa-form-group-wide">
                       <label>Quê quán</label>

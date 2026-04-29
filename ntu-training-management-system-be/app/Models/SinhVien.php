@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class SinhVien extends Model
@@ -21,6 +22,7 @@ class SinhVien extends Model
         'email',
         'so_dien_thoai',
         'ma_lop',
+        'lop_id',
         'nganh_dao_tao_id',
         'don_vi_id',
         'he_dao_tao',
@@ -45,5 +47,10 @@ class SinhVien extends Model
     public function user(): MorphOne
     {
         return $this->morphOne(User::class, 'profile');
+    }
+
+    public function lop(): BelongsTo
+    {
+        return $this->belongsTo(Lop::class, 'lop_id');
     }
 }

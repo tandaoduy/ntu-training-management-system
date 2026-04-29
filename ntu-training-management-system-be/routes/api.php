@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\Account\AdminAccountController;
 use App\Http\Controllers\Api\Admin\AcademicTerm\AcademicTermController;
 use App\Http\Controllers\Api\Admin\Classes\LopController;
 use App\Http\Controllers\Api\AcademicCatalogController;
+use App\Http\Controllers\Api\Admin\Province\ProvinceController;
 use App\Http\Controllers\Api\StudentDashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +45,9 @@ Route::middleware(['auth:sanctum', 'email.verified.profile', 'permission:student
 Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::get('/academic-catalog/nam-hocs', [AcademicCatalogController::class, 'namHocs']);
     Route::get('/academic-catalog/hoc-kys', [AcademicCatalogController::class, 'hocKys']);
+    Route::get('/provinces', [ProvinceController::class, 'provinces']);
+    Route::get('/provinces/with-districts', [ProvinceController::class, 'index']);
+    Route::get('/districts', [ProvinceController::class, 'districts']);
 });
 
 Route::middleware(['auth:sanctum', 'permission:admin.academic-term.manage'])->group(function (): void {

@@ -13,6 +13,7 @@ const quickAccessLinks = [
   { label: 'Quản lý người dùng', icon: '👤', colorClass: 'blue', link: '/quantri/taikhoan' },
   { label: 'Phân quyền hệ thống', icon: '🔑', colorClass: 'purple', link: '/admin/roles' },
   { label: 'Quản lý phòng ban', icon: '🏢', colorClass: 'cyan', link: '/admin/departments' },
+  { label: 'Quản lý lớp học', icon: '🏫', colorClass: 'orange', link: '/quantri/lophoc' },
   { label: 'Cấu hình hệ thống', icon: '⚙️', colorClass: 'gray', link: '/quantri/cauhinh' },
   { label: 'Nhật ký truy cập', icon: '📋', colorClass: 'indigo', link: '/admin/logs' },
   { label: 'Sao lưu dữ liệu', icon: '💾', colorClass: 'teal', link: '/admin/backups' },
