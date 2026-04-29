@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Admin\Account;
 
 use App\Http\Controllers\Controller;
+use App\Models\DanToc;
 use App\Models\DonVi;
 use App\Models\Lop;
 use App\Models\NganhDaoTao;
+use App\Models\TonGiao;
 use App\Models\User;
 use App\Services\Admin\AccountProvisioningService;
 use Illuminate\Http\JsonResponse;
@@ -83,9 +85,21 @@ class AdminAccountController extends Controller
             ])
             ->values();
 
+        $danTocs = DanToc::query()
+            ->select(['id', 'ten_dan_toc', 'thu_tu'])
+            ->orderBy('thu_tu')
+            ->get();
+
+        $tonGiaos = TonGiao::query()
+            ->select(['id', 'ten_ton_giao', 'thu_tu'])
+            ->orderBy('thu_tu')
+            ->get();
+
         return $this->jsonResponse([
             'data' => [
                 'don_vis' => $donVis,
+                'dan_tocs' => $danTocs,
+                'ton_giaos' => $tonGiaos,
             ],
         ]);
     }
@@ -94,10 +108,37 @@ class AdminAccountController extends Controller
     {
         $payload = $request->validate([
             'role' => ['required', Rule::in(['student', 'lecturer', 'manager', 'training_officer'])],
-            'username' => ['required', 'string', 'max:50'],
+            'username' => [
+                'required',
+                'string',
+                'max:50',
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if ($request->input('role') === 'student' && ! preg_match('/^\d{8}$/', (string) $value)) {
+                        $fail('MSSV phải gồm đúng 8 chữ số.');
+                    }
+                },
+            ],
             'password' => ['sometimes', 'string', 'min:6'],
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! preg_match('/^[\p{L}\s]+$/u', trim((string) $value))) {
+                        $fail('Họ và tên chỉ được gồm chữ cái và khoảng trắng.');
+                    }
+                },
+            ],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value && ! str_ends_with(mb_strtolower((string) $value, 'UTF-8'), '@ntu.edu.vn')) {
+                        $fail('Email liên hệ phải thuộc tên miền @ntu.edu.vn.');
+                    }
+                },
+            ],
             'phone' => ['nullable', 'string', 'max:20'],
             'status' => ['sometimes', 'boolean'],
             'gioi_tinh' => ['nullable', 'string', 'max:20'],
@@ -127,6 +168,8 @@ class AdminAccountController extends Controller
             'ton_giao' => ['nullable', 'string', 'max:100'],
         ]);
 
+        $payload['name'] = $this->normalizePersonName($payload['name']);
+
         $user = match ($payload['role']) {
             'student' => $this->accountProvisioningService->createStudentAccount($payload),
             'lecturer' => $this->accountProvisioningService->createLecturerAccount($payload),
@@ -143,6 +186,7 @@ class AdminAccountController extends Controller
     public function storeStudent(Request $request): JsonResponse
     {
         $payload = $request->validate($this->studentRules($request));
+        $payload['ten_sinh_vien'] = $this->normalizePersonName($payload['ten_sinh_vien']);
         $user = $this->accountProvisioningService->createStudentAccount($payload);
 
         // Handle image upload if provided
@@ -196,7 +240,16 @@ class AdminAccountController extends Controller
             'profile.ten_giang_vien' => ['nullable', 'string', 'max:255'],
             'profile.ten_nguoi_quan_ly' => ['nullable', 'string', 'max:255'],
             'profile.ten_chuyen_vien' => ['nullable', 'string', 'max:255'],
-            'profile.email' => ['nullable', 'email', 'max:255'],
+            'profile.email' => [
+                'nullable',
+                'email',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value && ! str_ends_with(mb_strtolower((string) $value, 'UTF-8'), '@ntu.edu.vn')) {
+                        $fail('Email liên hệ phải thuộc tên miền @ntu.edu.vn.');
+                    }
+                },
+            ],
             'profile.so_dien_thoai' => ['nullable', 'string', 'max:20'],
             'profile.phone' => ['nullable', 'string', 'max:20'],
             'profile.ngay_sinh' => ['nullable', 'date'],
@@ -351,7 +404,16 @@ class AdminAccountController extends Controller
         return [
             'username' => ['required', 'string', 'max:50'],
             'password' => ['sometimes', 'string', 'min:6'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value && ! str_ends_with(mb_strtolower((string) $value, 'UTF-8'), '@ntu.edu.vn')) {
+                        $fail('Email liên hệ phải thuộc tên miền @ntu.edu.vn.');
+                    }
+                },
+            ],
             'so_dien_thoai' => ['nullable', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:20'],
             'ngay_sinh' => ['nullable', 'date'],
@@ -368,7 +430,17 @@ class AdminAccountController extends Controller
     {
         return [
             ...$this->baseCreateRules(),
-            'ten_sinh_vien' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'regex:/^\d{8}$/'],
+            'ten_sinh_vien' => [
+                'required',
+                'string',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! preg_match('/^[\p{L}\s]+$/u', trim((string) $value))) {
+                        $fail('Họ và tên chỉ được gồm chữ cái và khoảng trắng.');
+                    }
+                },
+            ],
             'ma_lop' => ['nullable', 'string', 'max:100'],
             'lop_id' => ['nullable', 'integer', 'exists:lops,id'],
             'nganh_dao_tao_id' => [
@@ -391,6 +463,14 @@ class AdminAccountController extends Controller
             'dia_chi_lien_lac' => ['nullable', 'string'],
             'anh' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:5120'], // 5MB max
         ];
+    }
+
+    private function normalizePersonName(string $name): string
+    {
+        $normalized = preg_replace('/\s+/u', ' ', trim($name)) ?? '';
+        $normalized = mb_strtolower($normalized, 'UTF-8');
+
+        return mb_convert_case($normalized, MB_CASE_TITLE, 'UTF-8');
     }
 
     private function lecturerRules(): array
