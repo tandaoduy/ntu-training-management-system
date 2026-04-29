@@ -16,8 +16,9 @@ const mapCurrentUser = (input: CurrentUserResponse): AuthUser | null => {
   return {
     id: input.id,
     username: input.username,
-    display_name: input.display_name ?? null,
+    name: input.name ?? null,
     role: input.role,
+    educationSystem: input.education_system ?? null,
   };
 };
 

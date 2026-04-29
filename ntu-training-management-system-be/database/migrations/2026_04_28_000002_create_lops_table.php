@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('don_vi_id')->constrained('don_vis')->cascadeOnDelete();
             $table->string('lop_hoc_phan', 255);
             $table->unsignedInteger('si_so')->default(0);
-            $table->string('mo_hinh_dao_tao', 100)->default('Theo tín chỉ');
+            $table->string('mo_hinh_dao_tao', 100)->default('Tín chỉ');
             $table->string('ma_khoi', 100);
             $table->string('ten_khoi', 255)->nullable();
             $table->string('ma_don_vi', 50);

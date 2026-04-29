@@ -45,9 +45,12 @@ class AuthController extends Controller
             'user' => [
                 'id' => $user->id,
                 'username' => $user->username,
-                'display_name' => $user->profileName(),
+                'name' => $user->profileName(),
                 'role' => $user->role?->code,
                 'email' => $user->profileEmail(),
+                'education_system' => $user->role?->code === 'student'
+                    ? $user->profile?->getAttribute('he_dao_tao')
+                    : null,
                 'email_verified' => $user->isEmailVerified(),
             ],
         ]);
@@ -71,9 +74,12 @@ class AuthController extends Controller
         return response()->json([
             'id' => $user?->id,
             'username' => $user?->username,
-            'display_name' => $user?->profileName(),
+            'name' => $user?->profileName(),
             'role' => $user?->role?->code,
             'email' => $user?->profileEmail(),
+            'education_system' => $user?->role?->code === 'student'
+                ? $user?->profile?->getAttribute('he_dao_tao')
+                : null,
             'email_verified' => $user?->isEmailVerified() ?? false,
         ]);
     }

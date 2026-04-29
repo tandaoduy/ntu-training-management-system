@@ -60,9 +60,4 @@ class SinhVien extends Model
     {
         return $this->belongsTo(Lop::class, 'lop_id');
     }
-
-    public function donVi(): BelongsTo
-    {
-        return $this->belongsTo(DonVi::class, 'don_vi_id');
-    }
 }

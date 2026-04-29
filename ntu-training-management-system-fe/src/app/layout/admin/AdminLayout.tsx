@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, Link, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../api/query'
 import logoImage from '../../../assets/Logo_NTU.png'
 import './AdminLayout.css'
@@ -8,11 +8,26 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const { logout } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const goHome = () => {
+    navigate('/quantri')
+  }
 
   const confirmLogout = async () => {
-    setShowLogoutConfirm(false)
-    await logout()
-    navigate('/login', { replace: true })
+    if (isLoggingOut) {
+      return
+    }
+
+    setIsLoggingOut(true)
+
+    try {
+      await logout()
+      setShowLogoutConfirm(false)
+      navigate('/login', { replace: true })
+    } finally {
+      setIsLoggingOut(false)
+    }
   }
 
   return (
@@ -40,10 +55,10 @@ export default function AdminLayout() {
           <span className="ad-greeting-text">
             Xin chào, Quản trị viên
           </span>
-          <Link to="/quantri" className="ad-home-icon" title="Trang chủ">
+          <button type="button" className="ad-home-icon" onClick={goHome} title="Trang chủ" aria-label="Trang chủ">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </Link>
-          <button type="button" className="ad-btn-logout-small" onClick={() => setShowLogoutConfirm(true)} title="Đăng xuất">
+          </button>
+          <button type="button" className="ad-btn-logout-small" onClick={() => setShowLogoutConfirm(true)} title="Đăng xuất" aria-label="Đăng xuất">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </button>
         </div>
@@ -65,6 +80,7 @@ export default function AdminLayout() {
                 type="button" 
                 className="ad-modal-btn ad-modal-btn-cancel"
                 onClick={() => setShowLogoutConfirm(false)}
+                disabled={isLoggingOut}
               >
                 Hủy
               </button>
@@ -72,8 +88,9 @@ export default function AdminLayout() {
                 type="button" 
                 className="ad-modal-btn ad-modal-btn-confirm"
                 onClick={confirmLogout}
+                disabled={isLoggingOut}
               >
-                Đăng xuất
+                {isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
               </button>
             </div>
           </div>

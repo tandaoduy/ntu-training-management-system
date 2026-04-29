@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Models\CanBo;
 use App\Models\ChuyenVien;
+use App\Models\Lop;
 use App\Models\QuanLy;
 use App\Models\Role;
 use App\Models\SinhVien;
@@ -55,6 +56,8 @@ class AccountProvisioningService
                 'ton_giao' => $payload['ton_giao'] ?? null,
                 'dia_chi_lien_lac' => $payload['dia_chi_lien_lac'] ?? null,
             ]);
+
+            $this->incrementLopSize($sinhVien->lop_id);
 
             $user->forceFill([
                 'profile_id' => $sinhVien->id,
@@ -178,6 +181,11 @@ class AccountProvisioningService
     public function updateAccount(User $user, array $payload): User
     {
         return DB::transaction(function () use ($user, $payload) {
+            $user->loadMissing(['role', 'profile']);
+            $oldLopId = $user->role?->code === 'student'
+                ? $user->profile?->getAttribute('lop_id')
+                : null;
+
             if (isset($payload['password'])) {
                 $user->update(['password' => $payload['password']]);
             }
@@ -190,7 +198,17 @@ class AccountProvisioningService
                 $user->profile()?->update($payload['profile']);
             }
 
-            return $user->refresh()->load(['role', 'profile']);
+            $user->refresh()->load(['role', 'profile']);
+            $newLopId = $user->role?->code === 'student'
+                ? $user->profile?->getAttribute('lop_id')
+                : null;
+
+            if ((string) $oldLopId !== (string) $newLopId) {
+                $this->decrementLopSize($oldLopId);
+                $this->incrementLopSize($newLopId);
+            }
+
+            return $user;
         });
     }
 
@@ -213,5 +231,28 @@ class AccountProvisioningService
         $user->update(['status' => $status]);
 
         return $user->refresh()->load(['role', 'profile']);
+    }
+
+    private function incrementLopSize(null|int|string $lopId): void
+    {
+        if (! $lopId) {
+            return;
+        }
+
+        Lop::query()
+            ->whereKey($lopId)
+            ->increment('si_so');
+    }
+
+    private function decrementLopSize(null|int|string $lopId): void
+    {
+        if (! $lopId) {
+            return;
+        }
+
+        Lop::query()
+            ->whereKey($lopId)
+            ->where('si_so', '>', 0)
+            ->decrement('si_so');
     }
 }

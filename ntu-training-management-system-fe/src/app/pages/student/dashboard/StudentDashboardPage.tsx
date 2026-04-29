@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { apiGet } from '../../../../api/core/request'
 import { useAuth } from '../../../../api/query'
 import logoImage from '../../../../assets/Logo_NTU.png'
 import './StudentDashboardPage.css'
@@ -63,16 +64,21 @@ const statusLabel: Record<string, string> = {
   active: 'Đang học',
 }
 
-interface StudentDashboardUserExtras {
-  educationSystem?: string
+interface StudentDashboardResponse {
+  student?: {
+    ten_sinh_vien?: string | null
+    he_dao_tao?: string | null
+  } | null
 }
 
 export default function StudentDashboardPage() {
   const navigate = useNavigate()
   const { user, logout, me } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const sysAcademicYear = localStorage.getItem('sys_academic_year') || '2025-2026'
-  const sysSemester = localStorage.getItem('sys_semester') || '2'
+  const [sysAcademicYear, setSysAcademicYear] = useState('2025-2026')
+  const [sysSemester, setSysSemester] = useState('2')
+  const [studentName, setStudentName] = useState<string | null>(null)
+  const [educationSystem, setEducationSystem] = useState<string | null>(null)
 
   // Lấy thông tin user khi vào trang
   useEffect(() => {
@@ -81,12 +87,44 @@ export default function StudentDashboardPage() {
     }
   }, [me, user])
 
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchStudentDashboard = async () => {
+      try {
+        const response = await apiGet<StudentDashboardResponse>('/student/dashboard')
+        const name = response.student?.ten_sinh_vien?.trim() || null
+        const heDaoTao = response.student?.he_dao_tao?.trim() || null
+
+        if (!isMounted) {
+          return
+        }
+
+        setStudentName(name)
+        setEducationSystem(heDaoTao)
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setStudentName(null)
+        setEducationSystem(null)
+      }
+    }
+
+    void fetchStudentDashboard()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
   }
 
-  const displayName = user?.display_name?.trim() || user?.username || 'Sinh viên'
+  const displayName = studentName || user?.name?.trim() || 'Sinh viên'
 
   return (
     <div className="sd-root">
@@ -114,7 +152,7 @@ export default function StudentDashboardPage() {
           <div className="sd-academic-left">
             <div className="sd-academic-badge">
               <span className="sd-academic-label">Hệ đào tạo:</span>
-              <span className="sd-academic-value">{(user as StudentDashboardUserExtras | null)?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
+              <span className="sd-academic-value">{educationSystem || user?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
             </div>
             <div className="sd-academic-dot"></div>
             <div className="sd-academic-badge">
@@ -156,6 +194,10 @@ export default function StudentDashboardPage() {
 
       {/* ── MAIN ── */}
       <main className="sd-main">
+        {/* Greeting */}
+        <div className="sd-greeting">
+          <h1>Xin chào, {displayName} 👋</h1>
+        </div>
 
         {/* Quick Access */}
         <div className="sd-quick-access-section">
