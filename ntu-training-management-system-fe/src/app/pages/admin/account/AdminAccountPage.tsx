@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, FormEvent, ReactNode } from 'react'
 
 import { apiGet, apiPost } from '../../../../api/core/request'
-import { useAlert } from '../../../../components/alert'
+import { useAlert } from '@/components/alert'
 import './AdminAccountPage.css'
 
 type RoleId = 'student' | 'lecturer' | 'training_officer' | 'manager'

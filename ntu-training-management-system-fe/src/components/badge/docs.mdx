@@ -1,0 +1,149 @@
+# Badge Component Documentation
+
+## Overview
+
+A lightweight badge component for status labels, tags, categories, roles, and compact metadata. Supports color variants, sizes, optional icons, status dots, and rounded pill or rounded rectangle shapes.
+
+## Features
+
+✅ **Variants**: default, success, warning, danger, info, neutral  
+✅ **Sizes**: sm, md, lg  
+✅ **Status Dot**: Optional colored dot  
+✅ **Icon Slot**: Optional icon before text  
+✅ **Shape Control**: Pill or rounded rectangle  
+✅ **Tailwind CSS**: Fully styled with Tailwind  
+✅ **TypeScript**: Full type safety  
+
+## Installation
+
+The badge component is ready to use from `@/components/badge`.
+
+## Usage
+
+```tsx
+import { Badge } from '@/components/badge';
+
+export const MyComponent = () => {
+  return (
+    <div className="flex gap-2">
+      <Badge variant="success">Active</Badge>
+      <Badge variant="warning">Pending</Badge>
+      <Badge variant="danger">Blocked</Badge>
+    </div>
+  );
+};
+```
+
+## API Reference
+
+### Badge Props
+
+```typescript
+interface BadgeProps {
+  children: ReactNode;
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  size?: 'sm' | 'md' | 'lg';
+  icon?: ReactNode;
+  dot?: boolean;
+  pill?: boolean;
+  className?: string;
+}
+```
+
+Default values:
+
+- `variant`: `'default'`
+- `size`: `'md'`
+- `dot`: `false`
+- `pill`: `true`
+
+## Examples
+
+### Example 1: Status Badge
+
+```tsx
+<Badge variant="success" dot>
+  Active
+</Badge>
+```
+
+### Example 2: Warning Badge
+
+```tsx
+<Badge variant="warning">
+  Pending Review
+</Badge>
+```
+
+### Example 3: Badge With Icon
+
+```tsx
+import { ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { Badge } from '@/components/badge';
+
+<Badge variant="info" icon={<ShieldCheckIcon className="h-3.5 w-3.5" />}>
+  Admin
+</Badge>
+```
+
+### Example 4: Different Sizes
+
+```tsx
+<div className="flex items-center gap-2">
+  <Badge size="sm" variant="neutral">Small</Badge>
+  <Badge size="md" variant="neutral">Medium</Badge>
+  <Badge size="lg" variant="neutral">Large</Badge>
+</div>
+```
+
+### Example 5: Rounded Rectangle
+
+```tsx
+<Badge variant="default" pill={false}>
+  Course
+</Badge>
+```
+
+## Styling
+
+The component uses Tailwind CSS with soft background colors, readable text colors, and inset ring borders.
+
+- **Default**: Blue
+- **Success**: Green
+- **Warning**: Yellow
+- **Danger**: Red
+- **Info**: Cyan
+- **Neutral**: Gray
+
+## Customization
+
+To customize colors, edit `variantClasses` and `dotClasses` in `Badge.tsx`:
+
+```tsx
+const variantClasses = {
+  default: 'bg-blue-50 text-blue-700 ring-blue-600/20',
+  success: 'bg-green-50 text-green-700 ring-green-600/20',
+  warning: 'bg-yellow-50 text-yellow-800 ring-yellow-600/20',
+  danger: 'bg-red-50 text-red-700 ring-red-600/20',
+  info: 'bg-cyan-50 text-cyan-700 ring-cyan-600/20',
+  neutral: 'bg-gray-100 text-gray-700 ring-gray-600/20',
+};
+```
+
+## File Structure
+
+```
+components/badge/
+├── types.ts     # TypeScript type definitions
+├── Badge.tsx    # Badge component
+├── index.ts     # Export barrel file
+└── docs.mdx     # This documentation
+```
+
+## Browser Support
+
+Works on all modern browsers that support:
+
+- React 18+
+- Tailwind CSS 3+
+- ES2020+

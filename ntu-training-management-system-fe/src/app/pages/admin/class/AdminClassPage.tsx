@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { apiDelete, apiGet, apiPost, apiPut } from '../../../../api/core/request'
-import { useAlert } from '../../../../components/alert'
+import { useAlert } from '@/components/alert'
 import './AdminClassPage.css'
 
 interface DonViOption {

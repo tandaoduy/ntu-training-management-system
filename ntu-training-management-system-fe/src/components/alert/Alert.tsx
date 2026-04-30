@@ -4,95 +4,133 @@ import {
   InformationCircleIcon,
   XCircleIcon,
   XMarkIcon,
-} from '@heroicons/react/24/solid'
+} from '@heroicons/react/24/solid';
+import type { AlertMessage, AlertVariant } from './types';
 
-import type { AlertProps, AlertVariant } from './types'
-
-type VariantStyle = {
-  container: string
-  icon: string
-  title: string
-  message: string
-  IconComponent: React.ComponentType<React.SVGProps<SVGSVGElement>>
+interface AlertNotificationProps {
+  alert: AlertMessage;
+  onDismiss: (id: string) => void;
 }
 
-const VARIANTS: Record<AlertVariant, VariantStyle> = {
-  success: {
-    container: 'bg-green-50 border border-green-200',
-    icon: 'text-green-500',
-    title: 'text-green-800',
-    message: 'text-green-700',
-    IconComponent: CheckCircleIcon,
-  },
-  error: {
-    container: 'bg-red-50 border border-red-200',
-    icon: 'text-red-500',
-    title: 'text-red-800',
-    message: 'text-red-700',
-    IconComponent: XCircleIcon,
-  },
-  warning: {
-    container: 'bg-yellow-50 border border-yellow-200',
-    icon: 'text-yellow-500',
-    title: 'text-yellow-800',
-    message: 'text-yellow-700',
-    IconComponent: ExclamationTriangleIcon,
-  },
-  info: {
-    container: 'bg-blue-50 border border-blue-200',
-    icon: 'text-blue-500',
-    title: 'text-blue-800',
-    message: 'text-blue-700',
-    IconComponent: InformationCircleIcon,
-  },
+interface AlertInlineProps {
+  variant?: AlertVariant;
+  type?: AlertVariant;
+  title?: string;
+  message?: string;
+  description?: string;
+  dismissible?: boolean;
+  onDismiss?: () => void;
 }
 
-export default function Alert({
-  variant = 'info',
-  title,
-  message,
-  dismissible = false,
-  isExiting = false,
-  onDismiss,
-  className = '',
-}: AlertProps) {
-  const styles = VARIANTS[variant] ?? VARIANTS.info
-  const { IconComponent } = styles
+type AlertProps = AlertNotificationProps | AlertInlineProps;
 
-  const motionClass = isExiting
-    ? 'translate-x-16 opacity-0 scale-[0.98] pointer-events-none'
-    : 'translate-x-0 opacity-100 scale-100'
+const iconMap = {
+  success: <CheckCircleIcon className="w-5 h-5" />,
+  error: <XCircleIcon className="w-5 h-5" />,
+  warning: <ExclamationTriangleIcon className="w-5 h-5" />,
+  info: <InformationCircleIcon className="w-5 h-5" />,
+};
+
+const bgColorMap = {
+  success: 'bg-green-50 border-green-200',
+  error: 'bg-red-50 border-red-200',
+  warning: 'bg-yellow-50 border-yellow-200',
+  info: 'bg-blue-50 border-blue-200',
+};
+
+const iconColorMap = {
+  success: 'text-green-600',
+  error: 'text-red-600',
+  warning: 'text-yellow-600',
+  info: 'text-blue-600',
+};
+
+const titleColorMap = {
+  success: 'text-green-900',
+  error: 'text-red-900',
+  warning: 'text-yellow-900',
+  info: 'text-blue-900',
+};
+
+const descriptionColorMap = {
+  success: 'text-green-700',
+  error: 'text-red-700',
+  warning: 'text-yellow-700',
+  info: 'text-blue-700',
+};
+
+const closeButtonColorMap = {
+  success: 'text-green-600 hover:bg-green-100',
+  error: 'text-red-600 hover:bg-red-100',
+  warning: 'text-yellow-600 hover:bg-yellow-100',
+  info: 'text-blue-600 hover:bg-blue-100',
+};
+
+const isNotificationProps = (props: AlertProps): props is AlertNotificationProps => {
+  return 'alert' in props;
+};
+
+export const Alert = (props: AlertProps) => {
+  const alert = isNotificationProps(props)
+    ? props.alert
+    : {
+        id: 'inline-alert',
+        type: props.type ?? props.variant ?? 'info',
+        title: props.title ?? '',
+        description: props.description ?? props.message,
+        dismissible: props.dismissible,
+      };
+
+  const handleDismiss = () => {
+    if (isNotificationProps(props)) {
+      props.onDismiss(alert.id);
+      return;
+    }
+
+    props.onDismiss?.();
+  };
 
   return (
     <div
-      className={`pointer-events-auto rounded-lg p-4 transition-all duration-300 ease-out will-change-transform ${motionClass} ${styles.container} ${className}`}
+      className={`
+        flex items-start gap-3 p-4 rounded-lg border
+        ${bgColorMap[alert.type]}
+        animate-in fade-in slide-in-from-top-2 duration-300
+      `}
       role="alert"
     >
-      <div className="flex items-start gap-3">
-        <IconComponent className={`h-5 w-5 mt-0.5 shrink-0 ${styles.icon}`} />
+      {/* Icon */}
+      <div className={`flex-shrink-0 mt-0.5 ${iconColorMap[alert.type]}`}>
+        {iconMap[alert.type]}
+      </div>
 
-        <div className="flex-1 min-w-0">
-          {title ? (
-            <>
-              <p className={`text-sm font-semibold ${styles.title}`}>{title}</p>
-              <p className={`mt-1 text-sm ${styles.message}`}>{message}</p>
-            </>
-          ) : (
-            <p className={`text-sm ${styles.message}`}>{message}</p>
-          )}
-        </div>
-
-        {dismissible && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className={`shrink-0 rounded-sm ${styles.icon} hover:opacity-70 transition-opacity`}
-            aria-label="Dong thong bao"
-          >
-            <XMarkIcon className="h-4 w-4" />
-          </button>
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        {alert.title && (
+          <h3 className={`font-semibold text-sm ${titleColorMap[alert.type]}`}>
+            {alert.title}
+          </h3>
+        )}
+        {alert.description && (
+          <p className={`text-sm mt-1 ${descriptionColorMap[alert.type]}`}>
+            {alert.description}
+          </p>
         )}
       </div>
+
+      {/* Close button */}
+      {alert.dismissible && (
+        <button
+          onClick={handleDismiss}
+          className={`
+            flex-shrink-0 p-1 rounded transition-colors
+            ${closeButtonColorMap[alert.type]}
+          `}
+          aria-label="Dismiss alert"
+        >
+          <XMarkIcon className="w-4 h-4" />
+        </button>
+      )}
     </div>
-  )
-}
+  );
+};

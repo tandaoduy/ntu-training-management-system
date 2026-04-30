@@ -1,0 +1,21 @@
+# DatePicker Component Documentation
+
+## Usage
+
+```tsx
+import { DatePicker } from '@/components/date-picker';
+
+<DatePicker label="Start date" name="startDate" />
+```
+
+## Props
+
+```typescript
+interface DatePickerProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
+  label?: string;
+  helperText?: string;
+  error?: string;
+  inputSize?: 'sm' | 'md' | 'lg';
+  containerClassName?: string;
+}
+```

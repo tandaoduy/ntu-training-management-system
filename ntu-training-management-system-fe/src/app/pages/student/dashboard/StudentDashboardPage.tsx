@@ -75,8 +75,8 @@ export default function StudentDashboardPage() {
   const navigate = useNavigate()
   const { user, logout, me } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [sysAcademicYear, setSysAcademicYear] = useState('2025-2026')
-  const [sysSemester, setSysSemester] = useState('2')
+  const [sysAcademicYear] = useState('2025-2026')
+  const [sysSemester] = useState('2')
   const [studentName, setStudentName] = useState<string | null>(null)
   const [educationSystem, setEducationSystem] = useState<string | null>(null)
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAlert } from '../../../../components/alert'
+import { useAlert } from '@/components/alert'
 import './AdminConfigurationPage.css'
 
 export default function AdminConfigurationPage() {

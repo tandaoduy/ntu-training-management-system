@@ -1,82 +1,229 @@
-# Thành phần Alert
+# Alert Component Documentation
 
-## Cấu trúc thư mục
+## Overview
 
-- Alert.tsx
-- AlertContext.ts
-- AlertProvider.tsx
-- alert.hook.ts
-- docs.mdx
-- index.ts
-- types.ts
+A fully-featured alert system built with React Context API, Tailwind CSS, and Heroicons. Supports multiple alert types, auto-dismiss, and custom positioning.
 
-## Cách dùng cơ bản
+## Features
+
+✅ **Multiple Alert Types**: success, error, warning, info  
+✅ **Auto-dismiss**: Configurable duration  
+✅ **Dismissible**: Optional close button  
+✅ **Positioned Alerts**: 6 positioning options  
+✅ **Icons**: Using @heroicons/react icons  
+✅ **Tailwind CSS**: Fully styled with Tailwind  
+✅ **Context API**: Global state management  
+✅ **TypeScript**: Full type safety  
+
+## Installation
+
+The alert component is already set up! You just need to use it.
+
+## Usage
+
+### 1. Wrap your app with AlertProvider
 
 ```tsx
-import Alert from '../../components/alert'
+// main.tsx
+import { AlertProvider } from '@/components/alert';
+import { AlertNotification } from '@/components/alert';
 
-export function Example() {
+ReactDOM.render(
+  <AlertProvider>
+    <AlertNotification position="top-right">
+      <App />
+    </AlertNotification>
+  </AlertProvider>,
+  document.getElementById('root')
+);
+```
+
+### 2. Use the alert hook in components
+
+```tsx
+import { useAlert } from '@/components/alert';
+
+export const MyComponent = () => {
+  const { showSuccess, showError, showWarning, showInfo } = useAlert();
+
   return (
-    <Alert
-      variant="success"
-      message="Cập nhật thông tin thành công."
-    />
-  )
+    <div>
+      <button onClick={() => showSuccess('Success!', 'Operation completed')}>
+        Show Success
+      </button>
+      <button onClick={() => showError('Error!', 'Something went wrong')}>
+        Show Error
+      </button>
+      <button onClick={() => showWarning('Warning!', 'Please be careful')}>
+        Show Warning
+      </button>
+      <button onClick={() => showInfo('Info', 'Here is some information')}>
+        Show Info
+      </button>
+    </div>
+  );
+};
+```
+
+## API Reference
+
+### useAlert Hook
+
+#### Methods
+
+```typescript
+const {
+  showSuccess,
+  showError,
+  showWarning,
+  showInfo,
+  show,
+  dismiss,
+  clearAll
+} = useAlert();
+```
+
+**showSuccess(title, description?, duration?)**
+- Shows a success alert
+- `title` (string): Alert title
+- `description` (string, optional): Alert description
+- `duration` (number, optional): Duration in ms (0 = never auto-dismiss, default: 5000)
+
+**showError(title, description?, duration?)**
+- Shows an error alert
+
+**showWarning(title, description?, duration?)**
+- Shows a warning alert
+
+**showInfo(title, description?, duration?)**
+- Shows an info alert
+
+**show(type, title, description?, duration?)**
+- Shows a custom alert
+- `type` ('success' | 'error' | 'warning' | 'info'): Alert type
+
+**dismiss(id)**
+- Dismiss a specific alert by ID
+- Returns: void
+
+**clearAll()**
+- Dismiss all active alerts
+- Returns: void
+
+### AlertProvider Props
+
+```typescript
+interface AlertProviderProps {
+  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
 }
 ```
 
-## Có tiêu đề
+Default position: `'top-right'`
+
+## Examples
+
+### Example 1: Form Submission
 
 ```tsx
-<Alert
-  variant="error"
-  title="Đăng nhập thất bại"
-  message="Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại."
-/>
-```
+import { useAlert } from '@/components/alert';
+import { userService } from '@/services';
 
-## Có nút đóng
+export const CreateUserForm = () => {
+  const { showSuccess, showError } = useAlert();
 
-```tsx
-<Alert
-  variant="warning"
-  title="Lưu ý"
-  message="Thời hạn đăng ký học phần sẽ kết thúc vào 23:59 hôm nay."
-  dismissible
-  onDismiss={() => setShowAlert(false)}
-/>
-```
-
-## Cách dùng AlertProvider và hook
-
-```tsx
-import { AlertProvider, useAlert } from '../../components/alert'
-
-function DemoAction() {
-  const { showAlert } = useAlert()
+  const handleSubmit = async (formData) => {
+    try {
+      await userService.createUser(formData);
+      showSuccess('Success!', 'User created successfully');
+    } catch (error) {
+      showError('Error!', 'Failed to create user');
+    }
+  };
 
   return (
-    <button
-      type="button"
-      onClick={() =>
-        showAlert({
-          variant: 'info',
-          title: 'Thông báo',
-          message: 'Dữ liệu đã được tải xong.',
-          dismissible: true,
-        })
-      }
-    >
-      Hiển thị thông báo
-    </button>
-  )
-}
-
-export function AppRoot() {
-  return (
-    <AlertProvider>
-      <DemoAction />
-    </AlertProvider>
-  )
-}
+    <form onSubmit={handleSubmit}>
+      {/* form fields */}
+    </form>
+  );
+};
 ```
+
+### Example 2: Persistent Alert
+
+```tsx
+const { show } = useAlert();
+
+// This alert won't auto-dismiss
+show('info', 'Important Notice', 'This will stay until dismissed', 0);
+```
+
+### Example 3: Multiple Alerts
+
+```tsx
+const { showSuccess, showWarning } = useAlert();
+
+showSuccess('Task 1 completed');
+showWarning('Task 2 needs attention');
+showSuccess('Task 3 completed');
+
+// All three will display stacked
+```
+
+### Example 4: Different Positions
+
+```tsx
+// main.tsx
+import { AlertNotification } from '@/components/alert';
+
+<AlertNotification position="bottom-left">
+  <App />
+</AlertNotification>
+```
+
+## Styling
+
+The component uses Tailwind CSS with the following color scheme:
+
+- **Success**: Green (bg-green-50, border-green-200, text-green-900)
+- **Error**: Red (bg-red-50, border-red-200, text-red-900)
+- **Warning**: Yellow (bg-yellow-50, border-yellow-200, text-yellow-900)
+- **Info**: Blue (bg-blue-50, border-blue-200, text-blue-900)
+
+## Customization
+
+To customize colors, edit the `colorMap` objects in `Alert.tsx`:
+
+```tsx
+const bgColorMap = {
+  success: 'bg-green-50 border-green-200',
+  error: 'bg-red-50 border-red-200',
+  warning: 'bg-yellow-50 border-yellow-200',
+  info: 'bg-blue-50 border-blue-200',
+};
+```
+
+## File Structure
+
+```
+components/alert/
+├── types.ts           # TypeScript type definitions
+├── AlertContext.ts    # React Context setup
+├── alert.hook.ts      # useAlert custom hook
+├── Alert.tsx          # Alert component
+├── AlertProvider.tsx  # Alert notification container
+├── index.ts           # Export barrel file
+└── docs.mdx           # This documentation
+```
+
+## Browser Support
+
+Works on all modern browsers that support:
+- React 18+
+- Tailwind CSS 3+
+- ES2020+
+
+## Performance
+
+- Alerts are automatically cleaned up after dismissal
+- Uses React Context for efficient state management
+- No unnecessary re-renders

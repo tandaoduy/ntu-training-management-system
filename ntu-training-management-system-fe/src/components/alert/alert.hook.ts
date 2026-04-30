@@ -1,13 +1,68 @@
-import { useContext } from 'react'
+import { useCallback } from 'react';
+import { useAlertContext } from './AlertContext';
+import type { AlertType, ShowAlertOptions } from './types';
 
-import { AlertContext } from './AlertContext'
+export const useAlert = () => {
+  const { addAlert, removeAlert, clearAlerts } = useAlertContext();
 
-export function useAlert() {
-  const context = useContext(AlertContext)
+  const showAlert = useCallback(
+    ({ type, variant, title, description, message, duration, dismissible }: ShowAlertOptions) => {
+      return addAlert({
+        type: type ?? variant ?? 'info',
+        title,
+        description: description ?? message,
+        message,
+        duration,
+        dismissible,
+      });
+    },
+    [addAlert]
+  );
 
-  if (!context) {
-    throw new Error('useAlert must be used within an AlertProvider')
-  }
+  const showSuccess = useCallback(
+    (title: string, description?: string, duration?: number) => {
+      return addAlert({ type: 'success', title, description, duration });
+    },
+    [addAlert]
+  );
 
-  return context
-}
+  const showError = useCallback(
+    (title: string, description?: string, duration?: number) => {
+      return addAlert({ type: 'error', title, description, duration });
+    },
+    [addAlert]
+  );
+
+  const showWarning = useCallback(
+    (title: string, description?: string, duration?: number) => {
+      return addAlert({ type: 'warning', title, description, duration });
+    },
+    [addAlert]
+  );
+
+  const showInfo = useCallback(
+    (title: string, description?: string, duration?: number) => {
+      return addAlert({ type: 'info', title, description, duration });
+    },
+    [addAlert]
+  );
+
+  const show = useCallback(
+    (type: AlertType, title: string, description?: string, duration?: number) => {
+      return addAlert({ type, title, description, duration });
+    },
+    [addAlert]
+  );
+
+  return {
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+    show,
+    showAlert,
+    dismiss: removeAlert,
+    clearAlerts,
+    clearAll: clearAlerts,
+  };
+};

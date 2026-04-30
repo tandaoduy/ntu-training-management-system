@@ -6,7 +6,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '../../../../api/core/request'
-import { useAlert } from '../../../../components/alert'
+import { useAlert } from '@/components/alert'
 import './AdminClassPage.css'
 
 interface DonVi {

@@ -1,0 +1,67 @@
+# Input Component Documentation
+
+## Overview
+
+A reusable text input component for forms. Supports labels, helper text, errors, sizes, disabled state, and optional left or right icons.
+
+## Usage
+
+```tsx
+import { Input } from '@/components/input';
+
+<Input
+  label="Email"
+  name="email"
+  type="email"
+  placeholder="student@ntu.edu.vn"
+  helperText="Use your school email."
+/>
+```
+
+## API Reference
+
+```typescript
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  label?: string;
+  helperText?: string;
+  error?: string;
+  inputSize?: 'sm' | 'md' | 'lg';
+  state?: 'default' | 'success' | 'error';
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
+  containerClassName?: string;
+}
+```
+
+Default values:
+
+- `inputSize`: `'md'`
+- `state`: `'default'`
+
+## Examples
+
+```tsx
+<Input label="Full name" placeholder="Nguyen Van A" />
+
+<Input
+  label="Email"
+  type="email"
+  error="Email is required"
+/>
+
+<Input
+  label="Search"
+  placeholder="Search courses"
+  inputSize="lg"
+/>
+```
+
+## File Structure
+
+```
+components/input/
+├── types.ts
+├── Input.tsx
+├── index.ts
+└── docs.mdx
+```
