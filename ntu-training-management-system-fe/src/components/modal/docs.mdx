@@ -1,0 +1,295 @@
+# Modal Component Documentation
+
+## Overview
+
+A reusable modal system built with React Context API, Tailwind CSS, and Heroicons. Supports global modal state, custom content, action buttons, sizes, overlay click dismissal, and Escape key dismissal.
+
+## Features
+
+✅ **Global Modal State**: Open and close modals from any child component  
+✅ **Custom Content**: Supports text, JSX, forms, and any React node  
+✅ **Action Buttons**: Configurable footer actions  
+✅ **Modal Sizes**: sm, md, lg, xl  
+✅ **Dismissible**: Optional close button  
+✅ **Overlay Close**: Optional close on overlay click  
+✅ **Escape Close**: Optional close on Escape key  
+✅ **Tailwind CSS**: Fully styled with Tailwind  
+✅ **Context API**: Global state management  
+✅ **TypeScript**: Full type safety  
+
+## Installation
+
+The modal component is already set up. Use `ModalProvider` near the root of the app.
+
+## Usage
+
+### 1. Wrap your app with ModalProvider
+
+```tsx
+// main.tsx
+import { ModalProvider } from '@/components/modal';
+
+createRoot(document.getElementById('root')!).render(
+  <ModalProvider>
+    <App />
+  </ModalProvider>
+);
+```
+
+### 2. Use the modal hook in components
+
+```tsx
+import { useModal } from '@/components/modal';
+
+export const MyComponent = () => {
+  const { open, close } = useModal();
+
+  return (
+    <button
+      onClick={() =>
+        open({
+          title: 'Modal title',
+          content: 'This is the modal content.',
+          actions: [{ label: 'Close', onClick: close }],
+        })
+      }
+    >
+      Open Modal
+    </button>
+  );
+};
+```
+
+## API Reference
+
+### useModal Hook
+
+#### Methods
+
+```typescript
+const {
+  modal,
+  open,
+  confirm,
+  close
+} = useModal();
+```
+
+**modal**
+- Current active modal
+- Type: `ActiveModal | null`
+
+**open(options)**
+- Opens a modal with custom options
+- Returns: modal ID string
+
+**confirm(title, content, onConfirm, options?)**
+- Opens a confirmation modal
+- `title` (string): Modal title
+- `content` (ReactNode): Modal body content
+- `onConfirm` (() => void): Callback when confirm is clicked
+- `options` (optional): Extra modal options except title, content, and actions
+- Returns: modal ID string
+
+**close()**
+- Closes the active modal
+- Returns: void
+
+### ModalOptions
+
+```typescript
+interface ModalOptions {
+  title: string;
+  content?: ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  actions?: ModalAction[];
+  closeOnOverlayClick?: boolean;
+  closeOnEscape?: boolean;
+  dismissible?: boolean;
+}
+```
+
+Default values:
+
+- `size`: `'md'`
+- `closeOnOverlayClick`: `true`
+- `closeOnEscape`: `true`
+- `dismissible`: `true`
+
+### ModalAction
+
+```typescript
+interface ModalAction {
+  label: string;
+  variant?: 'primary' | 'secondary' | 'danger';
+  onClick?: () => void;
+  autoClose?: boolean;
+}
+```
+
+Default values:
+
+- `variant`: `'primary'`
+- `autoClose`: `true`
+
+## Examples
+
+### Example 1: Basic Modal
+
+```tsx
+import { useModal } from '@/components/modal';
+
+export const BasicExample = () => {
+  const { open } = useModal();
+
+  return (
+    <button
+      onClick={() =>
+        open({
+          title: 'Information',
+          content: 'Here is some useful information.',
+          actions: [{ label: 'Got it' }],
+        })
+      }
+    >
+      Open
+    </button>
+  );
+};
+```
+
+### Example 2: Confirmation Modal
+
+```tsx
+import { useModal } from '@/components/modal';
+
+export const DeleteButton = () => {
+  const { confirm } = useModal();
+
+  const handleDelete = () => {
+    confirm('Delete user', 'Are you sure you want to delete this user?', () => {
+      // Delete user here
+    }, {
+      size: 'sm',
+    });
+  };
+
+  return <button onClick={handleDelete}>Delete</button>;
+};
+```
+
+### Example 3: Custom Actions
+
+```tsx
+const { open } = useModal();
+
+open({
+  title: 'Save changes',
+  content: 'Do you want to save before leaving?',
+  actions: [
+    { label: 'Discard', variant: 'danger' },
+    { label: 'Cancel', variant: 'secondary' },
+    {
+      label: 'Save',
+      variant: 'primary',
+      onClick: () => {
+        // Save changes here
+      },
+    },
+  ],
+});
+```
+
+### Example 4: Form Modal
+
+```tsx
+const { open } = useModal();
+
+open({
+  title: 'Create course',
+  size: 'lg',
+  content: (
+    <form className="space-y-4">
+      <input className="w-full rounded-md border px-3 py-2" placeholder="Course name" />
+      <textarea className="w-full rounded-md border px-3 py-2" placeholder="Description" />
+    </form>
+  ),
+  actions: [
+    { label: 'Cancel', variant: 'secondary' },
+    { label: 'Create', variant: 'primary' },
+  ],
+});
+```
+
+### Example 5: Required Decision Modal
+
+```tsx
+open({
+  title: 'Complete required fields',
+  content: 'Please fix the highlighted fields before continuing.',
+  dismissible: false,
+  closeOnOverlayClick: false,
+  closeOnEscape: false,
+  actions: [{ label: 'Review fields' }],
+});
+```
+
+## Styling
+
+The component uses Tailwind CSS with the following visual structure:
+
+- **Overlay**: `fixed inset-0 bg-black/50`
+- **Container**: white panel with rounded corners and shadow
+- **Header**: title and close button
+- **Body**: flexible React content
+- **Footer**: action button row
+
+## Customization
+
+To customize sizes, edit `sizeClasses` in `Modal.tsx`:
+
+```tsx
+const sizeClasses = {
+  sm: 'max-w-sm',
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
+};
+```
+
+To customize action colors, edit `actionClasses` in `Modal.tsx`:
+
+```tsx
+const actionClasses = {
+  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+  secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-400',
+  danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+};
+```
+
+## File Structure
+
+```
+components/modal/
+├── types.ts            # TypeScript type definitions
+├── ModalContext.tsx    # React Context setup
+├── modal.hook.ts       # useModal custom hook
+├── Modal.tsx           # Modal component
+├── ModalProvider.tsx   # Modal provider and renderer
+├── index.ts            # Export barrel file
+└── docs.mdx            # This documentation
+```
+
+## Browser Support
+
+Works on all modern browsers that support:
+
+- React 18+
+- Tailwind CSS 3+
+- ES2020+
+
+## Performance
+
+- Only one active modal is rendered at a time
+- Uses React Context for shared state
+- Keyboard listeners are attached only while an Escape-dismissible modal is active

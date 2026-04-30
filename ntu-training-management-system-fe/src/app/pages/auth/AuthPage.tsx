@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import campusImage from '../../../assets/hinhhome1.jpg'
 import logoImage from '../../../assets/Logo_NTU.png'
 import { useAuth } from '../../../api/query'
-import { useAlert } from '../../../components/alert'
+import { useAlert } from '@/components/alert'
 import './AuthPage.css'
 
 interface LoginFormState {

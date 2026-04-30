@@ -1,0 +1,135 @@
+# Spinner Component Documentation
+
+## Overview
+
+A small loading spinner component for async states, submit buttons, table loading rows, and page-level loading indicators. Supports sizes, color variants, and accessible loading labels.
+
+## Features
+
+✅ **Sizes**: sm, md, lg, xl  
+✅ **Variants**: primary, secondary, white, success, danger  
+✅ **Accessible**: Uses `role="status"` and screen-reader text  
+✅ **Tailwind CSS**: Fully styled with Tailwind  
+✅ **TypeScript**: Full type safety  
+
+## Installation
+
+The spinner component is ready to use from `@/components/spinner`.
+
+## Usage
+
+```tsx
+import { Spinner } from '@/components/spinner';
+
+export const MyComponent = () => {
+  return <Spinner />;
+};
+```
+
+## API Reference
+
+### Spinner Props
+
+```typescript
+interface SpinnerProps {
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  variant?: 'primary' | 'secondary' | 'white' | 'success' | 'danger';
+  label?: string;
+  className?: string;
+}
+```
+
+Default values:
+
+- `size`: `'md'`
+- `variant`: `'primary'`
+- `label`: `'Loading'`
+
+## Examples
+
+### Example 1: Basic Spinner
+
+```tsx
+<Spinner />
+```
+
+### Example 2: Button Loading State
+
+```tsx
+<button className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white">
+  <Spinner size="sm" variant="white" />
+  Saving
+</button>
+```
+
+### Example 3: Page Loading State
+
+```tsx
+<div className="flex min-h-64 items-center justify-center">
+  <Spinner size="xl" label="Loading page" />
+</div>
+```
+
+### Example 4: Different Variants
+
+```tsx
+<div className="flex items-center gap-4">
+  <Spinner variant="primary" />
+  <Spinner variant="secondary" />
+  <Spinner variant="success" />
+  <Spinner variant="danger" />
+</div>
+```
+
+## Styling
+
+The spinner is built with a circular border and Tailwind `animate-spin`.
+
+- **Primary**: Blue
+- **Secondary**: Gray
+- **White**: For dark or colored backgrounds
+- **Success**: Green
+- **Danger**: Red
+
+## Customization
+
+To customize sizes, edit `sizeClasses` in `Spinner.tsx`:
+
+```tsx
+const sizeClasses = {
+  sm: 'h-4 w-4 border-2',
+  md: 'h-6 w-6 border-2',
+  lg: 'h-8 w-8 border-2',
+  xl: 'h-12 w-12 border-4',
+};
+```
+
+To customize colors, edit `variantClasses` in `Spinner.tsx`:
+
+```tsx
+const variantClasses = {
+  primary: 'border-blue-200 border-t-blue-600',
+  secondary: 'border-gray-200 border-t-gray-700',
+  white: 'border-white/40 border-t-white',
+  success: 'border-green-200 border-t-green-600',
+  danger: 'border-red-200 border-t-red-600',
+};
+```
+
+## File Structure
+
+```
+components/spinner/
+├── types.ts       # TypeScript type definitions
+├── Spinner.tsx    # Spinner component
+├── index.ts       # Export barrel file
+└── docs.mdx       # This documentation
+```
+
+## Browser Support
+
+Works on all modern browsers that support:
+
+- React 18+
+- Tailwind CSS 3+
+- ES2020+

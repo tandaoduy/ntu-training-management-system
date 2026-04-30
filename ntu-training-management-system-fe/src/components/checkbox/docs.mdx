@@ -1,0 +1,57 @@
+# Checkbox Component Documentation
+
+## Overview
+
+A checkbox component for boolean form values and multi-select lists. Supports labels, descriptions, error text, sizes, and disabled state.
+
+## Usage
+
+```tsx
+import { Checkbox } from '@/components/checkbox';
+
+<Checkbox
+  label="I agree to the terms"
+  description="You can change this later."
+/>
+```
+
+## API Reference
+
+```typescript
+interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
+  label?: ReactNode;
+  description?: ReactNode;
+  error?: string;
+  checkboxSize?: 'sm' | 'md' | 'lg';
+}
+```
+
+Default values:
+
+- `checkboxSize`: `'md'`
+
+## Examples
+
+```tsx
+<Checkbox label="Remember me" />
+
+<Checkbox
+  label="Enable notifications"
+  description="Send course updates by email."
+/>
+
+<Checkbox
+  label="Required approval"
+  error="You must accept before continuing."
+/>
+```
+
+## File Structure
+
+```
+components/checkbox/
+├── types.ts
+├── Checkbox.tsx
+├── index.ts
+└── docs.mdx
+```

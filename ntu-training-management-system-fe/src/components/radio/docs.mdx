@@ -1,0 +1,70 @@
+# Radio Component Documentation
+
+## Overview
+
+Radio components for single-choice form inputs. Includes a standalone `Radio` and a convenience `RadioGroup`.
+
+## Usage
+
+```tsx
+import { RadioGroup } from '@/components/radio';
+
+<RadioGroup
+  name="role"
+  label="Role"
+  options={[
+    { label: 'Student', value: 'student' },
+    { label: 'Teacher', value: 'teacher' },
+  ]}
+/>
+```
+
+## API Reference
+
+```typescript
+interface RadioProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
+  label: ReactNode;
+  description?: ReactNode;
+  radioSize?: 'sm' | 'md' | 'lg';
+}
+
+interface RadioGroupProps {
+  name: string;
+  label?: string;
+  options: RadioOption[];
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+  error?: string;
+  helperText?: string;
+  radioSize?: 'sm' | 'md' | 'lg';
+  direction?: 'vertical' | 'horizontal';
+}
+```
+
+## Examples
+
+```tsx
+<Radio label="Active" name="status" value="active" />
+
+<RadioGroup
+  name="semester"
+  label="Semester"
+  defaultValue="fall"
+  direction="horizontal"
+  options={[
+    { label: 'Spring', value: 'spring' },
+    { label: 'Fall', value: 'fall' },
+  ]}
+/>
+```
+
+## File Structure
+
+```
+components/radio/
+├── types.ts
+├── Radio.tsx
+├── index.ts
+└── docs.mdx
+```

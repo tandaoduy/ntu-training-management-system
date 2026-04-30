@@ -1,0 +1,29 @@
+# Table Component Documentation
+
+## Usage
+
+```tsx
+import { Table, TablePagination } from '@/components/table';
+
+<Table columns={columns} data={rows} rowKey="id" />
+```
+
+## Features
+
+- Basic data table
+- Optional checkbox selection
+- Pagination helper component
+- Horizontal overflow for small screens
+
+## Example
+
+```tsx
+<Table
+  selectable
+  selectedRows={selectedRows}
+  onSelectedRowsChange={setSelectedRows}
+  columns={columns}
+  data={rows}
+  rowKey="id"
+/>
+```

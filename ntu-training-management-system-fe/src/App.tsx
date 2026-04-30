@@ -11,11 +11,10 @@ import ManagerDashboardPage from './app/pages/manager/dashboard/ManagerDashboard
 import DashboardStudentPage from './app/pages/student/dashboard/StudentDashboardPage'
 import ForgotPasswordPage from './app/pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './app/pages/auth/ResetPasswordPage'
-import AlertTestPage from './app/pages/test/AlertTestPage'
+import ComponentPreviewPage from './app/pages/test/ComponentPreviewPage'
 import ComponentTestPage from './app/pages/test/ComponentTestPage'
-import SubnavTestPage from './app/pages/test/SubnavTestPage'
 import TrainingOfficerDashboardPage from './app/pages/training-officer/dashboard/TrainingOfficerDashboardPage.tsx'
-import { AlertProvider } from './components/alert'
+import { AlertProvider } from '@/components/alert'
 import { useAuthSession } from './hooks'
 
 function AppShell() {
@@ -135,12 +134,8 @@ function AppShell() {
           element={isAuthenticated ? <ComponentTestPage /> : <Navigate to="/login" replace />}
         />
         <Route
-          path="/component-test/alert"
-          element={isAuthenticated ? <AlertTestPage /> : <Navigate to="/login" replace />}
-        />
-        <Route
-          path="/component-test/subnav"
-          element={isAuthenticated ? <SubnavTestPage /> : <Navigate to="/login" replace />}
+          path="/component-test/:componentId"
+          element={isAuthenticated ? <ComponentPreviewPage /> : <Navigate to="/login" replace />}
         />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
