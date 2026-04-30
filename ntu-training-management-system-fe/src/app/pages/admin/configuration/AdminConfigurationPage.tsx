@@ -1,22 +1,111 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { apiGet, apiPost } from '@/api/core/request'
 import { useAlert } from '@/components/alert'
+import { Button } from '@/components/button'
+import { Input } from '@/components/input'
+import { Select } from '@/components/select'
 import './AdminConfigurationPage.css'
 
+type AcademicTerm = {
+  id: number
+  nam_hoc_id: number
+  nam_hoc: string
+  hoc_ky: string
+}
+
+type AcademicYear = {
+  id: number
+  nam_hoc: string
+  hoc_kys?: AcademicTerm[]
+}
+
+type AcademicTermsResponse = {
+  nam_hocs: AcademicYear[]
+  current_academic_term: AcademicTerm | null
+}
+
+type SwitchAcademicTermResponse = {
+  data: {
+    current_academic_term: AcademicTerm
+  }
+}
+
 export default function AdminConfigurationPage() {
+  const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const { showAlert } = useAlert()
 
-  // Form state
-  const [academicYearsList, setAcademicYearsList] = useState<string[]>(['2025-2026', '2024-2025', '2023-2024'])
+  const [academicYearsList, setAcademicYearsList] = useState<AcademicYear[]>([])
   const [academicYearMode, setAcademicYearMode] = useState<'select' | 'new'>('select')
-  const [academicYear, setAcademicYear] = useState(() => localStorage.getItem('sys_academic_year') || '2025-2026')
+  const [academicYear, setAcademicYear] = useState('')
   const [newYearInput, setNewYearInput] = useState('')
   const [yearError, setYearError] = useState('')
-  const [semester, setSemester] = useState(() => localStorage.getItem('sys_semester') || '2')
+  const [semester, setSemester] = useState('2')
 
-  const currentYear = new Date().getFullYear()
+  const minAcademicYear = 2023
 
-  const handleSave = (e: React.FormEvent) => {
+  const fetchAcademicTerms = async () => {
+    const response = await apiGet<AcademicTermsResponse>('/admin/academic-terms')
+    const years = response.nam_hocs ?? []
+    const currentTerm = response.current_academic_term
+
+    setAcademicYearsList(years)
+
+    if (currentTerm) {
+      setAcademicYear(currentTerm.nam_hoc)
+      setSemester(currentTerm.hoc_ky)
+      return
+    }
+
+    const firstYear = years[0]?.nam_hoc ?? ''
+    setAcademicYear(firstYear)
+    setSemester('2')
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadAcademicTerms = async () => {
+      setIsLoading(true)
+
+      try {
+        const response = await apiGet<AcademicTermsResponse>('/admin/academic-terms')
+
+        if (!isMounted) {
+          return
+        }
+
+        const years = response.nam_hocs ?? []
+        const currentTerm = response.current_academic_term
+
+        setAcademicYearsList(years)
+        setAcademicYear(currentTerm?.nam_hoc ?? years[0]?.nam_hoc ?? '')
+        setSemester(currentTerm?.hoc_ky ?? '2')
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        showAlert({
+          title: 'Không tải được cấu hình',
+          message: 'Vui lòng kiểm tra kết nối backend hoặc quyền cấu hình năm học.',
+          variant: 'error',
+        })
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadAcademicTerms()
+
+    return () => {
+      isMounted = false
+    }
+  }, [showAlert])
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
 
     let yearToSave = academicYear
@@ -29,37 +118,57 @@ export default function AdminConfigurationPage() {
       }
       const yearStr = newYearInput.split('-')[0]
       const yearNum = parseInt(yearStr, 10)
-      if (isNaN(yearNum) || yearNum < currentYear) {
-        setYearError(`Năm học phải lớn hơn hoặc bằng năm hiện tại (${currentYear})`)
+      if (isNaN(yearNum) || yearNum < minAcademicYear) {
+        setYearError(`Năm học phải lớn hơn hoặc bằng ${minAcademicYear}`)
         return
       }
       yearToSave = `${yearNum}-${yearNum + 1}`
     }
 
+    if (!yearToSave) {
+      setYearError('Vui lòng chọn năm học')
+      return
+    }
+
     setIsSaving(true)
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false)
-      
+    try {
+      const response = await apiPost<SwitchAcademicTermResponse, { nam_hoc: string; hoc_ky: string }>(
+        '/admin/academic-terms/switch',
+        {
+          nam_hoc: yearToSave,
+          hoc_ky: semester,
+        },
+      )
+
+      const currentTerm = response.data.current_academic_term
+
       showAlert({
         title: 'Thành công',
-        message: 'Đã cập nhật cấu hình thời gian thành công',
+        message: `Đã cập nhật năm học ${currentTerm.nam_hoc}, học kỳ ${currentTerm.hoc_ky} cho toàn hệ thống`,
         variant: 'success'
       })
 
-      // Cập nhật giao diện và localStorage như thể đã lưu vào DB
-      localStorage.setItem('sys_academic_year', yearToSave)
-      localStorage.setItem('sys_semester', semester)
-
       if (academicYearMode === 'new') {
-        if (!academicYearsList.includes(yearToSave)) {
-          setAcademicYearsList((prev) => [yearToSave, ...prev].sort((a, b) => b.localeCompare(a)))
-        }
         setAcademicYear(yearToSave)
         setAcademicYearMode('select')
         setNewYearInput('')
       }
-    }, 1000)
+
+      try {
+        await fetchAcademicTerms()
+      } catch {
+        setAcademicYear(currentTerm.nam_hoc)
+        setSemester(currentTerm.hoc_ky)
+      }
+    } catch {
+      showAlert({
+        title: 'Lưu thất bại',
+        message: 'Không thể cập nhật cấu hình năm học/học kỳ. Vui lòng thử lại.',
+        variant: 'error'
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -80,9 +189,10 @@ export default function AdminConfigurationPage() {
                 <div className="ac-form-group">
                   <label className="ac-label">Năm học</label>
                   {academicYearMode === 'select' ? (
-                    <select 
-                      className="ac-select" 
-                      value={academicYear} 
+                    <Select
+                      className="ac-select"
+                      value={academicYear}
+                      disabled={isLoading}
                       onChange={(e) => {
                         if (e.target.value === 'new') {
                           setAcademicYearMode('new')
@@ -92,18 +202,20 @@ export default function AdminConfigurationPage() {
                           setAcademicYear(e.target.value)
                         }
                       }}
-                    >
-                      <option value="new" style={{ fontWeight: 'bold', color: '#3182ce' }}>+ Tạo năm học mới</option>
-                      {academicYearsList.map((year) => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
+                      options={[
+                        { label: '+ Tạo năm học mới', value: 'new' },
+                        ...academicYearsList.map((year) => ({
+                          label: year.nam_hoc,
+                          value: year.nam_hoc,
+                        })),
+                      ]}
+                    />
                   ) : (
                     <div>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <input 
+                        <Input
                           type="text"
-                          className="ac-input" 
+                          className="ac-input"
                           value={newYearInput}
                           onFocus={() => {
                             if (newYearInput.includes('-')) {
@@ -113,7 +225,7 @@ export default function AdminConfigurationPage() {
                           onBlur={() => {
                             const yearStr = newYearInput.split('-')[0]
                             const yearNum = parseInt(yearStr, 10)
-                            if (!isNaN(yearNum) && yearNum >= currentYear) {
+                            if (!isNaN(yearNum) && yearNum >= minAcademicYear) {
                               setNewYearInput(`${yearNum}-${yearNum + 1}`)
                             }
                           }}
@@ -122,20 +234,21 @@ export default function AdminConfigurationPage() {
                             const val = e.target.value.replace(/\D/g, '')
                             setNewYearInput(val)
                             
-                            if (val && parseInt(val, 10) < currentYear) {
-                              setYearError(`Năm học phải lớn hơn hoặc bằng ${currentYear}`)
+                            if (val && parseInt(val, 10) < minAcademicYear) {
+                              setYearError(`Năm học phải lớn hơn hoặc bằng ${minAcademicYear}`)
                             } else {
                               setYearError('')
                             }
                           }}
-                          placeholder={`Nhập năm (VD: ${currentYear})`}
+                          placeholder={`Nhập năm (VD: ${minAcademicYear})`}
                           style={{ 
                             borderColor: yearError ? '#e53e3e' : undefined,
                             outlineColor: yearError ? '#e53e3e' : undefined
                           }}
                         />
-                        <button 
+                        <Button
                           type="button" 
+                          variant="secondary"
                           onClick={() => {
                             setAcademicYearMode('select')
                             setYearError('')
@@ -152,7 +265,7 @@ export default function AdminConfigurationPage() {
                           }}
                         >
                           Hủy
-                        </button>
+                        </Button>
                       </div>
                       {newYearInput && !yearError && !newYearInput.includes('-') && (
                         <span style={{ color: '#38a169', fontSize: '0.85rem', marginTop: '6px', display: 'block', fontWeight: 500 }}>
@@ -171,20 +284,22 @@ export default function AdminConfigurationPage() {
                 {/* Semester */}
                 <div className="ac-form-group">
                   <label className="ac-label">Học kỳ</label>
-                  <select 
-                    className="ac-select" 
-                    value={semester} 
+                  <Select
+                    className="ac-select"
+                    value={semester}
+                    disabled={isLoading}
                     onChange={(e) => setSemester(e.target.value)}
-                  >
-                    <option value="1">Học kỳ 1</option>
-                    <option value="2">Học kỳ 2</option>
-                    <option value="3">Học kỳ Hè</option>
-                  </select>
+                    options={[
+                      { label: 'Học kỳ 1', value: '1' },
+                      { label: 'Học kỳ 2', value: '2' },
+                      { label: 'Học kỳ Hè', value: 'Hè' },
+                    ]}
+                  />
                 </div>
               </div>
 
               <div className="ac-form-actions">
-                <button type="submit" className="ac-btn-save" disabled={isSaving}>
+                <Button type="submit" className="ac-btn-save" disabled={isLoading || isSaving}>
                   {isSaving ? (
                     <>
                       <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
@@ -196,7 +311,7 @@ export default function AdminConfigurationPage() {
                       Lưu cấu hình
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

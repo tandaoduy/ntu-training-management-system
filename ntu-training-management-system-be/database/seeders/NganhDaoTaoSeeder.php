@@ -9,6 +9,8 @@ use Illuminate\Database\Seeder;
 class NganhDaoTaoSeeder extends Seeder
 {
     private const HE_DAO_TAO = 'Đại học Chính quy';
+    private const DEFAULT_TRAINING_DURATION = 4.0;
+    private const EXTENDED_TRAINING_DURATION = 4.5;
 
     public function run(): void
     {
@@ -78,12 +80,17 @@ class NganhDaoTaoSeeder extends Seeder
                 continue;
             }
 
+            $thoiGianDaoTao = preg_match('/(HV|MP)$/u', $maNganh)
+                ? self::EXTENDED_TRAINING_DURATION
+                : self::DEFAULT_TRAINING_DURATION;
+
             NganhDaoTao::query()->updateOrCreate(
                 ['ma_nganh' => $maNganh],
                 [
                     'ten_nganh' => $tenNganh,
                     'don_vi_id' => $donViId,
                     'he_dao_tao' => self::HE_DAO_TAO,
+                    'thoi_gian_dao_tao' => $thoiGianDaoTao,
                 ],
             );
         }

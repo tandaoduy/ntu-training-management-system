@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { apiGet } from '../../../../api/core/request'
 import { useAuth } from '../../../../api/query'
+import { Modal } from '@/components/modal'
 import logoImage from '../../../../assets/Logo_NTU.png'
 import './StudentDashboardPage.css'
 
@@ -71,12 +72,31 @@ interface StudentDashboardResponse {
   } | null
 }
 
+interface CurrentAcademicTermResponse {
+  data?: {
+    id?: number
+    nam_hoc_id?: number
+    nam_hoc?: string | null
+    hoc_ky?: string | null
+  } | null
+  is_configured?: boolean
+}
+
+interface LegacyStudentDashboardResponse extends StudentDashboardResponse {
+  hoc_ky_hien_hanh?: {
+    id?: number
+    nam_hoc_id?: number
+    nam_hoc?: string | null
+    hoc_ky?: string | null
+  } | null
+}
+
 export default function StudentDashboardPage() {
   const navigate = useNavigate()
   const { user, logout, me } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [sysAcademicYear] = useState('2025-2026')
-  const [sysSemester] = useState('2')
+  const [sysAcademicYear, setSysAcademicYear] = useState('Đang tải')
+  const [sysSemester, setSysSemester] = useState('Đang tải')
   const [studentName, setStudentName] = useState<string | null>(null)
   const [educationSystem, setEducationSystem] = useState<string | null>(null)
 
@@ -91,25 +111,36 @@ export default function StudentDashboardPage() {
     let isMounted = true
 
     const fetchStudentDashboard = async () => {
-      try {
-        const response = await apiGet<StudentDashboardResponse>('/student/dashboard')
-        const name = response.student?.ten_sinh_vien?.trim() || null
-        const heDaoTao = response.student?.he_dao_tao?.trim() || null
+      const [dashboardResult, currentTermResult] = await Promise.allSettled([
+        apiGet<LegacyStudentDashboardResponse>('/student/dashboard'),
+        apiGet<CurrentAcademicTermResponse>('/academic-catalog/current-term'),
+      ])
 
-        if (!isMounted) {
-          return
-        }
+      if (!isMounted) {
+        return
+      }
+
+      if (dashboardResult.status === 'fulfilled') {
+        const name = dashboardResult.value.student?.ten_sinh_vien?.trim() || null
+        const heDaoTao = dashboardResult.value.student?.he_dao_tao?.trim() || null
 
         setStudentName(name)
         setEducationSystem(heDaoTao)
-      } catch {
-        if (!isMounted) {
-          return
-        }
-
+      } else {
         setStudentName(null)
         setEducationSystem(null)
       }
+
+      const currentTerm = currentTermResult.status === 'fulfilled'
+        ? currentTermResult.value.data
+        : dashboardResult.status === 'fulfilled'
+          ? dashboardResult.value.hoc_ky_hien_hanh
+          : null
+      const namHoc = currentTerm?.nam_hoc?.trim() || null
+      const hocKy = currentTerm?.hoc_ky?.trim() || null
+
+      setSysAcademicYear(namHoc ?? 'Chưa cấu hình')
+      setSysSemester(hocKy ?? 'Chưa cấu hình')
     }
 
     void fetchStudentDashboard()
@@ -180,16 +211,30 @@ export default function StudentDashboardPage() {
 
       {/* MODAL XÁC NHẬN ĐĂNG XUẤT */}
       {showLogoutConfirm && (
-        <div className="sd-modal-overlay">
-          <div className="sd-modal-content">
-            <h3 className="sd-modal-title">Xác nhận đăng xuất</h3>
-            <p className="sd-modal-desc">Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?</p>
-            <div className="sd-modal-actions">
-              <button className="sd-modal-btn sd-modal-btn-cancel" onClick={() => setShowLogoutConfirm(false)}>Hủy</button>
-              <button className="sd-modal-btn sd-modal-btn-confirm" onClick={handleLogout}>Đăng xuất</button>
-            </div>
-          </div>
-        </div>
+        <Modal
+          modal={{
+            id: 'student-logout-confirm',
+            title: 'Xác nhận đăng xuất',
+            content: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
+            dismissible: true,
+            closeOnOverlayClick: true,
+            actions: [
+              {
+                label: 'Hủy',
+                variant: 'secondary',
+                autoClose: false,
+                onClick: () => setShowLogoutConfirm(false),
+              },
+              {
+                label: 'Đăng xuất',
+                variant: 'danger',
+                autoClose: false,
+                onClick: () => void handleLogout(),
+              },
+            ],
+          }}
+          onClose={() => setShowLogoutConfirm(false)}
+        />
       )}
 
       {/* ── MAIN ── */}
