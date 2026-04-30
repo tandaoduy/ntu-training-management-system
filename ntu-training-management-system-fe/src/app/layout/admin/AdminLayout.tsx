@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../api/query'
+import { Modal } from '@/components/modal'
 import logoImage from '../../../assets/Logo_NTU.png'
 import './AdminLayout.css'
 
@@ -71,30 +72,34 @@ export default function AdminLayout() {
 
       {/* ── LOGOUT MODAL ── */}
       {showLogoutConfirm && (
-        <div className="ad-modal-overlay">
-          <div className="ad-modal-content">
-            <h3 className="ad-modal-title">Xác nhận đăng xuất</h3>
-            <p className="ad-modal-desc">Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?</p>
-            <div className="ad-modal-actions">
-              <button 
-                type="button" 
-                className="ad-modal-btn ad-modal-btn-cancel"
-                onClick={() => setShowLogoutConfirm(false)}
-                disabled={isLoggingOut}
-              >
-                Hủy
-              </button>
-              <button 
-                type="button" 
-                className="ad-modal-btn ad-modal-btn-confirm"
-                onClick={confirmLogout}
-                disabled={isLoggingOut}
-              >
-                {isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <Modal
+          modal={{
+            id: 'admin-logout-confirm',
+            title: 'Xác nhận đăng xuất',
+            content: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?',
+            dismissible: !isLoggingOut,
+            closeOnOverlayClick: !isLoggingOut,
+            actions: [
+              {
+                label: 'Hủy',
+                variant: 'secondary',
+                autoClose: false,
+                onClick: () => setShowLogoutConfirm(false),
+              },
+              {
+                label: isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất',
+                variant: 'danger',
+                autoClose: false,
+                onClick: () => void confirmLogout(),
+              },
+            ],
+          }}
+          onClose={() => {
+            if (!isLoggingOut) {
+              setShowLogoutConfirm(false)
+            }
+          }}
+        />
       )}
     </div>
   )

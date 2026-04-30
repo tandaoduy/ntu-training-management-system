@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\HeThongCauHinh;
 use App\Models\HocKy;
 use App\Models\NamHoc;
 use Illuminate\Http\JsonResponse;
@@ -42,6 +43,29 @@ class AcademicCatalogController extends Controller
 
         return $this->jsonResponse([
             'data' => $items,
+        ]);
+    }
+
+    public function currentTerm(): JsonResponse
+    {
+        $currentTermId = (int) (HeThongCauHinh::query()->find('current_hoc_ky_id')?->value ?? 0);
+
+        if ($currentTermId <= 0) {
+            $currentTermId = (int) (HeThongCauHinh::query()->find('current_academic_term_id')?->value ?? 0);
+        }
+
+        $currentTerm = $currentTermId > 0
+            ? HocKy::query()->with('namHoc:id,nam_hoc')->find($currentTermId)
+            : null;
+
+        return $this->jsonResponse([
+            'data' => $currentTerm ? [
+                'id' => $currentTerm->id,
+                'nam_hoc_id' => $currentTerm->nam_hoc_id,
+                'nam_hoc' => (string) ($currentTerm->namHoc?->nam_hoc ?? ''),
+                'hoc_ky' => (string) $currentTerm->hoc_ky,
+            ] : null,
+            'is_configured' => $currentTerm !== null,
         ]);
     }
 }

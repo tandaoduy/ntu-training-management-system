@@ -41,7 +41,7 @@ class ProvinceController extends Controller
         '56' => 'Tỉnh Khánh Hòa',
         '66' => 'Tỉnh Đắk Lắk',
         '68' => 'Tỉnh Lâm Đồng',
-        '75' => 'Tỉnh Đồng Nai',
+        '75' => 'Thành phố Đồng Nai',
         '79' => 'Thành phố Hồ Chí Minh',
         '80' => 'Tỉnh Tây Ninh',
         '82' => 'Tỉnh Đồng Tháp',

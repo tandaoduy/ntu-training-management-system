@@ -29,6 +29,8 @@ class SinhVien extends Model
         'don_vi_id',
         'ten_don_vi',
         'he_dao_tao',
+        'nam_nhap_hoc',
+        'khoa_hoc',
         'so_cccd',
         'ngay_cap_cccd',
         'noi_cap_cccd',

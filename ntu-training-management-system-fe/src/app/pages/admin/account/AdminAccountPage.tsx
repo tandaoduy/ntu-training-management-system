@@ -3,6 +3,10 @@ import type { CSSProperties, FormEvent, ReactNode } from 'react'
 
 import { apiGet, apiPost } from '../../../../api/core/request'
 import { useAlert } from '@/components/alert'
+import { Button } from '@/components/button'
+import { DatePicker } from '@/components/date-picker'
+import { Input } from '@/components/input'
+import { Select } from '@/components/select'
 import './AdminAccountPage.css'
 
 type RoleId = 'student' | 'lecturer' | 'training_officer' | 'manager'
@@ -46,6 +50,7 @@ interface NganhDaoTaoOption {
   ten_nganh: string
   don_vi_id: number | null
   he_dao_tao: string
+  thoi_gian_dao_tao: number | string
 }
 
 interface DonViOption {
@@ -112,6 +117,8 @@ interface NewAccountState {
   nganhDaoTaoId: string
   tenNganhHoc: string
   heDaoTao: string
+  namNhapHoc: string
+  khoaHoc: string
   soCccd: string
   noiSinh: string
   ngayCapCccd: string
@@ -125,6 +132,7 @@ interface NewAccountState {
   queQuanTinhThanhPho: string
   queQuanQuanHuyen: string
   queQuan: string
+  diaChiLienLac: string
   danToc: string
   tonGiao: string
 }
@@ -132,6 +140,8 @@ interface NewAccountState {
 interface AccountFormErrors {
   username?: string
   fullName?: string
+  soCccd?: string
+  namNhapHoc?: string
 }
 
 const EMPTY_ACCOUNT: NewAccountState = {
@@ -148,6 +158,8 @@ const EMPTY_ACCOUNT: NewAccountState = {
   nganhDaoTaoId: '',
   tenNganhHoc: '',
   heDaoTao: 'Đại học Chính quy',
+  namNhapHoc: '',
+  khoaHoc: '',
   soCccd: '',
   noiSinh: '',
   ngayCapCccd: '',
@@ -161,6 +173,7 @@ const EMPTY_ACCOUNT: NewAccountState = {
   queQuanTinhThanhPho: '',
   queQuanQuanHuyen: '',
   queQuan: '',
+  diaChiLienLac: '',
   danToc: '',
   tonGiao: '',
 }
@@ -214,15 +227,46 @@ const formatProvinceOption = (province: Province): string => {
 }
 
 const STUDENT_CODE_REGEX = /^\d{8}$/
-const PERSON_NAME_REGEX = /^[\p{L}\s]+$/u
+const CCCD_REGEX = /^\d{12}$/
+const ADMISSION_YEAR_REGEX = /^\d{4}$/
+const MIN_ADMISSION_YEAR = 2023
+const PERSON_NAME_REGEX = /^[\p{L}\p{M}\s]+$/u
 const NTU_EMAIL_DOMAIN = '@ntu.edu.vn'
 
 const sanitizeStudentCode = (value: string): string => {
   return value.replace(/\D/g, '').slice(0, 8)
 }
 
+const sanitizeCccd = (value: string): string => {
+  return value.replace(/\D/g, '').slice(0, 12)
+}
+
+const sanitizeAdmissionYear = (value: string): string => {
+  return value.replace(/\D/g, '').slice(0, 4)
+}
+
+const getTrainingDuration = (nganhDaoTao?: NganhDaoTaoOption): number => {
+  if (/(MP|HV)$/u.test(nganhDaoTao?.ma_nganh ?? '')) {
+    return 4.5
+  }
+
+  return Number(nganhDaoTao?.thoi_gian_dao_tao) || 4
+}
+
+const getAcademicCohort = (value: string, trainingDuration = 4): string => {
+  const year = Number(value)
+
+  return ADMISSION_YEAR_REGEX.test(value) && year >= MIN_ADMISSION_YEAR
+    ? `${year}-${year + Math.ceil(trainingDuration)}`
+    : ''
+}
+
 const sanitizePersonName = (value: string): string => {
-  return value.replace(/[^\p{L}\s]/gu, '').replace(/\s{2,}/g, ' ')
+  return value.replace(/[^\p{L}\p{M}\s]/gu, '').replace(/\s{2,}/g, ' ').normalize('NFC')
+}
+
+const sanitizeLettersOnly = (value: string): string => {
+  return value.replace(/[^\p{L}\p{M}\s]/gu, '').replace(/\s{2,}/g, ' ').normalize('NFC')
 }
 
 const normalizePersonName = (value: string): string => {
@@ -382,6 +426,7 @@ export default function AdminAccountPage() {
   const selectedNganhDaoTao = selectedDonVi?.nganh_dao_taos.find(
     (nganhDaoTao) => String(nganhDaoTao.id) === newAccount.nganhDaoTaoId,
   )
+  const selectedTrainingDuration = getTrainingDuration(selectedNganhDaoTao)
 
   const validateAccountForm = (account: NewAccountState): AccountFormErrors => {
     const errors: AccountFormErrors = {}
@@ -389,6 +434,18 @@ export default function AdminAccountPage() {
 
     if (selectedRole === 'student' && !STUDENT_CODE_REGEX.test(account.username)) {
       errors.username = 'MSSV phải gồm đúng 8 chữ số.'
+    }
+
+    if (selectedRole === 'student' && !CCCD_REGEX.test(account.soCccd)) {
+      errors.soCccd = 'Số CCCD phải gồm đúng 12 chữ số.'
+    }
+
+    if (selectedRole === 'student') {
+      const admissionYear = Number(account.namNhapHoc)
+
+      if (!ADMISSION_YEAR_REGEX.test(account.namNhapHoc) || admissionYear < MIN_ADMISSION_YEAR) {
+        errors.namNhapHoc = `Năm nhập học phải từ ${MIN_ADMISSION_YEAR} trở đi.`
+      }
     }
 
     if (!fullName) {
@@ -408,6 +465,26 @@ export default function AdminAccountPage() {
     return 'MSSV phải gồm đúng 8 chữ số.'
   }
 
+  const getCccdError = (value: string): string | undefined => {
+    if (selectedRole !== 'student' || value.length === 0 || value.length === 12) {
+      return undefined
+    }
+
+    return 'Số CCCD phải gồm đúng 12 chữ số.'
+  }
+
+  const getAdmissionYearError = (value: string): string | undefined => {
+    if (selectedRole !== 'student' || value.length === 0) {
+      return undefined
+    }
+
+    if (value.length < 4) {
+      return 'Năm nhập học phải gồm đúng 4 chữ số.'
+    }
+
+    return Number(value) < MIN_ADMISSION_YEAR ? `Năm nhập học phải từ ${MIN_ADMISSION_YEAR} trở đi.` : undefined
+  }
+
   const handleCreateAccount = async (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault()
 
@@ -418,6 +495,11 @@ export default function AdminAccountPage() {
     const normalizedAccount = {
       ...newAccount,
       username: selectedRole === 'student' ? sanitizeStudentCode(newAccount.username) : newAccount.username.trim(),
+      soCccd: selectedRole === 'student' ? sanitizeCccd(newAccount.soCccd) : newAccount.soCccd.trim(),
+      namNhapHoc: selectedRole === 'student' ? sanitizeAdmissionYear(newAccount.namNhapHoc) : newAccount.namNhapHoc.trim(),
+      khoaHoc: selectedRole === 'student'
+        ? getAcademicCohort(sanitizeAdmissionYear(newAccount.namNhapHoc), selectedTrainingDuration)
+        : newAccount.khoaHoc.trim(),
       fullName: normalizePersonName(newAccount.fullName),
       email: normalizeNtuEmail(newAccount.email),
     }
@@ -449,19 +531,22 @@ export default function AdminAccountPage() {
         don_vi_id: selectedRole === 'student' ? Number(normalizedAccount.donViId) || null : undefined,
         lop_id: selectedRole === 'student' ? Number(normalizedAccount.lopId) || null : undefined,
         nganh_dao_tao_id: selectedRole === 'student' ? Number(normalizedAccount.nganhDaoTaoId) || null : undefined,
-        ma_lop: selectedRole === 'student' ? selectedLop?.ma_khoi ?? null : undefined,
+        ma_lop: selectedRole === 'student' ? selectedLop?.lop_hoc_phan ?? null : undefined,
         ten_don_vi: selectedRole === 'student' ? selectedDonVi?.ten_don_vi ?? null : undefined,
         ten_nganh_hoc: selectedRole === 'student' ? selectedNganhDaoTao?.ten_nganh ?? null : undefined,
         he_dao_tao: selectedRole === 'student' ? normalizedAccount.heDaoTao || null : undefined,
+        nam_nhap_hoc: selectedRole === 'student' ? Number(normalizedAccount.namNhapHoc) || null : undefined,
+        khoa_hoc: selectedRole === 'student' ? normalizedAccount.khoaHoc || null : undefined,
         so_cccd: selectedRole === 'student' ? normalizedAccount.soCccd.trim() || null : undefined,
         noi_sinh: selectedRole === 'student' ? normalizedAccount.noiSinh.trim() || null : undefined,
         ngay_cap_cccd: selectedRole === 'student' ? normalizedAccount.ngayCapCccd || null : undefined,
-        noi_cap_cccd: selectedRole === 'student' ? normalizedAccount.noiCapCccd.trim() || null : undefined,
+        noi_cap_cccd: selectedRole === 'student' ? sanitizeLettersOnly(normalizedAccount.noiCapCccd).trim() || null : undefined,
         ho_khau_tinh_thanh_pho: selectedRole === 'student' ? normalizedAccount.hoKhauTinhThanhPho.trim() || null : undefined,
         ho_khau_quan_huyen: selectedRole === 'student' ? normalizedAccount.hoKhauQuanHuyen.trim() || null : undefined,
         que_quan_tinh_thanh_pho: selectedRole === 'student' ? normalizedAccount.queQuanTinhThanhPho.trim() || null : undefined,
         que_quan_quan_huyen: selectedRole === 'student' ? normalizedAccount.queQuanQuanHuyen.trim() || null : undefined,
         que_quan: selectedRole === 'student' ? normalizedAccount.queQuan.trim() || null : undefined,
+        dia_chi_lien_lac: selectedRole === 'student' ? normalizedAccount.diaChiLienLac.trim() || null : undefined,
         dan_toc: selectedRole === 'student' ? normalizedAccount.danToc.trim() || null : undefined,
         ton_giao: selectedRole === 'student' ? normalizedAccount.tonGiao.trim() || null : undefined,
       })
@@ -543,14 +628,14 @@ export default function AdminAccountPage() {
       {selectedRole && activeRole && (
         <div className="aa-list-view">
           <div className="aa-toolbar">
-            <button className="aa-btn-back" onClick={() => setSelectedRole(null)}>
+            <Button className="aa-btn-back" variant="secondary" onClick={() => setSelectedRole(null)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
               Quay lại danh sách vai trò
-            </button>
-            <button className="aa-btn-primary" onClick={() => setShowModal(true)}>
+            </Button>
+            <Button className="aa-btn-primary" onClick={() => setShowModal(true)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
               Tạo tài khoản {activeRole.title.toLowerCase()}
-            </button>
+            </Button>
           </div>
 
           <div className="aa-table-container">
@@ -623,47 +708,45 @@ export default function AdminAccountPage() {
             </div>
 
             <form onSubmit={handleCreateAccount} className="aa-form">
-              <div className="aa-form-group">
-                <label>Mã tài khoản / MSSV *</label>
-                <input
-                  type="text"
-                  className="aa-input"
-                  required
-                  inputMode={selectedRole === 'student' ? 'numeric' : undefined}
-                  maxLength={selectedRole === 'student' ? 8 : undefined}
-                  pattern={selectedRole === 'student' ? '\\d{8}' : undefined}
-                  placeholder={selectedRole === 'student' ? 'Nhập đúng 8 chữ số...' : 'Nhập mã tài khoản...'}
-                  value={newAccount.username}
-                  onChange={(event) => {
-                    const username = selectedRole === 'student'
-                      ? sanitizeStudentCode(event.target.value)
-                      : event.target.value
+              <Input
+                label="Mã tài khoản / MSSV *"
+                type="text"
+                className="aa-input"
+                containerClassName="aa-form-group"
+                required
+                inputMode={selectedRole === 'student' ? 'numeric' : undefined}
+                maxLength={selectedRole === 'student' ? 8 : undefined}
+                pattern={selectedRole === 'student' ? '\\d{8}' : undefined}
+                placeholder={selectedRole === 'student' ? 'Nhập đúng 8 chữ số...' : 'Nhập mã tài khoản...'}
+                value={newAccount.username}
+                error={formErrors.username}
+                onChange={(event) => {
+                  const username = selectedRole === 'student'
+                    ? sanitizeStudentCode(event.target.value)
+                    : event.target.value
 
-                    setNewAccount({ ...newAccount, username })
-                    setFormErrors({ ...formErrors, username: getStudentCodeError(username) })
-                  }}
-                />
-                {formErrors.username && <span className="aa-field-error">{formErrors.username}</span>}
-              </div>
-              <div className="aa-form-group">
-                <label>Họ và Tên *</label>
-                <input
-                  type="text"
-                  className="aa-input"
-                  required
-                  placeholder="Nhập họ và tên..."
-                  value={newAccount.fullName}
-                  onChange={(event) => {
-                    setNewAccount({ ...newAccount, fullName: sanitizePersonName(event.target.value) })
-                    setFormErrors({ ...formErrors, fullName: undefined })
-                  }}
-                  onBlur={() => setNewAccount({
-                    ...newAccount,
-                    fullName: normalizePersonName(newAccount.fullName),
-                  })}
-                />
-                {formErrors.fullName && <span className="aa-field-error">{formErrors.fullName}</span>}
-              </div>
+                  setNewAccount({ ...newAccount, username })
+                  setFormErrors({ ...formErrors, username: getStudentCodeError(username) })
+                }}
+              />
+              <Input
+                label="Họ và Tên *"
+                type="text"
+                className="aa-input"
+                containerClassName="aa-form-group"
+                required
+                placeholder="Nhập họ và tên..."
+                value={newAccount.fullName}
+                error={formErrors.fullName}
+                onChange={(event) => {
+                  setNewAccount({ ...newAccount, fullName: event.target.value })
+                  setFormErrors({ ...formErrors, fullName: undefined })
+                }}
+                onBlur={() => setNewAccount({
+                  ...newAccount,
+                  fullName: normalizePersonName(newAccount.fullName),
+                })}
+              />
               <div className="aa-form-group">
                 <label>Email liên hệ</label>
                 <div className="aa-email-input">
@@ -686,28 +769,26 @@ export default function AdminAccountPage() {
               {selectedRole === 'student' && (
                 <>
                   <div className="aa-form-grid">
-                    <div className="aa-form-group">
-                      <label>Giới tính</label>
-                      <select
-                        className="aa-input"
-                        value={newAccount.gioiTinh}
-                        onChange={(event) => setNewAccount({ ...newAccount, gioiTinh: event.target.value })}
-                      >
-                        <option value="">Chọn giới tính</option>
-                        <option value="Nam">Nam</option>
-                        <option value="Nữ">Nữ</option>
-                        <option value="Khác">Khác</option>
-                      </select>
-                    </div>
-                    <div className="aa-form-group">
-                      <label>Ngày sinh</label>
-                      <input
-                        type="date"
-                        className="aa-input"
-                        value={newAccount.ngaySinh}
-                        onChange={(event) => setNewAccount({ ...newAccount, ngaySinh: event.target.value })}
-                      />
-                    </div>
+                    <Select
+                      label="Giới tính"
+                      className="aa-input"
+                      containerClassName="aa-form-group"
+                      value={newAccount.gioiTinh}
+                      onChange={(event) => setNewAccount({ ...newAccount, gioiTinh: event.target.value })}
+                      placeholder="Chọn giới tính"
+                      options={[
+                        { label: 'Nam', value: 'Nam' },
+                        { label: 'Nữ', value: 'Nữ' },
+                        { label: 'Khác', value: 'Khác' },
+                      ]}
+                    />
+                    <DatePicker
+                      label="Ngày sinh"
+                      className="aa-input"
+                      containerClassName="aa-form-group"
+                      value={newAccount.ngaySinh}
+                      onChange={(event) => setNewAccount({ ...newAccount, ngaySinh: event.target.value })}
+                    />
                     <div className="aa-form-group">
                       <label>Mã đơn vị</label>
                       <select
@@ -723,6 +804,7 @@ export default function AdminAccountPage() {
                             tenDonVi: donVi?.ten_don_vi ?? '',
                             nganhDaoTaoId: '',
                             tenNganhHoc: '',
+                            khoaHoc: getAcademicCohort(newAccount.namNhapHoc, 4),
                           })
                         }}
                         disabled={isCatalogLoading}
@@ -745,7 +827,7 @@ export default function AdminAccountPage() {
                           setNewAccount({
                             ...newAccount,
                             lopId: event.target.value,
-                            maLop: lop?.ma_khoi ?? '',
+                            maLop: lop?.lop_hoc_phan ?? '',
                           })
                         }}
                         disabled={!newAccount.donViId || isCatalogLoading}
@@ -759,7 +841,7 @@ export default function AdminAccountPage() {
                         </option>
                         {selectedDonVi?.lops.map((lop) => (
                           <option key={lop.id} value={lop.id}>
-                            {lop.ma_khoi} - {lop.lop_hoc_phan}
+                            {lop.lop_hoc_phan}
                           </option>
                         ))}
                       </select>
@@ -782,6 +864,7 @@ export default function AdminAccountPage() {
                             nganhDaoTaoId: event.target.value,
                             tenNganhHoc: nganhDaoTao?.ten_nganh ?? '',
                             heDaoTao: nganhDaoTao?.he_dao_tao ?? newAccount.heDaoTao,
+                            khoaHoc: getAcademicCohort(newAccount.namNhapHoc, getTrainingDuration(nganhDaoTao)),
                           })
                         }}
                         disabled={!newAccount.donViId || isCatalogLoading}
@@ -800,27 +883,67 @@ export default function AdminAccountPage() {
                         ))}
                       </select>
                     </div>
-                    <div className="aa-form-group">
-                      <label>Hệ đào tạo</label>
-                      <select
-                        className="aa-input"
-                        value={newAccount.heDaoTao}
-                        onChange={(event) => setNewAccount({ ...newAccount, heDaoTao: event.target.value })}
-                      >
-                        <option value="Đại học Chính quy">Đại học Chính quy</option>
-                        <option value="Vừa học vừa làm">Vừa học vừa làm</option>
-                        <option value="Đào tạo từ xa">Đào tạo từ xa</option>
-                      </select>
-                    </div>
-                    <div className="aa-form-group">
-                      <label>Số CMND/CCCD</label>
-                      <input
-                        type="text"
-                        className="aa-input"
-                        value={newAccount.soCccd}
-                        onChange={(event) => setNewAccount({ ...newAccount, soCccd: event.target.value })}
-                      />
-                    </div>
+                    <Select
+                      label="Hệ đào tạo"
+                      className="aa-input"
+                      containerClassName="aa-form-group"
+                      value={newAccount.heDaoTao}
+                      onChange={(event) => setNewAccount({ ...newAccount, heDaoTao: event.target.value })}
+                      options={[
+                        { label: 'Đại học Chính quy', value: 'Đại học Chính quy' },
+                        { label: 'Vừa học vừa làm', value: 'Vừa học vừa làm' },
+                        { label: 'Đào tạo từ xa', value: 'Đào tạo từ xa' },
+                      ]}
+                    />
+                    <Input
+                      label="Năm nhập học *"
+                      type="text"
+                      className="aa-input"
+                      containerClassName="aa-form-group"
+                      required
+                      inputMode="numeric"
+                      maxLength={4}
+                      pattern="\d{4}"
+                      placeholder="Ví dụ: 2023"
+                      value={newAccount.namNhapHoc}
+                      error={formErrors.namNhapHoc}
+                      onChange={(event) => {
+                        const namNhapHoc = sanitizeAdmissionYear(event.target.value)
+                        setNewAccount({
+                          ...newAccount,
+                          namNhapHoc,
+                          khoaHoc: getAcademicCohort(namNhapHoc, selectedTrainingDuration),
+                        })
+                        setFormErrors({ ...formErrors, namNhapHoc: getAdmissionYearError(namNhapHoc) })
+                      }}
+                    />
+                    <Input
+                      label="Khóa học"
+                      type="text"
+                      className="aa-input"
+                      containerClassName="aa-form-group"
+                      value={newAccount.khoaHoc || 'Tự động tính theo năm nhập học'}
+                      disabled
+                      readOnly
+                    />
+                    <Input
+                      label="Số CCCD *"
+                      type="text"
+                      className="aa-input"
+                      containerClassName="aa-form-group"
+                      required
+                      inputMode="numeric"
+                      maxLength={12}
+                      pattern="\d{12}"
+                      placeholder="Nhập đúng 12 chữ số CCCD"
+                      value={newAccount.soCccd}
+                      error={formErrors.soCccd}
+                      onChange={(event) => {
+                        const soCccd = sanitizeCccd(event.target.value)
+                        setNewAccount({ ...newAccount, soCccd })
+                        setFormErrors({ ...formErrors, soCccd: getCccdError(soCccd) })
+                      }}
+                    />
                     <div className="aa-form-group">
                       <label>Nơi sinh</label>
                       <select
@@ -839,86 +962,27 @@ export default function AdminAccountPage() {
                         ))}
                       </select>
                     </div>
+                    <DatePicker
+                      label="Ngày cấp CCCD"
+                      className="aa-input"
+                      containerClassName="aa-form-group"
+                      value={newAccount.ngayCapCccd}
+                      onChange={(event) => setNewAccount({ ...newAccount, ngayCapCccd: event.target.value })}
+                    />
+                    <Input
+                      label="Nơi cấp CCCD"
+                      type="text"
+                      className="aa-input"
+                      containerClassName="aa-form-group"
+                      value={newAccount.noiCapCccd}
+                      onChange={(event) => setNewAccount({ ...newAccount, noiCapCccd: event.target.value })}
+                      onBlur={() => setNewAccount({
+                        ...newAccount,
+                        noiCapCccd: sanitizeLettersOnly(newAccount.noiCapCccd),
+                      })}
+                    />
                     <div className="aa-form-group">
-                      <label>Ngày cấp CMND/CCCD</label>
-                      <input
-                        type="date"
-                        className="aa-input"
-                        value={newAccount.ngayCapCccd}
-                        onChange={(event) => setNewAccount({ ...newAccount, ngayCapCccd: event.target.value })}
-                      />
-                    </div>
-                    <div className="aa-form-group">
-                      <label>Nơi cấp CMND/CCCD</label>
-                      <input
-                        type="text"
-                        className="aa-input"
-                        value={newAccount.noiCapCccd}
-                        onChange={(event) => setNewAccount({ ...newAccount, noiCapCccd: event.target.value })}
-                      />
-                    </div>
-                    <div className="aa-form-group">
-                      <label>Hộ khẩu tỉnh/thành phố</label>
-                      <select
-                        className="aa-input"
-                        value={newAccount.hoKhauTinhThanhPhoId}
-                        onChange={(event) => {
-                          const selectedProvince = provinces.find((p) => String(p.id) === event.target.value)
-                          setNewAccount({
-                            ...newAccount,
-                            hoKhauTinhThanhPhoId: event.target.value,
-                            hoKhauTinhThanhPho: selectedProvince?.name || '',
-                            hoKhauQuanHuyenId: '',
-                            hoKhauQuanHuyen: '',
-                          })
-                          if (selectedProvince) {
-                            void loadDistrictsByProvince(selectedProvince, 'hokhau')
-                          } else {
-                            setHoKhauDistricts([])
-                          }
-                        }}
-                        disabled={isProvincesLoading}
-                      >
-                        <option value="">
-                          {isProvincesLoading ? 'Đang tải...' : 'Chọn tỉnh/thành phố'}
-                        </option>
-                        {provinces.map((province) => (
-                          <option key={province.id} value={province.id}>
-                            {formatProvinceOption(province)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="aa-form-group">
-                      <label>Hộ khẩu xã/phường/đặc khu</label>
-                      <select
-                        className="aa-input"
-                        value={newAccount.hoKhauQuanHuyenId}
-                        onChange={(event) => {
-                          setNewAccount({
-                            ...newAccount,
-                            hoKhauQuanHuyenId: event.target.value,
-                            hoKhauQuanHuyen: hoKhauDistricts.find((d) => String(d.id) === event.target.value)?.name || '',
-                          })
-                        }}
-                        disabled={!newAccount.hoKhauTinhThanhPhoId || hoKhauDistricts.length === 0}
-                      >
-                        <option value="">
-                          {!newAccount.hoKhauTinhThanhPhoId
-                            ? 'Chọn tỉnh/thành phố trước'
-                            : hoKhauDistricts.length === 0
-                              ? 'Chưa có xã/phường/đặc khu'
-                              : 'Chọn xã/phường/đặc khu'}
-                        </option>
-                        {hoKhauDistricts.map((district) => (
-                          <option key={district.id} value={district.id}>
-                            {district.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="aa-form-group">
-                      <label>Tỉnh/thành phố quê quán</label>
+                      <label>Tỉnh/Thành phố quê quán</label>
                       <select
                         className="aa-input"
                         value={newAccount.queQuanTinhThanhPhoId}
@@ -940,7 +1004,7 @@ export default function AdminAccountPage() {
                         disabled={isProvincesLoading}
                       >
                         <option value="">
-                          {isProvincesLoading ? 'Đang tải...' : 'Chọn tỉnh/thành phố'}
+                          {isProvincesLoading ? 'Đang tải...' : 'Chọn tỉnh/thành phố quê quán'}
                         </option>
                         {provinces.map((province) => (
                           <option key={province.id} value={province.id}>
@@ -950,7 +1014,7 @@ export default function AdminAccountPage() {
                       </select>
                     </div>
                     <div className="aa-form-group">
-                      <label>Xã/phường/đặc khu quê quán</label>
+                      <label>Xã/Phường/Đặc khu quê quán</label>
                       <select
                         className="aa-input"
                         value={newAccount.queQuanQuanHuyenId}
@@ -965,10 +1029,10 @@ export default function AdminAccountPage() {
                       >
                         <option value="">
                           {!newAccount.queQuanTinhThanhPhoId
-                            ? 'Chọn tỉnh/thành phố trước'
+                            ? 'Chọn tỉnh/thành phố quê quán trước'
                             : queQuanDistricts.length === 0
                               ? 'Chưa có xã/phường/đặc khu'
-                              : 'Chọn xã/phường/đặc khu'}
+                              : 'Chọn xã/phường/đặc khu quê quán'}
                         </option>
                         {queQuanDistricts.map((district) => (
                           <option key={district.id} value={district.id}>
@@ -977,14 +1041,74 @@ export default function AdminAccountPage() {
                         ))}
                       </select>
                     </div>
+                    <div className="aa-form-group">
+                      <label>Tỉnh/Thành phố thường trú</label>
+                      <select
+                        className="aa-input"
+                        value={newAccount.hoKhauTinhThanhPhoId}
+                        onChange={(event) => {
+                          const selectedProvince = provinces.find((p) => String(p.id) === event.target.value)
+                          setNewAccount({
+                            ...newAccount,
+                            hoKhauTinhThanhPhoId: event.target.value,
+                            hoKhauTinhThanhPho: selectedProvince?.name || '',
+                            hoKhauQuanHuyenId: '',
+                            hoKhauQuanHuyen: '',
+                          })
+                          if (selectedProvince) {
+                            void loadDistrictsByProvince(selectedProvince, 'hokhau')
+                          } else {
+                            setHoKhauDistricts([])
+                          }
+                        }}
+                        disabled={isProvincesLoading}
+                      >
+                        <option value="">
+                          {isProvincesLoading ? 'Đang tải...' : 'Chọn tỉnh/thành phố thường trú'}
+                        </option>
+                        {provinces.map((province) => (
+                          <option key={province.id} value={province.id}>
+                            {formatProvinceOption(province)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="aa-form-group">
+                      <label>Xã/Phường/Đặc khu thường trú</label>
+                      <select
+                        className="aa-input"
+                        value={newAccount.hoKhauQuanHuyenId}
+                        onChange={(event) => {
+                          setNewAccount({
+                            ...newAccount,
+                            hoKhauQuanHuyenId: event.target.value,
+                            hoKhauQuanHuyen: hoKhauDistricts.find((d) => String(d.id) === event.target.value)?.name || '',
+                          })
+                        }}
+                        disabled={!newAccount.hoKhauTinhThanhPhoId || hoKhauDistricts.length === 0}
+                      >
+                        <option value="">
+                          {!newAccount.hoKhauTinhThanhPhoId
+                            ? 'Chọn tỉnh/thành phố thường trú trước'
+                            : hoKhauDistricts.length === 0
+                              ? 'Chưa có xã/phường/đặc khu'
+                              : 'Chọn xã/phường/đặc khu thường trú'}
+                        </option>
+                        {hoKhauDistricts.map((district) => (
+                          <option key={district.id} value={district.id}>
+                            {district.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     <div className="aa-form-group aa-form-group-wide">
-                      <label>Quê quán</label>
+                      <label>Địa chỉ hộ khẩu thường trú chi tiết</label>
                       <input
                         type="text"
                         className="aa-input"
-                        placeholder="Địa chỉ quê quán chi tiết"
-                        value={newAccount.queQuan}
-                        onChange={(event) => setNewAccount({ ...newAccount, queQuan: event.target.value })}
+                        placeholder="Nhập thôn/xóm, số nhà hoặc thông tin chi tiết nếu có"
+                        value={newAccount.diaChiLienLac}
+                        onChange={(event) => setNewAccount({ ...newAccount, diaChiLienLac: event.target.value })}
                       />
                     </div>
                     <div className="aa-form-group">
@@ -1026,25 +1150,24 @@ export default function AdminAccountPage() {
                   </div>
                 </>
               )}
-              <div className="aa-form-group">
-                <label>Mật khẩu mặc định</label>
-                <input
-                  type="text"
-                  className="aa-input"
-                  value={newAccount.password}
-                  disabled
-                  readOnly
-                />
-              </div>
+              <Input
+                label="Mật khẩu mặc định"
+                type="text"
+                className="aa-input"
+                containerClassName="aa-form-group"
+                value={newAccount.password}
+                disabled
+                readOnly
+              />
             </form>
 
             <div className="aa-form-actions">
-              <button className="aa-btn-cancel" onClick={() => setShowModal(false)}>
+              <Button className="aa-btn-cancel" variant="secondary" onClick={() => setShowModal(false)}>
                 Hủy bỏ
-              </button>
-              <button className="aa-btn-primary" onClick={() => void handleCreateAccount()} disabled={isSaving}>
+              </Button>
+              <Button className="aa-btn-primary" onClick={() => void handleCreateAccount()} disabled={isSaving}>
                 {isSaving ? 'Đang lưu...' : 'Lưu tài khoản'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1069,9 +1192,9 @@ export default function AdminAccountPage() {
               <p className="aa-success-muted">Mật khẩu mặc định: 123456789</p>
             </div>
             <div className="aa-form-actions">
-              <button className="aa-btn-primary" onClick={() => setCreatedAccount(null)}>
+              <Button className="aa-btn-primary" onClick={() => setCreatedAccount(null)}>
                 Đã hiểu
-              </button>
+              </Button>
             </div>
           </div>
         </div>

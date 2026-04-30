@@ -17,6 +17,7 @@ class NganhDaoTao extends Model
         'ten_nganh',
         'don_vi_id',
         'he_dao_tao',
+        'thoi_gian_dao_tao',
     ];
 
     public function donVi(): BelongsTo

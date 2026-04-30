@@ -45,6 +45,7 @@ Route::middleware(['auth:sanctum', 'email.verified.profile', 'permission:student
 Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::get('/academic-catalog/nam-hocs', [AcademicCatalogController::class, 'namHocs']);
     Route::get('/academic-catalog/hoc-kys', [AcademicCatalogController::class, 'hocKys']);
+    Route::get('/academic-catalog/current-term', [AcademicCatalogController::class, 'currentTerm']);
     Route::get('/provinces', [ProvinceController::class, 'provinces']);
     Route::get('/provinces/with-districts', [ProvinceController::class, 'index']);
     Route::get('/districts', [ProvinceController::class, 'districts']);

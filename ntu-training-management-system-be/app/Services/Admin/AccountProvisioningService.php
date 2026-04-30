@@ -44,6 +44,8 @@ class AccountProvisioningService
                 'ten_don_vi' => $payload['ten_don_vi'] ?? null,
                 'ten_nganh_hoc' => $payload['ten_nganh_hoc'] ?? null,
                 'he_dao_tao' => $payload['he_dao_tao'] ?? 'Đại học Chính quy',
+                'nam_nhap_hoc' => $payload['nam_nhap_hoc'] ?? null,
+                'khoa_hoc' => $payload['khoa_hoc'] ?? null,
                 'so_cccd' => $payload['so_cccd'] ?? null,
                 'ngay_cap_cccd' => $payload['ngay_cap_cccd'] ?? null,
                 'noi_cap_cccd' => $payload['noi_cap_cccd'] ?? null,

@@ -66,7 +66,7 @@ class AdminAccountController extends Controller
             ->groupBy('don_vi_id');
 
         $nganhDaoTaosByDonViId = NganhDaoTao::query()
-            ->select(['id', 'ma_nganh', 'ten_nganh', 'don_vi_id', 'he_dao_tao'])
+            ->select(['id', 'ma_nganh', 'ten_nganh', 'don_vi_id', 'he_dao_tao', 'thoi_gian_dao_tao'])
             ->orderBy('ma_nganh')
             ->get()
             ->groupBy('don_vi_id');
@@ -156,7 +156,9 @@ class AdminAccountController extends Controller
             'ten_don_vi' => ['nullable', 'string', 'max:255'],
             'ten_nganh_hoc' => ['nullable', 'string', 'max:255'],
             'he_dao_tao' => ['nullable', Rule::in(['Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
-            'so_cccd' => ['nullable', 'string', 'max:20'],
+            'nam_nhap_hoc' => ['required_if:role,student', 'integer', 'min:2023', 'max:2100'],
+            'khoa_hoc' => ['nullable', 'string', 'regex:/^\d{4}-\d{4}$/'],
+            'so_cccd' => ['required_if:role,student', 'string', 'regex:/^\d{12}$/'],
             'ngay_cap_cccd' => ['nullable', 'date'],
             'noi_cap_cccd' => ['nullable', 'string', 'max:255'],
             'ho_khau_tinh_thanh_pho' => ['nullable', 'string', 'max:255'],
@@ -164,11 +166,13 @@ class AdminAccountController extends Controller
             'que_quan_tinh_thanh_pho' => ['nullable', 'string', 'max:255'],
             'que_quan_quan_huyen' => ['nullable', 'string', 'max:255'],
             'que_quan' => ['nullable', 'string', 'max:255'],
+            'dia_chi_lien_lac' => ['nullable', 'string'],
             'dan_toc' => ['nullable', 'string', 'max:100'],
             'ton_giao' => ['nullable', 'string', 'max:100'],
         ]);
 
         $payload['name'] = $this->normalizePersonName($payload['name']);
+        $this->fillStudentCohort($payload);
 
         $user = match ($payload['role']) {
             'student' => $this->accountProvisioningService->createStudentAccount($payload),
@@ -187,6 +191,7 @@ class AdminAccountController extends Controller
     {
         $payload = $request->validate($this->studentRules($request));
         $payload['ten_sinh_vien'] = $this->normalizePersonName($payload['ten_sinh_vien']);
+        $this->fillStudentCohort($payload);
         $user = $this->accountProvisioningService->createStudentAccount($payload);
 
         // Handle image upload if provided
@@ -258,12 +263,15 @@ class AdminAccountController extends Controller
             'profile.que_quan' => ['nullable', 'string', 'max:255'],
             'profile.ten_don_vi' => ['nullable', 'string', 'max:255'],
             'profile.ten_nganh_hoc' => ['nullable', 'string', 'max:255'],
+            'profile.nganh_dao_tao_id' => ['nullable', 'integer', 'exists:nganh_dao_taos,id'],
             'profile.chuc_vu' => ['nullable', 'string', 'max:255'],
             'profile.chuc_danh' => ['nullable', 'string', 'max:255'],
             'profile.ma_lop' => ['nullable', 'string', 'max:100'],
             'profile.lop_id' => ['nullable', 'integer', 'exists:lops,id'],
             'profile.he_dao_tao' => ['nullable', Rule::in(['Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
-            'profile.so_cccd' => ['nullable', 'string', 'max:20'],
+            'profile.nam_nhap_hoc' => ['nullable', 'integer', 'min:2023', 'max:2100'],
+            'profile.khoa_hoc' => ['nullable', 'string', 'regex:/^\d{4}-\d{4}$/'],
+            'profile.so_cccd' => ['nullable', 'string', 'regex:/^\d{12}$/'],
             'profile.ngay_cap_cccd' => ['nullable', 'date'],
             'profile.noi_cap_cccd' => ['nullable', 'string', 'max:255'],
             'profile.ho_khau_tinh_thanh_pho' => ['nullable', 'string', 'max:255'],
@@ -274,6 +282,13 @@ class AdminAccountController extends Controller
             'profile.ton_giao' => ['nullable', 'string', 'max:100'],
             'anh' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:5120'],
         ]);
+
+        if (isset($payload['profile']['nam_nhap_hoc'])) {
+            $trainingDuration = $this->getTrainingDuration(
+                $payload['profile']['nganh_dao_tao_id'] ?? $user->profile?->nganh_dao_tao_id ?? null,
+            );
+            $payload['profile']['khoa_hoc'] = $this->academicCohort((int) $payload['profile']['nam_nhap_hoc'], $trainingDuration);
+        }
 
         if (isset($payload['profile']['phone']) && ! isset($payload['profile']['so_dien_thoai'])) {
             $payload['profile']['phone'] = $payload['profile']['phone'];
@@ -453,7 +468,9 @@ class AdminAccountController extends Controller
             'ten_don_vi' => ['nullable', 'string', 'max:255'],
             'he_dao_tao' => ['nullable', Rule::in(['Đại học Chính quy', 'Vừa học vừa làm', 'Đào tạo từ xa'])],
             'noi_sinh' => ['nullable', 'string', 'max:255'],
-            'so_cccd' => ['nullable', 'string', 'max:20'],
+            'nam_nhap_hoc' => ['required', 'integer', 'min:2023', 'max:2100'],
+            'khoa_hoc' => ['nullable', 'string', 'regex:/^\d{4}-\d{4}$/'],
+            'so_cccd' => ['required', 'string', 'regex:/^\d{12}$/'],
             'ngay_cap_cccd' => ['nullable', 'date'],
             'noi_cap_cccd' => ['nullable', 'string', 'max:255'],
             'ho_khau_tinh_thanh_pho' => ['nullable', 'string', 'max:255'],
@@ -471,6 +488,44 @@ class AdminAccountController extends Controller
         $normalized = mb_strtolower($normalized, 'UTF-8');
 
         return mb_convert_case($normalized, MB_CASE_TITLE, 'UTF-8');
+    }
+
+    private function academicCohort(int $admissionYear, float $trainingDuration = 4.0): string
+    {
+        return $admissionYear . '-' . ($admissionYear + (int) ceil($trainingDuration));
+    }
+
+    private function fillStudentCohort(array &$payload): void
+    {
+        if (($payload['role'] ?? 'student') !== 'student' && ! isset($payload['nam_nhap_hoc'])) {
+            return;
+        }
+
+        if (isset($payload['nam_nhap_hoc'])) {
+            $trainingDuration = $this->getTrainingDuration($payload['nganh_dao_tao_id'] ?? null);
+            $payload['khoa_hoc'] = $this->academicCohort((int) $payload['nam_nhap_hoc'], $trainingDuration);
+        }
+    }
+
+    private function getTrainingDuration(mixed $nganhDaoTaoId): float
+    {
+        if (! $nganhDaoTaoId) {
+            return 4.0;
+        }
+
+        $nganhDaoTao = NganhDaoTao::query()
+            ->whereKey($nganhDaoTaoId)
+            ->first(['ma_nganh', 'thoi_gian_dao_tao']);
+
+        if (! $nganhDaoTao) {
+            return 4.0;
+        }
+
+        if (preg_match('/(MP|HV)$/u', $nganhDaoTao->ma_nganh)) {
+            return 4.5;
+        }
+
+        return (float) ($nganhDaoTao->thoi_gian_dao_tao ?? 4.0);
     }
 
     private function lecturerRules(): array
