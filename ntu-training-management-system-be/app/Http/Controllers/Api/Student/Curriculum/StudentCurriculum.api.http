@@ -1,0 +1,34 @@
+@baseUrl = http://localhost:8000/api
+@authToken = paste_student_token_here
+@username = 65131708
+@password = 123456789
+
+### =========================================================
+### 1) Login as student
+### Copy access_token from response and paste into @authToken
+### =========================================================
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### =========================================================
+### 2) Get current student curriculum
+### Response course items include:
+### - de_cuong_hoc_phan_url
+### - tai_lieu_tham_khao_url
+### =========================================================
+GET {{baseUrl}}/student/curriculum
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### =========================================================
+### 3) Get current academic term used by student curriculum filters
+### =========================================================
+GET {{baseUrl}}/academic-catalog/current-term
+Authorization: Bearer {{authToken}}
+Accept: application/json

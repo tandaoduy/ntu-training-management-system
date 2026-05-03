@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             DonViSeeder::class,
             NganhDaoTaoSeeder::class,
+            CnttK65CurriculumSeeder::class,
             ProvinceDistrictSeeder::class,
         ]);
     }

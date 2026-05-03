@@ -192,9 +192,12 @@
 }
 
 .rd-task-title {
+  color: #163f73;
+  display: block;
   margin: 0;
   font-size: 0.85rem;
   font-weight: 700;
+  text-decoration: none;
 }
 
 .rd-task-note {

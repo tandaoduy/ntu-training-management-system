@@ -173,6 +173,7 @@
   background: #dbeafe;
 }
 
+.sd-btn-home-small,
 .sd-btn-logout-small {
   background: #fff0f0;
   color: #ef4444;
@@ -184,6 +185,16 @@
   cursor: pointer;
   border-radius: 10px;
   transition: all 0.2s ease;
+}
+
+.sd-btn-home-small {
+  background: #edf6ff;
+  color: #1d5fa7;
+}
+
+.sd-btn-home-small:hover {
+  background: #dbeafe;
+  transform: scale(1.05);
 }
 
 .sd-btn-logout-small:hover {

@@ -6,8 +6,10 @@ use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Admin\Account\AdminAccountController;
 use App\Http\Controllers\Api\Admin\AcademicTerm\AcademicTermController;
 use App\Http\Controllers\Api\Admin\Classes\LopController;
+use App\Http\Controllers\Api\Admin\Curriculum\StudentCurriculumController;
 use App\Http\Controllers\Api\AcademicCatalogController;
 use App\Http\Controllers\Api\Admin\Province\ProvinceController;
+use App\Http\Controllers\Api\Student\Curriculum\StudentCurriculumController as StudentCurriculumApiController;
 use App\Http\Controllers\Api\StudentDashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +44,9 @@ Route::prefix('auth')->group(function (): void {
 Route::middleware(['auth:sanctum', 'email.verified.profile', 'permission:student.dashboard.view'])
     ->get('/student/dashboard', [StudentDashboardController::class, 'index']);
 
+Route::middleware(['auth:sanctum', 'email.verified.profile'])
+    ->get('/student/curriculum', [StudentCurriculumApiController::class, 'mine']);
+
 Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::get('/academic-catalog/nam-hocs', [AcademicCatalogController::class, 'namHocs']);
     Route::get('/academic-catalog/hoc-kys', [AcademicCatalogController::class, 'hocKys']);
@@ -61,8 +66,19 @@ Route::middleware(['auth:sanctum', 'permission:admin.academic-term.manage'])->gr
 });
 
 Route::middleware(['auth:sanctum'])->group(function (): void {
+    Route::get('/curriculum-programs', [StudentCurriculumController::class, 'programs']);
+    Route::get('/curriculum-programs/{chuongTrinhDaoTao}', [StudentCurriculumController::class, 'programDetail']);
+    Route::get('/curriculum-versions', [StudentCurriculumController::class, 'versions']);
+    Route::get('/curriculum-versions/{phienBanCtdt}', [StudentCurriculumController::class, 'versionDetail']);
+
     Route::get('/admin/accounts', [AdminAccountController::class, 'index']);
     Route::get('/admin/accounts/student-catalog', [AdminAccountController::class, 'studentCatalog']);
+    Route::get('/admin/curriculum-programs', [StudentCurriculumController::class, 'programs']);
+    Route::get('/admin/curriculum-programs/{chuongTrinhDaoTao}', [StudentCurriculumController::class, 'programDetail']);
+    Route::get('/admin/curriculum-versions', [StudentCurriculumController::class, 'versions']);
+    Route::get('/admin/curriculum-versions/{phienBanCtdt}', [StudentCurriculumController::class, 'versionDetail']);
+    Route::get('/admin/students/{sinhVien}/curriculum', [StudentCurriculumController::class, 'show']);
+    Route::post('/admin/students/{sinhVien}/curriculum', [StudentCurriculumController::class, 'store']);
     Route::post('/admin/accounts', [AdminAccountController::class, 'store']);
     Route::post('/admin/accounts/students', [AdminAccountController::class, 'storeStudent']);
     Route::post('/admin/accounts/lecturers', [AdminAccountController::class, 'storeLecturer']);

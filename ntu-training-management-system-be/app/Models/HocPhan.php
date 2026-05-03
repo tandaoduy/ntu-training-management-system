@@ -17,6 +17,8 @@ class HocPhan extends Model
         'ma_hoc_phan',
         'ten_hoc_phan',
         'so_tin_chi',
+        'so_tiet_ly_thuyet',
+        'so_tiet_thuc_hanh',
         'loai_hoc_phan',
         'mo_ta',
         'trang_thai',
@@ -25,6 +27,8 @@ class HocPhan extends Model
     protected $casts = [
         'trang_thai' => 'boolean',
         'so_tin_chi' => 'integer',
+        'so_tiet_ly_thuyet' => 'integer',
+        'so_tiet_thuc_hanh' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
