@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class SinhVien extends Model
@@ -61,5 +63,17 @@ class SinhVien extends Model
     public function lop(): BelongsTo
     {
         return $this->belongsTo(Lop::class, 'lop_id');
+    }
+
+    public function chuongTrinhs(): HasMany
+    {
+        return $this->hasMany(SinhVienChuongTrinh::class, 'sinh_vien_id');
+    }
+
+    public function chuongTrinhHienTai(): HasOne
+    {
+        return $this->hasOne(SinhVienChuongTrinh::class, 'sinh_vien_id')
+            ->where('locked', true)
+            ->latestOfMany();
     }
 }

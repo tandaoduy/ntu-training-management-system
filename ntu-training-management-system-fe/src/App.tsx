@@ -5,15 +5,20 @@ import AdminLayout from './app/layout/admin/AdminLayout.tsx'
 import AdminAccountPage from './app/pages/admin/account/AdminAccountPage.tsx'
 import AdminClassPage from './app/pages/admin/classes/AdminClassPage.tsx'
 import AdminDashboardPage from './app/pages/admin/dashboard/AdminDashboardPage.tsx'
+import AdminCurriculumPage from './app/pages/admin/curriculum/AdminCurriculumPage.tsx'
 import AdminConfigurationPage from './app/pages/admin/configuration/AdminConfigurationPage.tsx'
 import LecturerDashboardPage from './app/pages/lecturer/dashboard/LecturerDashboardPage.tsx'
+import LecturerStudyPlanPage from './app/pages/lecturer/study-plan/LecturerStudyPlanPage.tsx'
 import ManagerDashboardPage from './app/pages/manager/dashboard/ManagerDashboardPage.tsx'
+import ManagerCurriculumPage from './app/pages/manager/curriculum/ManagerCurriculumPage.tsx'
 import DashboardStudentPage from './app/pages/student/dashboard/StudentDashboardPage'
+import StudentStudyPlanPage from './app/pages/student/study-plan/StudentStudyPlanPage.tsx'
 import ForgotPasswordPage from './app/pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './app/pages/auth/ResetPasswordPage'
 import ComponentPreviewPage from './app/pages/test/ComponentPreviewPage'
 import ComponentTestPage from './app/pages/test/ComponentTestPage'
 import TrainingOfficerDashboardPage from './app/pages/training-officer/dashboard/TrainingOfficerDashboardPage.tsx'
+import TrainingOfficerCurriculumPage from './app/pages/training-officer/curriculum/TrainingOfficerCurriculumPage.tsx'
 import { AlertProvider } from '@/components/alert'
 import { useAuthSession } from './hooks'
 
@@ -83,10 +88,30 @@ function AppShell() {
           }
         />
         <Route
+          path="/sinhvien/studyplan"
+          element={
+            isAuthenticated && user?.role === 'student' ? (
+              <StudentStudyPlanPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
           path="/canbo"
           element={
             isAuthenticated && user?.role === 'lecturer' ? (
               <LecturerDashboardPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
+          path="/canbo/studyplan"
+          element={
+            isAuthenticated && user?.role === 'lecturer' ? (
+              <LecturerStudyPlanPage />
             ) : (
               <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
             )
@@ -103,10 +128,30 @@ function AppShell() {
           }
         />
         <Route
+          path="/quanly/curriculum"
+          element={
+            isAuthenticated && user?.role === 'manager' ? (
+              <ManagerCurriculumPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
           path="/chuyenvien"
           element={
             isAuthenticated && user?.role === 'training_officer' ? (
               <TrainingOfficerDashboardPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
+          path="/chuyenvien/curriculum"
+          element={
+            isAuthenticated && user?.role === 'training_officer' ? (
+              <TrainingOfficerCurriculumPage />
             ) : (
               <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
             )
@@ -126,6 +171,7 @@ function AppShell() {
           <Route path="taikhoan" element={<AdminAccountPage />} />
           <Route path="lophoc" element={<AdminClassPage />} />
           <Route path="cauhinh" element={<AdminConfigurationPage />} />
+          <Route path="curriculum" element={<AdminCurriculumPage />} />
           <Route path="taikhoan" element={<AdminAccountPage />} />
           <Route path="lop" element={<AdminClassPage />} />
         </Route>

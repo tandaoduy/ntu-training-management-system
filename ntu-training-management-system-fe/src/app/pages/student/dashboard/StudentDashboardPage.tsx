@@ -18,7 +18,7 @@ const quickAccessLinks = [
   { label: 'Thời khóa biểu', icon: '📅', colorClass: 'blue', link: '/student/schedule' },
   { label: 'Đánh giá rèn luyện', icon: '📋', colorClass: 'teal', link: '/student/conduct' },
   { label: 'Thông tin sinh viên', icon: '👤', colorClass: 'indigo', link: '/student/profile' },
-  { label: 'Kế hoạch học tập', icon: '🗺️', colorClass: 'amber', link: '/student/study-plan' },
+  { label: 'Kế hoạch học tập', icon: '🗺️', colorClass: 'amber', link: '/sinhvien/studyplan' },
   { label: 'Đăng ký học phần', icon: '✍️', colorClass: 'purple', link: '/student/registration' },
   { label: 'Xem lịch thi', icon: '⏰', colorClass: 'rose', link: '/student/exam-schedule' },
   { label: 'Nhận xét học phần', icon: '📝', colorClass: 'cyan', link: '/student/feedback' },
@@ -202,6 +202,9 @@ export default function StudentDashboardPage() {
               Xin chào, {displayName}
             </span>
             <div className="sd-academic-divider"></div>
+            <Link to="/sinhvien" className="sd-btn-home-small" title="Trang chủ" aria-label="Trang chủ">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
+            </Link>
             <button type="button" className="sd-btn-logout-small" onClick={() => setShowLogoutConfirm(true)} title="Đăng xuất">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </button>

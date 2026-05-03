@@ -9,6 +9,11 @@ const stats = [
 
 const tasks = [
   {
+    title: 'Theo dõi kế hoạch học tập',
+    note: 'Xem chương trình đào tạo theo ngành và phiên bản đã công bố.',
+    link: '/chuyenvien/curriculum',
+  },
+  {
     title: 'Validate timetable changes',
     note: '2 departments submitted schedule change requests.',
   },

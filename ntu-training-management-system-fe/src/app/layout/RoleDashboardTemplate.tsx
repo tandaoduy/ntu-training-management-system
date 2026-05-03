@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../api/query'
 import logoImage from '../../assets/Logo_NTU.png'
@@ -13,6 +13,7 @@ interface StatCard {
 interface QuickTask {
   title: string
   note: string
+  link?: string
 }
 
 interface RoleDashboardTemplateProps {
@@ -91,7 +92,13 @@ export default function RoleDashboardTemplate({
           <ul>
             {tasks.map((task) => (
               <li key={task.title}>
-                <p className="rd-task-title">{task.title}</p>
+                {task.link ? (
+                  <Link to={task.link} className="rd-task-title">
+                    {task.title}
+                  </Link>
+                ) : (
+                  <p className="rd-task-title">{task.title}</p>
+                )}
                 <p className="rd-task-note">{task.note}</p>
               </li>
             ))}
