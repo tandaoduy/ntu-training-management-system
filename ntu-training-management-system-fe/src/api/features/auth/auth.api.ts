@@ -32,8 +32,12 @@ export const authApi = {
     return apiPost<MessageResponse, ChangePasswordRequest>(`${AUTH_BASE_PATH}/change-password`, payload);
   },
 
-  logout(): Promise<MessageResponse> {
-    return apiPost<MessageResponse>(`${AUTH_BASE_PATH}/logout`);
+  logout(token?: string | null): Promise<MessageResponse> {
+    return apiPost<MessageResponse>(`${AUTH_BASE_PATH}/logout`, undefined, token ? {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    } : undefined);
   },
 
   forgotPassword(payload: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {

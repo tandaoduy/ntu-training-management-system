@@ -39,11 +39,17 @@ httpClient.interceptors.request.use((config) => {
     return config;
   }
 
+  if (config.headers.Authorization) {
+    return config;
+  }
+
   const token = authStorage.getToken();
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (!token) {
+    return Promise.reject(new axios.CanceledError('Missing auth token'));
   }
+
+  config.headers.Authorization = `Bearer ${token}`;
 
   return config;
 });
@@ -56,8 +62,13 @@ httpClient.interceptors.request.use((config) => {
 httpClient.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      authStorage.clearToken();
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const url = error.config?.url ?? '';
+
+      if (status === 401 || (status === 403 && url.startsWith('/student/'))) {
+        authStorage.clearToken();
+      }
     }
 
     return Promise.reject(error);

@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { authMutations } from '../features/auth';
+import { useCallback, useEffect, useState } from 'react';
+import { AUTH_SESSION_CHANGED_EVENT, authMutations } from '../features/auth';
 import type {
   AuthUser,
   ChangePasswordRequest,
@@ -34,7 +34,7 @@ const mapCurrentUser = (input: CurrentUserResponse): AuthUser | null => {
 // Hook auth quản lý toàn bộ state đăng nhập cho UI.
 export const useAuth = () => {
   const [state, setState] = useState<AuthState>({
-    user: null,
+    user: authStorage.getUser(),
     loading: false,
     error: null,
   });
@@ -46,6 +46,20 @@ export const useAuth = () => {
   const setError = (error: ApiError | null) => {
     setState((prev) => ({ ...prev, error }));
   };
+
+  useEffect(() => {
+    const handleSessionChanged = () => {
+      if (!authStorage.getToken()) {
+        setState({ user: null, loading: false, error: null });
+      }
+    };
+
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChanged);
+
+    return () => {
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChanged);
+    };
+  }, []);
 
   const login = useCallback(async (payload: LoginRequest): Promise<AuthUser | null> => {
     // Bật loading và xóa lỗi trước khi gửi request.
@@ -83,6 +97,9 @@ export const useAuth = () => {
     try {
       const response = await authMutations.me();
       const user = mapCurrentUser(response);
+      if (user) {
+        authStorage.setUser(user);
+      }
       setState({ user, loading: false, error: null });
       return user;
     } catch (error) {

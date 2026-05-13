@@ -8,6 +8,7 @@ use App\Rules\NoSqlInjection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -60,6 +61,13 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         $request->user()?->currentAccessToken()?->delete();
+
+        if (! $request->user()) {
+            $token = $request->bearerToken();
+            if ($token) {
+                PersonalAccessToken::findToken($token)?->delete();
+            }
+        }
 
         return response()->json([
             'message' => 'Logged out successfully',

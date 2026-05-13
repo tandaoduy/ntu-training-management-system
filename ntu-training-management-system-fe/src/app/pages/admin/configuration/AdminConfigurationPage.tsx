@@ -189,27 +189,45 @@ export default function AdminConfigurationPage() {
                 <div className="ac-form-group">
                   <label className="ac-label">Năm học</label>
                   {academicYearMode === 'select' ? (
-                    <Select
-                      className="ac-select"
-                      value={academicYear}
-                      disabled={isLoading}
-                      onChange={(e) => {
-                        if (e.target.value === 'new') {
-                          setAcademicYearMode('new')
-                          setNewYearInput('')
-                          setYearError('')
-                        } else {
-                          setAcademicYear(e.target.value)
-                        }
-                      }}
-                      options={[
-                        { label: '+ Tạo năm học mới', value: 'new' },
-                        ...academicYearsList.map((year) => ({
+                    <div>
+                      <Select
+                        className="ac-select"
+                        value={academicYear}
+                        disabled={isLoading}
+                        onChange={(e) => setAcademicYear(e.target.value)}
+                        options={academicYearsList.map((year) => ({
                           label: year.nam_hoc,
                           value: year.nam_hoc,
-                        })),
-                      ]}
-                    />
+                        }))}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          const nextStartYear = Math.max(
+                            minAcademicYear,
+                            ...academicYearsList
+                              .map((year) => parseInt(year.nam_hoc.slice(0, 4), 10))
+                              .filter((year) => !Number.isNaN(year)),
+                          ) + 1
+
+                          setAcademicYearMode('new')
+                          setNewYearInput(String(nextStartYear))
+                          setYearError('')
+                        }}
+                        style={{
+                          marginTop: '8px',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: '#f8fafc',
+                          color: '#1f2937',
+                          fontWeight: 700,
+                        }}
+                      >
+                        + Tạo năm học mới
+                      </Button>
+                    </div>
                   ) : (
                     <div>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -316,6 +334,7 @@ export default function AdminConfigurationPage() {
             </form>
           </div>
         </section>
+
       </main>
     </>
   )

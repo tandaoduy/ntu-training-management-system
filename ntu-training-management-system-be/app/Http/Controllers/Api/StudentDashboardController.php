@@ -17,7 +17,8 @@ class StudentDashboardController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user()?->loadMissing(['student']);
+        $user = $request->user()?->loadMissing(['role', 'student']);
+
         $currentAcademicTermArray = json_decode((string) (HeThongCauHinh::query()->find('current_academic_term')?->value ?? ''), true);
         $hocKyHienHanh = null;
 
@@ -56,6 +57,7 @@ class StudentDashboardController extends Controller
 
         return $this->jsonResponse([
             'message' => 'Student dashboard data',
+            'status' => $user?->student ? 'ok' : 'missing_student_profile',
             'student' => $user?->student,
             'permissions' => $user?->permissionCodes()->values() ?? [],
             'hoc_ky_hien_hanh' => $hocKyPayload,

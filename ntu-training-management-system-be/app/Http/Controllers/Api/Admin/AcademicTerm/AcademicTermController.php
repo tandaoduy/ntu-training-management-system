@@ -8,6 +8,7 @@ use App\Models\HeThongCauHinh;
 use App\Models\NamHoc;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -103,6 +104,8 @@ class AcademicTermController extends Controller
             $currentAcademicTerm = $this->findTermOrFail($namHoc->id, (string) $payload['hoc_ky']);
             $this->saveCurrentAcademicTerm($request, $currentAcademicTerm);
         }
+
+        $this->clearAcademicCatalogCache($namHoc->id);
 
         return $this->jsonResponse([
             'message' => 'Da tao nam hoc moi va 3 hoc ky mac dinh',
@@ -213,6 +216,19 @@ class AcademicTermController extends Controller
                 'updated_by' => $updatedBy,
             ],
         );
+
+        $this->clearAcademicCatalogCache($academicTerm->nam_hoc_id);
+    }
+
+    private function clearAcademicCatalogCache(?int $namHocId = null): void
+    {
+        Cache::forget('academic_catalog:nam_hocs');
+        Cache::forget('academic_catalog:hoc_kys:all');
+        Cache::forget('academic_catalog:current_term');
+
+        if ($namHocId) {
+            Cache::forget('academic_catalog:hoc_kys:' . $namHocId);
+        }
     }
 
     private function toAcademicYearPayload(NamHoc $namHoc): array
