@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { authMutations, authStorage, type AuthUser, type CurrentUserResponse } from '../api/features/auth';
+import {
+  AUTH_SESSION_CHANGED_EVENT,
+  authMutations,
+  authStorage,
+  type AuthUser,
+  type CurrentUserResponse,
+} from '../api/features/auth';
 
 interface UseAuthSessionResult {
   user: AuthUser | null;
@@ -42,9 +48,27 @@ const resolveDashboardPath = (role: string | null | undefined): string => {
 export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
-  const token = authStorage.getToken();
+  const [token, setToken] = useState(() => authStorage.getToken());
   const hasToken = Boolean(token);
   const effectiveUser = userToken === token ? user : null;
+
+  useEffect(() => {
+    const handleSessionChanged = () => {
+      const nextToken = authStorage.getToken();
+      setToken(nextToken);
+
+      if (!nextToken) {
+        setUser(null);
+        setUserToken(null);
+      }
+    };
+
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChanged);
+
+    return () => {
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChanged);
+    };
+  }, []);
 
   useEffect(() => {
     if (!token || effectiveUser !== null) {
@@ -72,6 +96,7 @@ export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
         }
 
         setUser(mappedUser);
+        authStorage.setUser(mappedUser);
         setUserToken(requestToken);
       } catch {
         if (!isMounted) {

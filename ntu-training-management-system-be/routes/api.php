@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AcademicCatalogController;
 use App\Http\Controllers\Api\Admin\Province\ProvinceController;
 use App\Http\Controllers\Api\Student\Curriculum\StudentCurriculumController as StudentCurriculumApiController;
 use App\Http\Controllers\Api\StudentDashboardController;
+use App\Http\Controllers\Api\StudyPlanRegistrationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/test', function () {
@@ -21,6 +22,7 @@ Route::get('/test', function () {
 
 Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/forgot-password/captcha', [PasswordResetController::class, 'captcha'])
         ->middleware('throttle:15,1');
     Route::post('/check-email', [PasswordResetController::class, 'checkEmail'])->name('auth.check-email');
@@ -32,7 +34,6 @@ Route::prefix('auth')->group(function (): void {
         ->name('auth.verification.verify');
 
     Route::middleware('auth:sanctum')->group(function (): void {
-        Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/change-password', [AuthController::class, 'changePassword']);
         Route::get('/email/verification-status', [EmailVerificationController::class, 'status']);
@@ -41,11 +42,16 @@ Route::prefix('auth')->group(function (): void {
     });
 });
 
-Route::middleware(['auth:sanctum', 'email.verified.profile', 'permission:student.dashboard.view'])
+Route::middleware(['auth:sanctum', 'student.role'])
     ->get('/student/dashboard', [StudentDashboardController::class, 'index']);
 
-Route::middleware(['auth:sanctum', 'email.verified.profile'])
+Route::middleware(['auth:sanctum', 'student.role'])
     ->get('/student/curriculum', [StudentCurriculumApiController::class, 'mine']);
+
+Route::middleware(['auth:sanctum', 'student.role'])->group(function (): void {
+    Route::get('/student/study-plan-registration', [StudyPlanRegistrationController::class, 'studentStatus']);
+    Route::post('/student/study-plan-registration', [StudyPlanRegistrationController::class, 'submitStudentPlan']);
+});
 
 Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::get('/academic-catalog/nam-hocs', [AcademicCatalogController::class, 'namHocs']);
@@ -89,6 +95,10 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::post('/admin/accounts/{user}/lock', [AdminAccountController::class, 'lock']);
     Route::post('/admin/accounts/{user}/unlock', [AdminAccountController::class, 'unlock']);
     Route::post('/admin/accounts/{user}/upload-image', [AdminAccountController::class, 'uploadStudentImage']);
+
+    Route::get('/admin/study-plan-registration-periods', [StudyPlanRegistrationController::class, 'index']);
+    Route::post('/admin/study-plan-registration-periods', [StudyPlanRegistrationController::class, 'store']);
+    Route::get('/training-officer/study-plan-statistics', [StudyPlanRegistrationController::class, 'statistics']);
 
     Route::get('/admin/don-vis', [LopController::class, 'donVis']);
     Route::get('/admin/lops', [LopController::class, 'index']);

@@ -10,6 +10,7 @@ use App\Models\SinhVien;
 use App\Models\SinhVienChuongTrinh;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -119,6 +120,18 @@ class StudentCurriculumController extends Controller
     {
         $student = $this->resolveCurrentStudent($request);
 
+        if (! $student) {
+            return $this->jsonResponse([
+                'message' => 'Không xác định được hồ sơ sinh viên cho tài khoản hiện tại.',
+                'status' => 'missing_student_profile',
+                'data' => [
+                    'assignment' => null,
+                    'curriculum' => null,
+                    'current_term' => $this->currentTermPayload(),
+                ],
+            ]);
+        }
+
         $assignment = SinhVienChuongTrinh::query()
             ->with([
                 'phienBanCtdt.chuongTrinhDaoTao:id,ma_ctdt,ten_ctdt,nganh_dao_tao_id,tong_tin_chi_yeu_cau',
@@ -146,9 +159,10 @@ class StudentCurriculumController extends Controller
 
             if ($fallbackVersion) {
                 return $this->jsonResponse([
+                    'status' => 'fallback_curriculum',
                     'data' => [
                         'assignment' => null,
-                        'curriculum' => $this->curriculumPayload($fallbackVersion, $student),
+                        'curriculum' => $this->cachedCurriculumPayload($fallbackVersion, $student),
                         'current_term' => $this->currentTermPayload(),
                     ],
                 ]);
@@ -156,14 +170,20 @@ class StudentCurriculumController extends Controller
 
             return $this->jsonResponse([
                 'message' => 'Chưa có chương trình đào tạo đã công bố để hiển thị.',
-                'data' => null,
-            ], 404);
+                'status' => 'curriculum_not_configured',
+                'data' => [
+                    'assignment' => null,
+                    'curriculum' => null,
+                    'current_term' => $this->currentTermPayload(),
+                ],
+            ]);
         }
 
         return $this->jsonResponse([
+            'status' => 'ok',
             'data' => [
                 'assignment' => $this->assignmentPayload($assignment),
-                'curriculum' => $this->curriculumPayload($assignment->phienBanCtdt, $student),
+                'curriculum' => $this->cachedCurriculumPayload($assignment->phienBanCtdt, $student, $assignment->updated_at?->timestamp),
                 'current_term' => $this->currentTermPayload(),
             ],
         ]);
@@ -323,6 +343,20 @@ class StudentCurriculumController extends Controller
             ...$this->versionPayload($version),
             'groups' => $groupPayloads,
         ];
+    }
+
+    private function cachedCurriculumPayload(PhienBanCtdt $version, ?SinhVien $student, ?int $assignmentUpdatedAt = null): array
+    {
+        $cacheKey = implode(':', [
+            'student_curriculum_payload',
+            $student?->id ?? 0,
+            $version->id,
+            $version->updated_at?->timestamp ?? 0,
+            $assignmentUpdatedAt ?? 0,
+            $student?->updated_at?->timestamp ?? 0,
+        ]);
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), fn () => $this->curriculumPayload($version, $student));
     }
 
     private function courseSyllabusUrl(string $courseCode): ?string

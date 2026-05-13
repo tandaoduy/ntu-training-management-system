@@ -7,6 +7,7 @@ import AdminClassPage from './app/pages/admin/classes/AdminClassPage.tsx'
 import AdminDashboardPage from './app/pages/admin/dashboard/AdminDashboardPage.tsx'
 import AdminCurriculumPage from './app/pages/admin/curriculum/AdminCurriculumPage.tsx'
 import AdminConfigurationPage from './app/pages/admin/configuration/AdminConfigurationPage.tsx'
+import AdminStudyPlanPage from './app/pages/admin/study-plan/AdminStudyPlanPage.tsx'
 import LecturerDashboardPage from './app/pages/lecturer/dashboard/LecturerDashboardPage.tsx'
 import LecturerStudyPlanPage from './app/pages/lecturer/study-plan/LecturerStudyPlanPage.tsx'
 import ManagerDashboardPage from './app/pages/manager/dashboard/ManagerDashboardPage.tsx'
@@ -19,6 +20,7 @@ import ComponentPreviewPage from './app/pages/test/ComponentPreviewPage'
 import ComponentTestPage from './app/pages/test/ComponentTestPage'
 import TrainingOfficerDashboardPage from './app/pages/training-officer/dashboard/TrainingOfficerDashboardPage.tsx'
 import TrainingOfficerCurriculumPage from './app/pages/training-officer/curriculum/TrainingOfficerCurriculumPage.tsx'
+import TrainingOfficerStudyPlanStatisticsPage from './app/pages/training-officer/study-plan-statistics/TrainingOfficerStudyPlanStatisticsPage.tsx'
 import { AlertProvider } from '@/components/alert'
 import { useAuthSession } from './hooks'
 
@@ -158,6 +160,16 @@ function AppShell() {
           }
         />
         <Route
+          path="/chuyenvien/study-plan-statistics"
+          element={
+            isAuthenticated && user?.role === 'training_officer' ? (
+              <TrainingOfficerStudyPlanStatisticsPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
           path="/quantri"
           element={
             isAuthenticated && user?.role === 'admin' ? (
@@ -172,6 +184,7 @@ function AppShell() {
           <Route path="lophoc" element={<AdminClassPage />} />
           <Route path="cauhinh" element={<AdminConfigurationPage />} />
           <Route path="curriculum" element={<AdminCurriculumPage />} />
+          <Route path="studyplan" element={<AdminStudyPlanPage />} />
           <Route path="taikhoan" element={<AdminAccountPage />} />
           <Route path="lop" element={<AdminClassPage />} />
         </Route>

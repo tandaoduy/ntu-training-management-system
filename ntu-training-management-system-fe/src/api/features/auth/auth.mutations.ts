@@ -13,6 +13,7 @@ export const authMutations = {
   async login(payload: LoginRequest): Promise<LoginResponse> {
     const response = await authApi.login(payload);
     authStorage.setToken(response.access_token);
+    authStorage.setUser(response.user);
     return response;
   },
 
@@ -25,9 +26,14 @@ export const authMutations = {
   },
 
   async logout(): Promise<MessageResponse> {
-    const response = await authApi.logout();
+    const token = authStorage.getToken();
     authStorage.clearToken();
-    return response;
+
+    try {
+      return await authApi.logout(token);
+    } catch {
+      return { message: 'Logged out successfully' };
+    }
   },
 
   clearSession(): void {

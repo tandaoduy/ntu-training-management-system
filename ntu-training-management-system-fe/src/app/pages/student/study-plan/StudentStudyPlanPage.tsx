@@ -1,11 +1,13 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { apiGet } from '../../../../api/core/request'
+import { apiGet, apiPost } from '../../../../api/core/request'
+import { authStorage } from '../../../../api/features/auth'
 import { useAuth } from '../../../../api/query'
+import { useAlert } from '@/components/alert'
 import { Modal } from '@/components/modal'
 import { Select } from '@/components/select'
-import logoImage from '../../../../assets/Logo_NTU.png'
+import { StudentHeader } from '../components/StudentHeader'
 import './StudentStudyPlanPage.css'
 
 type ViewerMode = 'curriculum' | 'studyplan'
@@ -107,13 +109,6 @@ interface StudentCurriculumResponse {
   } | null
 }
 
-interface StudentDashboardResponse {
-  student?: {
-    ten_sinh_vien?: string | null
-    he_dao_tao?: string | null
-  } | null
-}
-
 interface CurrentAcademicTermResponse {
   data?: {
     nam_hoc?: string | null
@@ -128,6 +123,62 @@ interface ProgramDetailResponse {
   } | null
 }
 
+interface StudyPlanRegistrationResponse {
+  data?: {
+    max_credits: number
+    can_register: boolean
+    registration_period?: {
+      id: number
+      starts_at?: string | null
+      ends_at?: string | null
+      target_term?: {
+        nam_hoc?: string | null
+        hoc_ky?: string | null
+      } | null
+    } | null
+    plan?: {
+      id: number
+      hoc_ky_id?: number
+      tong_tin_chi: number
+      status: string
+      submitted_at?: string | null
+      course_ids: number[]
+      course_terms?: Array<{
+        course_id: number
+        hoc_ky_id?: number | null
+        term?: {
+          nam_hoc?: string | null
+          hoc_ky?: string | null
+        } | null
+      }>
+      term?: {
+        nam_hoc?: string | null
+        hoc_ky?: string | null
+      } | null
+    } | null
+  }
+}
+
+interface SubmitStudyPlanResponse {
+  data?: {
+    submitted_at?: string | null
+    course_ids: number[]
+    hoc_ky_id?: number
+    course_terms?: Array<{
+      course_id: number
+      hoc_ky_id?: number | null
+      term?: {
+        nam_hoc?: string | null
+        hoc_ky?: string | null
+      } | null
+    }>
+    term?: {
+      nam_hoc?: string | null
+      hoc_ky?: string | null
+    } | null
+  }
+}
+
 interface CurriculumPlanPageProps {
   mode: ViewerMode
   roleLabel: string
@@ -135,6 +186,143 @@ interface CurriculumPlanPageProps {
   title: string
   description: string
   staffEndpointPrefix?: string
+}
+
+const CURRENT_TERM_CACHE_KEY = 'student-current-academic-term'
+const FALLBACK_CURRENT_TERM = {
+  year: '2024-2025',
+  semester: '1',
+}
+
+function studentStudyPlanPageCacheKey(username?: string | null) {
+  return username ? `student-study-plan-page:${username}` : null
+}
+
+function readStudentStudyPlanPageCache(username?: string | null) {
+  const key = studentStudyPlanPageCacheKey(username)
+  if (!key) {
+    return null
+  }
+
+  try {
+    const cached = window.localStorage.getItem(key)
+    return cached
+      ? JSON.parse(cached) as {
+        curriculum?: CurriculumDetail | null
+        catalogYears?: CatalogYear[]
+        catalogSemesters?: CatalogSemester[]
+        currentTerm?: { nam_hoc?: string | null, hoc_ky?: string | null } | null
+      }
+      : null
+  } catch {
+    return null
+  }
+}
+
+function writeStudentStudyPlanPageCache(username: string | undefined | null, payload: {
+  curriculum?: CurriculumDetail | null
+  catalogYears?: CatalogYear[]
+  catalogSemesters?: CatalogSemester[]
+  currentTerm?: { nam_hoc?: string | null, hoc_ky?: string | null } | null
+}) {
+  const key = studentStudyPlanPageCacheKey(username)
+  if (!key) {
+    return
+  }
+
+  window.localStorage.setItem(key, JSON.stringify({
+    ...payload,
+    cachedAt: Date.now(),
+  }))
+}
+
+function readCachedCurrentTerm() {
+  try {
+    const cached = window.localStorage.getItem(CURRENT_TERM_CACHE_KEY)
+    if (!cached) {
+      return FALLBACK_CURRENT_TERM
+    }
+
+    const parsed = JSON.parse(cached) as { year?: string, semester?: string }
+    return {
+      year: parsed.year?.trim() || FALLBACK_CURRENT_TERM.year,
+      semester: parsed.semester?.trim() || FALLBACK_CURRENT_TERM.semester,
+    }
+  } catch {
+    return FALLBACK_CURRENT_TERM
+  }
+}
+
+function cacheCurrentTerm(year?: string | null, semester?: string | null) {
+  const normalizedYear = year?.trim()
+  const normalizedSemester = semester?.trim()
+
+  if (!normalizedYear || !normalizedSemester) {
+    return
+  }
+
+  window.localStorage.setItem(CURRENT_TERM_CACHE_KEY, JSON.stringify({
+    year: normalizedYear,
+    semester: normalizedSemester,
+  }))
+}
+
+function studentStudyPlanRegistrationCacheKey(username?: string | null) {
+  return username ? `student-study-plan-registration:${username}` : null
+}
+
+function readStudentStudyPlanRegistrationCache(username?: string | null) {
+  const key = studentStudyPlanRegistrationCacheKey(username)
+  if (!key) {
+    return null
+  }
+
+  try {
+    const cached = window.localStorage.getItem(key)
+    if (!cached) {
+      return null
+    }
+
+    const parsed = JSON.parse(cached) as {
+      canRegister?: boolean
+      maxCredits?: number
+      targetTerm?: { year?: string, semester?: string } | null
+      windowText?: string | null
+      startsAt?: string | null
+      endsAt?: string | null
+    }
+    const startsAt = parsed.startsAt ? new Date(parsed.startsAt).getTime() : null
+    const endsAt = parsed.endsAt ? new Date(parsed.endsAt).getTime() : null
+    const now = Date.now()
+    const isInsideWindow = startsAt !== null && endsAt !== null && startsAt <= now && now <= endsAt
+
+    return {
+      canRegister: Boolean(parsed.canRegister && isInsideWindow),
+      maxCredits: typeof parsed.maxCredits === 'number' ? parsed.maxCredits : 45,
+      targetTerm: parsed.targetTerm?.year && parsed.targetTerm?.semester
+        ? { year: parsed.targetTerm.year, semester: parsed.targetTerm.semester }
+        : null,
+      windowText: parsed.windowText ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeStudentStudyPlanRegistrationCache(username: string | undefined | null, payload: {
+  canRegister: boolean
+  maxCredits: number
+  targetTerm?: { year: string, semester: string } | null
+  windowText?: string | null
+  startsAt?: string | null
+  endsAt?: string | null
+}) {
+  const key = studentStudyPlanRegistrationCacheKey(username)
+  if (!key) {
+    return
+  }
+
+  window.localStorage.setItem(key, JSON.stringify(payload))
 }
 
 const defaultProps: CurriculumPlanPageProps = {
@@ -240,13 +428,18 @@ export default function StudentStudyPlanPage() {
   const config = defaultProps
   const navigate = useNavigate()
   const { user, me, logout } = useAuth()
-  const isStudentMode = config.mode === 'studyplan' && user?.role === 'student'
+  const { showAlert, clearAlerts } = useAlert()
+  const isStudentShell = config.mode === 'studyplan'
+  const isStudentMode = isStudentShell && user?.role === 'student'
+  const cachedRegistrationOnBoot = isStudentShell
+    ? readStudentStudyPlanRegistrationCache(authStorage.getUser()?.username)
+    : null
   const endpointPrefix = config.staffEndpointPrefix ?? '/curriculum-programs'
   const [programs, setPrograms] = useState<CurriculumProgram[]>([])
   const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null)
   const [curriculum, setCurriculum] = useState<CurriculumDetail | null>(null)
   const [currentTermText, setCurrentTermText] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [catalogYears, setCatalogYears] = useState<CatalogYear[]>([])
   const [catalogSemesters, setCatalogSemesters] = useState<CatalogSemester[]>([])
@@ -259,13 +452,22 @@ export default function StudentStudyPlanPage() {
     sortDirection: 'asc',
   })
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [studentName, setStudentName] = useState<string | null>(null)
-  const [educationSystem, setEducationSystem] = useState<string | null>(null)
-  const [sysAcademicYear, setSysAcademicYear] = useState('Đang tải')
-  const [sysSemester, setSysSemester] = useState('Đang tải')
+  const [sysAcademicYear, setSysAcademicYear] = useState(() => readCachedCurrentTerm().year)
+  const [sysSemester, setSysSemester] = useState(() => readCachedCurrentTerm().semester)
   const [studentActiveView, setStudentActiveView] = useState<'curriculum' | 'studyplan'>('curriculum')
   const [plannedCourseIds, setPlannedCourseIds] = useState<number[]>([])
+  const [plannedCourseTerms, setPlannedCourseTerms] = useState<Record<number, { year: string, semester: string }>>({})
+  const [selectedStudyPlanCourseIds, setSelectedStudyPlanCourseIds] = useState<number[]>([])
   const [plannedConfirmedAt, setPlannedConfirmedAt] = useState<string | null>(null)
+  const [studyPlanCanRegister, setStudyPlanCanRegister] = useState(cachedRegistrationOnBoot?.canRegister ?? false)
+  const [studyPlanWindowText, setStudyPlanWindowText] = useState<string | null>(cachedRegistrationOnBoot?.windowText ?? null)
+  const [studyPlanTargetTerm, setStudyPlanTargetTerm] = useState<{ year: string, semester: string } | null>(cachedRegistrationOnBoot?.targetTerm ?? null)
+  const [studyPlanMaxCredits, setStudyPlanMaxCredits] = useState(cachedRegistrationOnBoot?.maxCredits ?? 45)
+  const [isSubmittingStudyPlan, setIsSubmittingStudyPlan] = useState(false)
+  const [studyPlanPageSize, setStudyPlanPageSize] = useState('20')
+  const [studyPlanDialog, setStudyPlanDialog] = useState<'curriculum' | 'quick' | null>(null)
+  const [curriculumDialogCourseIds, setCurriculumDialogCourseIds] = useState<number[]>([])
+  const [quickCourseCode, setQuickCourseCode] = useState('')
 
   useEffect(() => {
     if (!user) {
@@ -275,6 +477,17 @@ export default function StudentStudyPlanPage() {
 
   useEffect(() => {
     let active = true
+
+    if (isStudentMode) {
+      const cached = readStudentStudyPlanPageCache(user?.username)
+      if (cached) {
+        setCurriculum(cached.curriculum ?? null)
+        setCatalogYears(cached.catalogYears ?? [])
+        setCatalogSemesters(cached.catalogSemesters ?? [])
+        const term = cached.currentTerm
+        setCurrentTermText(term?.nam_hoc && term?.hoc_ky ? `${term.nam_hoc} - HK ${term.hoc_ky}` : null)
+      }
+    }
 
     const loadInitialData = async () => {
       setIsLoading(true)
@@ -286,17 +499,31 @@ export default function StudentStudyPlanPage() {
         }
 
         if (isStudentMode) {
-          const yearsResponse = await apiGet<ApiListResponse<CatalogYear[]>>('/academic-catalog/nam-hocs')
-          const semestersResponse = await Promise.all(
-            yearsResponse.data.map((year) => apiGet<ApiListResponse<CatalogSemester[]>>(`/academic-catalog/hoc-kys?nam_hoc_id=${year.id}`)),
-          )
-          if (!active) return
-          setCatalogYears(yearsResponse.data)
-          setCatalogSemesters(semestersResponse.flatMap((response) => response.data))
+          const [yearsResult, semestersResult, curriculumResult] = await Promise.allSettled([
+            apiGet<ApiListResponse<CatalogYear[]>>('/academic-catalog/nam-hocs'),
+            apiGet<ApiListResponse<CatalogSemester[]>>('/academic-catalog/hoc-kys'),
+            apiGet<StudentCurriculumResponse>('/student/curriculum'),
+          ] as const)
 
-          const response = await apiGet<StudentCurriculumResponse>('/student/curriculum')
           if (!active) return
+
+          if (yearsResult.status === 'fulfilled') {
+            setCatalogYears(yearsResult.value.data)
+          }
+
+          if (semestersResult.status === 'fulfilled') {
+            setCatalogSemesters(semestersResult.value.data)
+          }
+
+          if (curriculumResult.status === 'rejected') {
+            throw curriculumResult.reason
+          }
+
+          const response = curriculumResult.value
           const studentCurriculum = response.data?.curriculum ?? null
+          let nextCurriculum = studentCurriculum
+          const years = yearsResult.status === 'fulfilled' ? yearsResult.value.data : []
+          const semesters = semestersResult.status === 'fulfilled' ? semestersResult.value.data : []
 
           if (studentCurriculum) {
             setCurriculum(studentCurriculum)
@@ -306,13 +533,20 @@ export default function StudentStudyPlanPage() {
 
             if (fallbackProgramId) {
               const fallbackDetail = await apiGet<ProgramDetailResponse>(`/curriculum-programs/${fallbackProgramId}`)
-              setCurriculum(fallbackDetail.data?.curriculum ?? null)
+              nextCurriculum = fallbackDetail.data?.curriculum ?? null
+              setCurriculum(nextCurriculum)
             } else {
               setCurriculum(null)
             }
           }
 
           const term = response.data?.current_term
+          writeStudentStudyPlanPageCache(user?.username, {
+            curriculum: nextCurriculum,
+            catalogYears: years,
+            catalogSemesters: semesters,
+            currentTerm: term ?? null,
+          })
           setCurrentTermText(term?.nam_hoc && term?.hoc_ky ? `${term.nam_hoc} - HK ${term.hoc_ky}` : null)
           setStudentFilters((current) => ({
             ...current,
@@ -362,15 +596,14 @@ export default function StudentStudyPlanPage() {
   }, [endpointPrefix, isStudentMode, user?.role])
 
   useEffect(() => {
-    if (!isStudentMode) {
+    if (!isStudentMode || !user?.username) {
       return
     }
 
     let active = true
 
     const loadStudentHeader = async () => {
-      const [dashboardResult, currentTermResult] = await Promise.allSettled([
-        apiGet<StudentDashboardResponse>('/student/dashboard'),
+      const [currentTermResult] = await Promise.allSettled([
         apiGet<CurrentAcademicTermResponse>('/academic-catalog/current-term'),
       ])
 
@@ -378,23 +611,22 @@ export default function StudentStudyPlanPage() {
         return
       }
 
-      if (dashboardResult.status === 'fulfilled') {
-        setStudentName(dashboardResult.value.student?.ten_sinh_vien?.trim() || null)
-        setEducationSystem(dashboardResult.value.student?.he_dao_tao?.trim() || null)
-      }
-
       if (currentTermResult.status === 'fulfilled') {
         const term = currentTermResult.value.data
-        setSysAcademicYear(term?.nam_hoc?.trim() || 'Chưa cấu hình')
-        setSysSemester(term?.hoc_ky?.trim() || 'Chưa cấu hình')
+        const year = term?.nam_hoc?.trim() || null
+        const semester = term?.hoc_ky?.trim() || null
+        setSysAcademicYear(year || FALLBACK_CURRENT_TERM.year)
+        setSysSemester(semester || FALLBACK_CURRENT_TERM.semester)
+        cacheCurrentTerm(year, semester)
         setStudentFilters((current) => ({
           ...current,
-          year: term?.nam_hoc?.trim() || current.year,
-          semester: term?.hoc_ky?.trim() || current.semester,
+          year: year || current.year,
+          semester: semester || current.semester,
         }))
       } else {
-        setSysAcademicYear('Chưa cấu hình')
-        setSysSemester('Chưa cấu hình')
+        const cached = readCachedCurrentTerm()
+        setSysAcademicYear(cached.year)
+        setSysSemester(cached.semester)
       }
     }
 
@@ -403,11 +635,26 @@ export default function StudentStudyPlanPage() {
     return () => {
       active = false
     }
-  }, [isStudentMode])
+  }, [isStudentMode, user?.username])
 
   useEffect(() => {
     if (!isStudentMode || !user?.username) {
       return
+    }
+
+    const cachedRegistration = readStudentStudyPlanRegistrationCache(user.username)
+    if (cachedRegistration) {
+      setStudyPlanCanRegister(cachedRegistration.canRegister)
+      setStudyPlanMaxCredits(cachedRegistration.maxCredits)
+      setStudyPlanTargetTerm(cachedRegistration.targetTerm)
+      setStudyPlanWindowText(cachedRegistration.windowText)
+      if (cachedRegistration.targetTerm) {
+        setStudentFilters((current) => ({
+          ...current,
+          year: cachedRegistration.targetTerm?.year || current.year,
+          semester: cachedRegistration.targetTerm?.semester || current.semester,
+        }))
+      }
     }
 
     const savedPlan = window.localStorage.getItem(`student-study-plan:${user.username}`)
@@ -417,13 +664,137 @@ export default function StudentStudyPlanPage() {
     }
 
     try {
-      const parsed = JSON.parse(savedPlan) as { courseIds?: number[], confirmedAt?: string | null }
+      const parsed = JSON.parse(savedPlan) as {
+        courseIds?: number[],
+        confirmedAt?: string | null,
+        courseTerms?: Record<string, { year?: string, semester?: string }>
+      }
 
       setPlannedCourseIds(Array.isArray(parsed.courseIds) ? parsed.courseIds : [])
+      setPlannedCourseTerms(Object.fromEntries(
+        Object.entries(parsed.courseTerms ?? {}).map(([courseId, term]) => [
+          Number(courseId),
+          { year: term.year ?? '', semester: term.semester ?? '' },
+        ]),
+      ))
       setPlannedConfirmedAt(parsed.confirmedAt ?? null)
     } catch {
       setPlannedCourseIds([])
+      setPlannedCourseTerms({})
       setPlannedConfirmedAt(null)
+    }
+  }, [isStudentMode, user?.username])
+
+  useEffect(() => {
+    setSelectedStudyPlanCourseIds((current) => current.filter((id) => plannedCourseIds.includes(id)))
+    setPlannedCourseTerms((current) => Object.fromEntries(
+      Object.entries(current).filter(([courseId]) => plannedCourseIds.includes(Number(courseId))),
+    ))
+  }, [plannedCourseIds])
+
+  useEffect(() => {
+    setSelectedStudyPlanCourseIds([])
+  }, [studentFilters.year, studentFilters.semester])
+
+  useEffect(() => {
+    if (!isStudentMode) {
+      return
+    }
+
+    let active = true
+
+    const loadStudyPlanRegistration = async () => {
+      try {
+        const response = await apiGet<StudyPlanRegistrationResponse>('/student/study-plan-registration')
+        if (!active) return
+
+        const data = response.data
+        const period = data?.registration_period
+        const targetYear = period?.target_term?.nam_hoc?.trim() ?? ''
+        const targetSemester = period?.target_term?.hoc_ky?.trim() ?? ''
+        const windowText = period
+          ? `${period.target_term?.nam_hoc ?? ''} - HK ${period.target_term?.hoc_ky ?? ''} (${period.starts_at ?? ''} Ä‘áº¿n ${period.ends_at ?? ''})`
+          : null
+
+        setStudyPlanMaxCredits(data?.max_credits ?? 45)
+        setStudyPlanCanRegister(Boolean(data?.can_register))
+        setStudyPlanTargetTerm(targetYear && targetSemester ? { year: targetYear, semester: targetSemester } : null)
+        setStudyPlanWindowText(windowText)
+        writeStudentStudyPlanRegistrationCache(user?.username, {
+          canRegister: Boolean(data?.can_register),
+          maxCredits: data?.max_credits ?? 45,
+          targetTerm: targetYear && targetSemester ? { year: targetYear, semester: targetSemester } : null,
+          windowText,
+          startsAt: period?.starts_at ?? null,
+          endsAt: period?.ends_at ?? null,
+        })
+        /*
+          ? `${period.target_term?.nam_hoc ?? ''} - HK ${period.target_term?.hoc_ky ?? ''} (${period.starts_at ?? ''} đến ${period.ends_at ?? ''})`
+          : null)
+        */
+        if (targetYear && targetSemester) {
+          setStudentFilters((current) => ({
+            ...current,
+            year: targetYear,
+            semester: targetSemester,
+          }))
+        }
+
+        if (data?.plan) {
+          const planYear = data.plan.term?.nam_hoc?.trim() ?? ''
+          const planSemester = data.plan.term?.hoc_ky?.trim() ?? ''
+
+          if (planYear && planSemester) {
+            if (!period) {
+              setStudyPlanTargetTerm({ year: planYear, semester: planSemester })
+            }
+            setStudentFilters((current) => ({
+              ...current,
+              year: planYear,
+              semester: planSemester,
+            }))
+          }
+
+          setPlannedCourseIds(Array.isArray(data.plan.course_ids) ? data.plan.course_ids : [])
+          if (data.plan.term?.nam_hoc && data.plan.term?.hoc_ky && Array.isArray(data.plan.course_ids)) {
+            setPlannedCourseTerms(Object.fromEntries(
+              (data.plan.course_terms && data.plan.course_terms.length > 0
+                ? data.plan.course_terms
+                : data.plan.course_ids.map((courseId) => ({
+                  course_id: courseId,
+                  term: data.plan?.term,
+                }))
+              ).map((item) => [
+                item.course_id,
+                {
+                  year: item.term?.nam_hoc ?? data.plan?.term?.nam_hoc ?? '',
+                  semester: item.term?.hoc_ky ?? data.plan?.term?.hoc_ky ?? '',
+                },
+              ]),
+            ))
+          }
+          setPlannedConfirmedAt(data.plan.submitted_at ?? null)
+        } else {
+          setPlannedCourseIds([])
+          setPlannedCourseTerms({})
+          setSelectedStudyPlanCourseIds([])
+          setPlannedConfirmedAt(null)
+          if (user?.username) {
+            window.localStorage.removeItem(`student-study-plan:${user.username}`)
+          }
+        }
+      } catch {
+        if (!active) return
+        setStudyPlanCanRegister(false)
+        setStudyPlanTargetTerm(null)
+        setSelectedStudyPlanCourseIds([])
+      }
+    }
+
+    void loadStudyPlanRegistration()
+
+    return () => {
+      active = false
     }
   }, [isStudentMode, user?.username])
 
@@ -583,14 +954,35 @@ export default function StudentStudyPlanPage() {
   const studentCourseNames = Array.from(new Set(studentPlanRows.map((course) => course.ten_hoc_phan)))
     .sort((left, right) => left.localeCompare(right))
   const studentSearchOptions = studentFilters.searchField === 'name' ? studentCourseNames : studentCourseCodes
+  const studyPlanYearOptions = studentYears
+  const studyPlanSemesterOptions = studentSemesters
+  const getSemesterOptionsForYear = (year?: string | null) => {
+    if (!year) {
+      return studyPlanSemesterOptions
+    }
+
+    const selectedYear = catalogYears.find((item) => item.nam_hoc === year)
+    if (!selectedYear) {
+      return studyPlanSemesterOptions
+    }
+
+    const semesters = catalogSemesters
+      .filter((semester) => semester.nam_hoc_id === selectedYear.id)
+      .map((semester) => semester.hoc_ky)
+
+    return semesters.length > 0 ? Array.from(new Set(semesters)) : studyPlanSemesterOptions
+  }
+  const quickMatchedCourse = quickCourseCode.trim()
+    ? studentPlanRows.find((course) => course.ma_hoc_phan.toLowerCase() === quickCourseCode.trim().toLowerCase()) ?? null
+    : null
   const filteredStudentRows = studentPlanRows
     .filter((course) => (
       (!studentFilters.year || course.nam_hoc_mo_hien_thi === studentFilters.year)
       && (!studentFilters.semester || course.hoc_ky_mo_hien_thi === studentFilters.semester)
       && (!studentFilters.searchValue || (
         studentFilters.searchField === 'name'
-          ? course.ten_hoc_phan === studentFilters.searchValue
-          : course.ma_hoc_phan === studentFilters.searchValue
+          ? course.ten_hoc_phan.toLowerCase().includes(studentFilters.searchValue.toLowerCase())
+          : course.ma_hoc_phan.toLowerCase().includes(studentFilters.searchValue.toLowerCase())
       ))
     ))
     .sort((left, right) => {
@@ -614,15 +1006,48 @@ export default function StudentStudyPlanPage() {
     .map((course, index) => ({ ...course, studentRowNo: index + 1 }))
   const studentProgram = curriculum?.chuong_trinh_dao_tao
   const studentMajor = studentProgram?.nganh_dao_tao
-  const displayName = studentName || user?.name?.trim() || 'Sinh viên'
+  const cachedUserName = authStorage.getUser()?.name?.trim() || null
+  const displayName = user?.name?.trim() || cachedUserName || ''
   const filteredStudentTotalCredits = filteredStudentRows.reduce((sum, course) => sum + course.so_tin_chi, 0)
-  const plannedStudentRows = filteredStudentRows.filter((course) => plannedCourseIds.includes(course.id))
-  const plannedStudentTotalCredits = plannedStudentRows.reduce((sum, course) => sum + course.so_tin_chi, 0)
+  const plannedStudentRows = studentPlanRows
+    .filter((course) => plannedCourseIds.includes(course.id))
+    .map((course, index) => ({
+      ...course,
+      nam_hoc_mo_hien_thi: plannedCourseTerms[course.id]?.year || studyPlanTargetTerm?.year || course.nam_hoc_mo_hien_thi,
+      hoc_ky_mo_hien_thi: plannedCourseTerms[course.id]?.semester || studyPlanTargetTerm?.semester || course.hoc_ky_mo_hien_thi,
+      studentRowNo: index + 1,
+    }))
+  const studyPlanFilteredRows = plannedStudentRows
+    .filter((course) => (
+      (!studentFilters.year || course.nam_hoc_mo_hien_thi === studentFilters.year)
+      && (!studentFilters.semester || course.hoc_ky_mo_hien_thi === studentFilters.semester)
+    ))
+    .map((course, index) => ({ ...course, studentRowNo: index + 1 }))
+  const studyPlanVisibleRows = studyPlanFilteredRows.slice(0, Number(studyPlanPageSize) || 20)
+  const studyPlanFilteredTotalCredits = studyPlanFilteredRows.reduce((sum, course) => sum + course.so_tin_chi, 0)
   const studentExportTitle = 'Danh Sách Học Phần Thuộc Chương Trình Đào Tạo Thực Hiện'
-  const studentExportInfo = `Hệ: ${educationSystem || user?.educationSystem || 'Đại học và Cao đẳng chính quy'}. Ngành: ${studentMajor?.ten_nganh || 'Chưa cập nhật'} (${studentMajor?.ma_nganh || '---'}). Khóa học: ${studentAdmissionYear ?? 2023} (65). Mô hình đào tạo Tín chỉ.`
+  const studentExportInfo = `Hệ: ${user?.educationSystem || 'Đại học và Cao đẳng chính quy'}. Ngành: ${studentMajor?.ten_nganh || 'Chưa cập nhật'} (${studentMajor?.ma_nganh || '---'}). Khóa học: ${studentAdmissionYear ?? 2023} (65). Mô hình đào tạo Tín chỉ.`
+
+  const courseSyllabusHref = (course: CurriculumCourse) => (
+    `/dchp/${encodeURIComponent(`${course.ma_hoc_phan}-${course.ten_hoc_phan}.pdf`)}`
+  )
 
   const buildStudentExportHtml = (forPrint = false) => {
-    const rows = filteredStudentRows.map((course) => `
+    const isStudyPlanExport = isStudentMode && studentActiveView === 'studyplan'
+    const exportRows = isStudyPlanExport ? studyPlanFilteredRows : filteredStudentRows
+    const exportTitle = isStudyPlanExport ? 'Kế Hoạch Học Tập Sinh Viên' : studentExportTitle
+    const exportTotalCredits = exportRows.reduce((sum, course) => sum + course.so_tin_chi, 0)
+    const rows = exportRows.map((course) => isStudyPlanExport ? `
+      <tr>
+        <td class="center bold">${course.studentRowNo}</td>
+        <td>${escapeHtml(course.ma_hoc_phan)}</td>
+        <td>${escapeHtml(course.ten_hoc_phan)}</td>
+        <td class="right">${course.so_tin_chi}</td>
+        <td class="center">Đã duyệt</td>
+        <td class="center">${escapeHtml(course.nam_hoc_mo_hien_thi ?? '')}</td>
+        <td class="center">${escapeHtml(course.hoc_ky_mo_hien_thi ?? '')}</td>
+      </tr>
+    ` : `
       <tr>
         <td class="center bold">${course.studentRowNo}</td>
         <td>${escapeHtml(course.ma_hoc_phan)}</td>
@@ -640,12 +1065,40 @@ export default function StudentStudyPlanPage() {
         <td></td>
       </tr>
     `).join('')
+    const tableHead = isStudyPlanExport ? `
+        <tr>
+          <th>Stt</th>
+          <th>Mã học phần</th>
+          <th>Tên học phần</th>
+          <th>ĐVHT/TC</th>
+          <th>Duyệt</th>
+          <th>Năm học</th>
+          <th>Học kỳ</th>
+        </tr>
+    ` : `
+        <tr>
+          <th>Stt</th>
+          <th>Mã học phần</th>
+          <th>Tên học phần</th>
+          <th>ĐVHT/TC</th>
+          <th>Tài liệu tham khảo</th>
+          <th>Nhóm kiến thức</th>
+          <th>Năm học</th>
+          <th>Học kỳ</th>
+          <th>HP cứng</th>
+          <th>HP bắt buộc</th>
+          <th>Học phần xét luận văn</th>
+          <th>Học phần xét học bổng</th>
+          <th>HP thi tốt nghiệp</th>
+          <th>Học phần tiên quyết</th>
+        </tr>
+    `
 
     return `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${escapeHtml(studentExportTitle)}</title>
+  <title>${escapeHtml(exportTitle)}</title>
   <style>
     body { font-family: "Times New Roman", Arial, sans-serif; font-size: 12pt; color: #000; }
     .sheet { padding: ${forPrint ? '16px' : '0'}; }
@@ -672,30 +1125,13 @@ export default function StudentStudyPlanPage() {
         <td style="width: 55%;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br />Độc lập - Tự do - Hạnh phúc</td>
       </tr>
     </table>
-    <div class="title">${escapeHtml(studentExportTitle)}</div>
+    <div class="title">${escapeHtml(exportTitle)}</div>
     <div class="info">${escapeHtml(studentExportInfo)}</div>
     <table class="data">
-      <thead>
-        <tr>
-          <th>Stt</th>
-          <th>Mã học phần</th>
-          <th>Tên học phần</th>
-          <th>ĐVHT/TC</th>
-          <th>Tài liệu tham khảo</th>
-          <th>Nhóm kiến thức</th>
-          <th>Năm học</th>
-          <th>Học kỳ</th>
-          <th>HP cứng</th>
-          <th>HP bắt buộc</th>
-          <th>Học phần xét luận văn</th>
-          <th>Học phần xét học bổng</th>
-          <th>HP thi tốt nghiệp</th>
-          <th>Học phần tiên quyết</th>
-        </tr>
-      </thead>
+      <thead>${tableHead}</thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="total">- Tổng ĐVHT/TC: ${filteredStudentTotalCredits}</div>
+    <div class="total">- Tổng ĐVHT/TC: ${exportTotalCredits}</div>
   </div>
 </body>
 </html>`
@@ -725,46 +1161,261 @@ export default function StudentStudyPlanPage() {
     const semester = studentFilters.semester || 'tat-ca'
 
     link.href = url
-    link.download = `chuong-trinh-dao-tao-${year}-hk-${semester}.xls`
+    link.download = `${studentActiveView === 'studyplan' ? 'ke-hoach-hoc-tap' : 'chuong-trinh-dao-tao'}-${year}-hk-${semester}.xls`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
-  const persistStudentStudyPlan = (courseIds: number[], confirmedAt = plannedConfirmedAt) => {
+  const persistStudentStudyPlan = (
+    courseIds: number[],
+    confirmedAt = plannedConfirmedAt,
+    courseTerms = plannedCourseTerms,
+  ) => {
     if (!user?.username) {
       return
     }
 
     window.localStorage.setItem(`student-study-plan:${user.username}`, JSON.stringify({
       courseIds,
+      courseTerms,
       confirmedAt,
     }))
   }
 
-  const togglePlannedCourse = (courseId: number) => {
-    setPlannedCourseIds((current) => {
-      const next = current.includes(courseId)
-        ? current.filter((id) => id !== courseId)
-        : [...current, courseId]
+  const notifyStudyPlan = (variant: 'success' | 'error' | 'info', title: string, message: string) => {
+    setError(variant === 'error' ? message : null)
+    clearAlerts()
+    showAlert({ title, message, variant })
+  }
+
+  const updatePlannedCourseTerm = (courseId: number, field: 'year' | 'semester', value: string) => {
+    if (!studyPlanCanRegister) {
+      notifyStudyPlan('error', 'KhÃ´ng thá»ƒ Ä‘á»•i há»c ká»³', 'Hiá»‡n khÃ´ng trong thá»i gian Ä‘Äƒng kÃ½ káº¿ hoáº¡ch há»c táº­p.')
+      return
+    }
+
+    setPlannedCourseTerms((current) => {
+      const currentTerm = current[courseId] ?? {
+        year: studyPlanTargetTerm?.year || studentFilters.year,
+        semester: studyPlanTargetTerm?.semester || studentFilters.semester,
+      }
+      const nextTerm = { ...currentTerm, [field]: value }
+      if (field === 'year') {
+        const validSemesters = getSemesterOptionsForYear(value)
+        if (!validSemesters.includes(nextTerm.semester)) {
+          nextTerm.semester = validSemesters[0] ?? ''
+        }
+      }
+      const next = {
+        ...current,
+        [courseId]: nextTerm,
+      }
 
       setPlannedConfirmedAt(null)
-      persistStudentStudyPlan(next, null)
 
       return next
     })
   }
 
-  const confirmStudentStudyPlan = () => {
-    const confirmedAt = new Date().toISOString()
+  const addCoursesToStudyPlan = (courseIds: number[]) => {
+    if (!studyPlanCanRegister) {
+      notifyStudyPlan('error', 'Không thể thêm học phần', 'Hiện không trong thời gian đăng ký kế hoạch học tập.')
+      return
+    }
 
-    setPlannedConfirmedAt(confirmedAt)
-    persistStudentStudyPlan(plannedCourseIds, confirmedAt)
+    if (courseIds.length === 0) {
+      notifyStudyPlan('error', 'Chưa chọn học phần', 'Vui lòng chọn học phần cần thêm vào kế hoạch học tập.')
+      return
+    }
+
+    setPlannedCourseIds((current) => {
+      const next = Array.from(new Set([...current, ...courseIds]))
+      const nextCredits = studentPlanRows
+        .filter((course) => next.includes(course.id))
+        .reduce((sum, course) => sum + course.so_tin_chi, 0)
+
+      if (nextCredits > studyPlanMaxCredits) {
+        notifyStudyPlan('error', 'Vượt giới hạn tín chỉ', `Tổng số tín chỉ đăng ký KHHT không được vượt quá ${studyPlanMaxCredits} tín chỉ trong một học kỳ.`)
+        return current
+      }
+
+      const nextTerms = next.reduce<Record<number, { year: string, semester: string }>>((terms, courseId) => {
+        terms[courseId] = plannedCourseTerms[courseId] ?? {
+          year: studyPlanTargetTerm?.year || studentFilters.year || studentYears[0] || '',
+          semester: studyPlanTargetTerm?.semester || studentFilters.semester || studentSemesters[0] || '',
+        }
+        return terms
+      }, {})
+
+      setPlannedCourseTerms(nextTerms)
+      setPlannedConfirmedAt(null)
+      setError(null)
+      setStudyPlanDialog(null)
+      setCurriculumDialogCourseIds([])
+      setQuickCourseCode('')
+      return next
+    })
   }
 
-  const handleLogout = async () => {
-    await logout()
+  const togglePlannedCourse = (courseId: number) => {
+    if (!studyPlanCanRegister) {
+      notifyStudyPlan('error', 'Không thể chọn học phần', 'Hiện không trong thời gian đăng ký kế hoạch học tập.')
+      return
+    }
+
+    setSelectedStudyPlanCourseIds((current) => (
+      current.includes(courseId)
+        ? current.filter((id) => id !== courseId)
+        : [...current, courseId]
+    ))
+  }
+
+  const handleAddCurriculumCourses = () => {
+    addCoursesToStudyPlan(curriculumDialogCourseIds)
+  }
+
+  const handleAddQuickCourse = () => {
+    if (!quickMatchedCourse) {
+      notifyStudyPlan('error', 'Không có môn phù hợp', 'Mã học phần bạn nhập không tồn tại trong chương trình đào tạo.')
+      return
+    }
+
+    addCoursesToStudyPlan([quickMatchedCourse.id])
+  }
+
+  const findTermId = (year?: string | null, semester?: string | null) => (
+    year && semester
+      ? catalogSemesters.find((item) => (
+        item.hoc_ky === semester
+        && catalogYears.find((catalogYear) => catalogYear.id === item.nam_hoc_id)?.nam_hoc === year
+      ))?.id
+      : undefined
+  )
+  const selectedStudyPlanTermId = findTermId(studyPlanTargetTerm?.year, studyPlanTargetTerm?.semester)
+  const selectedCourseTerms = plannedStudentRows.map((course) => ({
+    course_id: course.id,
+    hoc_ky_id: findTermId(course.nam_hoc_mo_hien_thi, course.hoc_ky_mo_hien_thi),
+    year: course.nam_hoc_mo_hien_thi,
+    semester: course.hoc_ky_mo_hien_thi,
+  }))
+
+  const confirmStudentStudyPlan = async () => {
+    if (!studyPlanCanRegister) {
+      notifyStudyPlan('error', 'Không thể lưu KHHT', 'Hiện không trong thời gian đăng ký kế hoạch học tập.')
+      return
+    }
+
+    if (!selectedStudyPlanTermId) {
+      notifyStudyPlan('error', 'Chưa xác định học kỳ đăng ký', 'Vui lòng chọn năm học và học kỳ hợp lệ trước khi bấm Thực hiện.')
+      return
+    }
+
+    if (selectedCourseTerms.some((item) => !item.hoc_ky_id)) {
+      notifyStudyPlan('error', 'Có học phần chưa có học kỳ hợp lệ', 'Vui lòng kiểm tra lại năm học và học kỳ của từng học phần trước khi bấm Thực hiện.')
+      return
+    }
+
+    setIsSubmittingStudyPlan(true)
+
+    try {
+      const response = await apiPost<SubmitStudyPlanResponse, {
+        course_ids: number[],
+        hoc_ky_id: number,
+        course_terms: Array<{ course_id: number, hoc_ky_id: number }>
+      }>(
+        '/student/study-plan-registration',
+        {
+          course_ids: plannedCourseIds,
+          hoc_ky_id: selectedStudyPlanTermId,
+          course_terms: selectedCourseTerms.map((item) => ({
+            course_id: item.course_id,
+            hoc_ky_id: item.hoc_ky_id as number,
+          })),
+        },
+      )
+      const confirmedAt = response.data?.submitted_at ?? new Date().toISOString()
+
+      setPlannedConfirmedAt(confirmedAt)
+      persistStudentStudyPlan(plannedCourseIds, confirmedAt, plannedCourseTerms)
+      setSelectedStudyPlanCourseIds([])
+      setError(null)
+      notifyStudyPlan('success', 'Đã lưu thành công', `Đã lưu ${plannedCourseIds.length} học phần vào kế hoạch học tập.`)
+    } catch (submitError) {
+      const message = submitError instanceof Error ? submitError.message : 'Không thể xác nhận kế hoạch học tập.'
+      notifyStudyPlan('error', 'Không thể lưu KHHT', message)
+    } finally {
+      setIsSubmittingStudyPlan(false)
+    }
+  }
+
+  const clearStudentStudyPlan = () => {
+    if (!studyPlanCanRegister) {
+      notifyStudyPlan('error', 'Không thể xóa học phần', 'Hiện không trong thời gian đăng ký kế hoạch học tập.')
+      return
+    }
+
+    const next = selectedStudyPlanCourseIds.length > 0
+      ? plannedCourseIds.filter((id) => !selectedStudyPlanCourseIds.includes(id))
+      : []
+
+    setPlannedCourseIds(next)
+    const nextTerms = Object.fromEntries(
+      Object.entries(plannedCourseTerms).filter(([courseId]) => next.includes(Number(courseId))),
+    )
+    setPlannedCourseTerms(nextTerms)
+    setSelectedStudyPlanCourseIds([])
+    setPlannedConfirmedAt(null)
+    setError(null)
+  }
+
+  const toggleAllVisiblePlannedCourses = () => {
+    if (!studyPlanCanRegister) {
+      notifyStudyPlan('error', 'Không thể chọn tất cả', 'Hiện không trong thời gian đăng ký kế hoạch học tập.')
+      return
+    }
+
+    const visibleIds = studyPlanVisibleRows.map((course) => course.id)
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedStudyPlanCourseIds.includes(id))
+    setSelectedStudyPlanCourseIds((current) => (
+      allVisibleSelected
+        ? current.filter((id) => !visibleIds.includes(id))
+        : Array.from(new Set([...current, ...visibleIds]))
+    ))
+    setError(null)
+  }
+
+  const renderStudyPlanActions = () => (
+    <div className="cp-khht-actions">
+      {studyPlanCanRegister && (
+        <>
+          <button type="button" onClick={() => setStudyPlanDialog('curriculum')}>
+            <span>+</span> Thêm HP trong khung CTĐT
+          </button>
+          <button type="button" onClick={() => setStudyPlanDialog('quick')}>
+            <span>+</span> Thêm nhanh HP vào KHHT
+          </button>
+          <button type="button" onClick={confirmStudentStudyPlan} disabled={plannedCourseIds.length === 0 || isSubmittingStudyPlan}>
+            <span>P</span> {isSubmittingStudyPlan ? 'Đang thực hiện' : 'Thực hiện'}
+          </button>
+          <button type="button" onClick={clearStudentStudyPlan} disabled={plannedCourseIds.length === 0}>
+            <span>X</span> Xóa
+          </button>
+        </>
+      )}
+      <button type="button" onClick={handlePrintStudentPlan}>
+        <span>P</span> In
+      </button>
+      <button type="button" onClick={handleExportStudentExcel}>
+        <span>X</span> Xuất Excel
+      </button>
+    </div>
+  )
+
+  const handleLogout = () => {
+    setShowLogoutConfirm(false)
+    void logout()
     navigate('/login', { replace: true })
   }
 
@@ -869,57 +1520,16 @@ export default function StudentStudyPlanPage() {
     )
   }
 
-  if (!user?.role) {
-    return <main className="cp-page"><div className="cp-loading">Đang tải phiên đăng nhập...</div></main>
-  }
-
   return (
     <main className={`cp-page ${config.mode}`}>
-      {isStudentMode && (
-        <header className="cp-student-header">
-          <div className="cp-student-topbar">
-            <div className="cp-student-brand-group">
-              <img src={logoImage} alt="NTU" className="cp-student-brand-logo" />
-              <div className="cp-student-brand-text">
-                <h1>TRƯỜNG ĐẠI HỌC NHA TRANG</h1>
-                <span>Hệ thống Tích hợp Thông tin</span>
-              </div>
-            </div>
-            <span className="cp-student-role-badge">SINH VIÊN</span>
-          </div>
-
-          <div className="cp-student-academic-bar">
-            <div className="cp-student-academic-left">
-              <div className="cp-student-academic-badge">
-                <span>Hệ đào tạo:</span>
-                <strong>{educationSystem || user?.educationSystem || 'Đại học và Cao đẳng chính quy'}</strong>
-              </div>
-              <div className="cp-student-academic-dot"></div>
-              <div className="cp-student-academic-badge">
-                <span>Năm học:</span>
-                <strong>{sysAcademicYear}</strong>
-              </div>
-              <div className="cp-student-academic-dot"></div>
-              <div className="cp-student-academic-badge">
-                <span>Học kỳ:</span>
-                <strong>{sysSemester}</strong>
-              </div>
-            </div>
-            <div className="cp-student-academic-right">
-              <span className="cp-student-greeting">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                Xin chào, {displayName}
-              </span>
-              <div className="cp-student-academic-divider"></div>
-              <button type="button" className="cp-student-home-button" onClick={() => navigate('/sinhvien')} title="Trang chủ" aria-label="Trang chủ">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 9-8 9 8" /><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" /></svg>
-              </button>
-              <button type="button" className="cp-student-logout-button" onClick={() => setShowLogoutConfirm(true)} title="Đăng xuất" aria-label="Đăng xuất">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-              </button>
-            </div>
-          </div>
-        </header>
+      {isStudentShell && (
+        <StudentHeader
+          displayName={displayName}
+          academicYear={sysAcademicYear}
+          semester={sysSemester}
+          onHomeClick={() => navigate('/sinhvien')}
+          onLogoutClick={() => setShowLogoutConfirm(true)}
+        />
       )}
 
       {showLogoutConfirm && (
@@ -949,14 +1559,148 @@ export default function StudentStudyPlanPage() {
         />
       )}
 
+      {studyPlanDialog === 'curriculum' && (
+        <Modal
+          modal={{
+            id: 'khht-add-from-curriculum',
+            title: 'Thêm học phần trong khung CTĐT',
+            size: 'xl',
+            dismissible: true,
+            closeOnOverlayClick: true,
+            content: (
+              <div className="cp-khht-modal">
+                <div className="cp-khht-modal-table-wrap">
+                  <table className="cp-khht-modal-table">
+                    <thead>
+                      <tr>
+                        <th>STT</th>
+                        <th>Chọn</th>
+                        <th>Mã học phần</th>
+                        <th>Tên học phần</th>
+                        <th>ĐVHT/TC</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentPlanRows.map((course, index) => {
+                        const isAlreadyAdded = plannedCourseIds.includes(course.id)
+
+                        return (
+                          <tr key={`add-curriculum-${course.id}`}>
+                            <td>{index + 1}</td>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={isAlreadyAdded || curriculumDialogCourseIds.includes(course.id)}
+                                disabled={isAlreadyAdded}
+                                onChange={() => setCurriculumDialogCourseIds((current) => (
+                                  current.includes(course.id)
+                                    ? current.filter((id) => id !== course.id)
+                                    : [...current, course.id]
+                                ))}
+                              />
+                            </td>
+                            <td>{course.ma_hoc_phan}</td>
+                            <td>{course.ten_hoc_phan}</td>
+                            <td>{course.so_tin_chi}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ),
+            actions: [
+              {
+                label: 'Hủy',
+                variant: 'secondary',
+                autoClose: false,
+                onClick: () => {
+                  setStudyPlanDialog(null)
+                  setCurriculumDialogCourseIds([])
+                },
+              },
+              {
+                label: 'Thực hiện',
+                variant: 'primary',
+                autoClose: false,
+                onClick: handleAddCurriculumCourses,
+              },
+            ],
+          }}
+          onClose={() => {
+            setStudyPlanDialog(null)
+            setCurriculumDialogCourseIds([])
+          }}
+        />
+      )}
+
+      {studyPlanDialog === 'quick' && (
+        <Modal
+          modal={{
+            id: 'khht-add-quick',
+            title: 'Thêm nhanh học phần vào KHHT',
+            size: 'md',
+            dismissible: true,
+            closeOnOverlayClick: true,
+            content: (
+              <div className="cp-khht-quick-form">
+                <label>
+                  <span>Mã học phần</span>
+                  <input
+                    value={quickCourseCode}
+                    list="khht-course-code-options"
+                    onChange={(e) => setQuickCourseCode(e.target.value)}
+                    placeholder="Nhập hoặc chọn mã học phần"
+                  />
+                  <datalist id="khht-course-code-options">
+                    {studentCourseCodes.map((code) => (
+                      <option key={code} value={code} />
+                    ))}
+                  </datalist>
+                </label>
+                <label>
+                  <span>Tên học phần</span>
+                  <input
+                    value={quickCourseCode.trim() ? quickMatchedCourse?.ten_hoc_phan ?? 'Không có môn phù hợp' : ''}
+                    readOnly
+                  />
+                </label>
+              </div>
+            ),
+            actions: [
+              {
+                label: 'Hủy',
+                variant: 'secondary',
+                autoClose: false,
+                onClick: () => {
+                  setStudyPlanDialog(null)
+                  setQuickCourseCode('')
+                },
+              },
+              {
+                label: 'Thực hiện',
+                variant: 'primary',
+                autoClose: false,
+                onClick: handleAddQuickCourse,
+              },
+            ],
+          }}
+          onClose={() => {
+            setStudyPlanDialog(null)
+            setQuickCourseCode('')
+          }}
+        />
+      )}
+
       <div className="cp-content">
-        {!isStudentMode && (
+        {!isStudentShell && (
           <div className="cp-toolbar">
             <span className="cp-role">{config.roleLabel}</span>
           </div>
         )}
 
-        {isStudentMode ? (
+        {isStudentShell ? (
           <div className="cp-student-view-tabs" role="tablist" aria-label="Chế độ xem chương trình đào tạo">
             <button
               type="button"
@@ -1000,7 +1744,7 @@ export default function StudentStudyPlanPage() {
 
         {curriculum && (
           <>
-            {!isStudentMode && (
+            {!isStudentShell && (
               <section className="cp-general">
                 <h2>Thông tin chung</h2>
                 {currentTermText && <p className="cp-term-note">Học kỳ cấu hình: {currentTermText}</p>}
@@ -1028,70 +1772,75 @@ export default function StudentStudyPlanPage() {
                     <strong>Mô hình đào tạo:</strong> Tín chỉ.
                   </p>
 
-                  <div className="cp-filter-grid">
-                    <Select
-                      label="Năm học mở"
-                      selectSize="sm"
-                      value={studentFilters.year}
-                      onChange={(e) => setStudentFilters((c) => ({ ...c, year: e.target.value }))}
-                      options={[
-                        { label: '---- Tất cả ----', value: '' },
-                        ...studentYears.map((y) => ({ label: y, value: y })),
-                      ]}
-                    />
-                    <Select
-                      label="Học kỳ mở"
-                      selectSize="sm"
-                      value={studentFilters.semester}
-                      onChange={(e) => setStudentFilters((c) => ({ ...c, semester: e.target.value }))}
-                      options={[
-                        { label: '---- Tất cả ----', value: '' },
-                        ...studentSemesters.map((s) => ({ label: `Học kỳ ${s}`, value: s })),
-                      ]}
-                    />
-                    <Select
-                      label="Tìm theo"
-                      selectSize="sm"
-                      value={studentFilters.searchField}
-                      onChange={(e) => setStudentFilters((c) => ({ ...c, searchField: e.target.value, searchValue: '' }))}
-                      options={[
-                        { label: 'Mã học phần', value: 'code' },
-                        { label: 'Tên học phần', value: 'name' },
-                      ]}
-                    />
-                    <Select
-                      label={studentFilters.searchField === 'name' ? 'Tên học phần' : 'Mã học phần'}
-                      selectSize="sm"
-                      value={studentFilters.searchValue}
-                      onChange={(e) => setStudentFilters((c) => ({ ...c, searchValue: e.target.value }))}
-                      options={[
-                        { label: '---- Tất cả ----', value: '' },
-                        ...studentSearchOptions.map((o) => ({ label: o, value: o })),
-                      ]}
-                    />
-                    <Select
-                      label="Sắp xếp theo"
-                      selectSize="sm"
-                      value={studentFilters.sortBy}
-                      onChange={(e) => setStudentFilters((c) => ({ ...c, sortBy: e.target.value }))}
-                      options={[
-                        { label: 'Năm học - học kỳ mở', value: 'term' },
-                        { label: 'Mã học phần', value: 'course' },
-                        { label: 'Tên học phần', value: 'name' },
-                        { label: 'Nhóm kiến thức', value: 'group' },
-                        { label: 'Học phần bắt buộc', value: 'required' },
-                      ]}
-                    />
-                    <Select
-                      label="Thứ tự"
-                      selectSize="sm"
-                      value={studentFilters.sortDirection}
-                      onChange={(e) => setStudentFilters((c) => ({ ...c, sortDirection: e.target.value }))}
-                      options={[
-                        { label: 'Tăng dần', value: 'asc' },
-                        { label: 'Giảm dần', value: 'desc' },
-                      ]}
-                    />
+                  <div className="cp-filter-stack">
+                    <div className="cp-filter-row">
+                      <span className="cp-filter-label-box">Năm học mở</span>
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.year}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, year: e.target.value }))}
+                        options={[
+                          { label: '---- Tất cả ----', value: '' },
+                          ...studentYears.map((y) => ({ label: y, value: y })),
+                        ]}
+                      />
+                    </div>
+                    <div className="cp-filter-row">
+                      <span className="cp-filter-label-box">Học kỳ mở</span>
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.semester}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, semester: e.target.value }))}
+                        options={[
+                          { label: '---- Tất cả ----', value: '' },
+                          ...studentSemesters.map((s) => ({ label: `Học kỳ ${s}`, value: s })),
+                        ]}
+                      />
+                    </div>
+                    <div className="cp-filter-row">
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.searchField}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, searchField: e.target.value, searchValue: '' }))}
+                        options={[
+                          { label: 'Mã học phần', value: 'code' },
+                          { label: 'Tên học phần', value: 'name' },
+                        ]}
+                      />
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.searchValue}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, searchValue: e.target.value }))}
+                        options={[
+                          { label: '---- Tất cả ----', value: '' },
+                          ...studentSearchOptions.map((o) => ({ label: o, value: o })),
+                        ]}
+                      />
+                    </div>
+                    <div className="cp-filter-row cp-filter-sort-row">
+                      <strong>Sắp xếp</strong>
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.sortBy}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, sortBy: e.target.value }))}
+                        options={[
+                          { label: 'Năm học - học kỳ mở', value: 'term' },
+                          { label: 'Mã học phần', value: 'course' },
+                          { label: 'Tên học phần', value: 'name' },
+                          { label: 'Nhóm kiến thức', value: 'group' },
+                          { label: 'Học phần bắt buộc', value: 'required' },
+                        ]}
+                      />
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.sortDirection}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, sortDirection: e.target.value }))}
+                        options={[
+                          { label: 'Tăng dần', value: 'asc' },
+                          { label: 'Giảm dần', value: 'desc' },
+                        ]}
+                      />
+                    </div>
                   </div>
                 </section>
 
@@ -1126,23 +1875,21 @@ export default function StudentStudyPlanPage() {
                               <td className="cp-course-name">{course.ten_hoc_phan}</td>
                               <td>{course.so_tin_chi}</td>
                               <td>
-                                {(course.de_cuong_hoc_phan_url || course.tai_lieu_tham_khao_url) ? (
-                                  <a
-                                    className="cp-reference-link"
-                                    href={course.de_cuong_hoc_phan_url || course.tai_lieu_tham_khao_url || undefined}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    title={`Xem đề cương học phần ${course.ma_hoc_phan}`}
-                                    aria-label={`Xem đề cương học phần ${course.ma_hoc_phan}`}
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                      <path d="M14 2v6h6" />
-                                      <path d="M8 13h8" />
-                                      <path d="M8 17h5" />
-                                    </svg>
-                                  </a>
-                                ) : null}
+                                <a
+                                  className="cp-reference-link"
+                                  href={courseSyllabusHref(course)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title={`Xem đề cương học phần ${course.ma_hoc_phan}`}
+                                  aria-label={`Xem đề cương học phần ${course.ma_hoc_phan}`}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <path d="M14 2v6h6" />
+                                    <path d="M8 13h8" />
+                                    <path d="M8 17h5" />
+                                  </svg>
+                                </a>
                               </td>
                               <td>{course.groupName}</td>
                               <td>{course.nam_hoc_mo_hien_thi ?? ''}</td>
@@ -1188,73 +1935,187 @@ export default function StudentStudyPlanPage() {
                 </section>
               </>
             ) : isStudentMode ? (
-              <section className="cp-study-plan-confirm">
-                <div className="cp-study-plan-head">
-                  <div>
-                    <h2>Kế hoạch học tập sinh viên</h2>
-                    <p>Chọn các học phần dự định đăng ký cho kỳ tới rồi xác nhận kế hoạch.</p>
-                  </div>
-                  <div className="cp-study-plan-summary">
-                    <span>Tổng tín chỉ đã chọn</span>
-                    <strong>{plannedStudentTotalCredits}</strong>
+              <section className="cp-khht-panel">
+                <div className="cp-khht-student-line">
+                  <strong>Mã cố vấn học tập:</strong> 2001025. <strong>Họ tên:</strong> {displayName}.
+                </div>
+
+                <div className="cp-khht-filter-area">
+                  <div className="cp-khht-filter-grid">
+                    <label>Năm học</label>
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.year}
+                        onChange={(e) => {
+                        const nextYear = e.target.value
+                        const validSemesters = getSemesterOptionsForYear(nextYear)
+                        setStudentFilters((c) => ({
+                          ...c,
+                          year: nextYear,
+                          semester: c.semester && validSemesters.includes(c.semester) ? c.semester : '',
+                        }))
+                      }}
+                      options={[
+                        { label: '---- Tất cả ----', value: '' },
+                        ...studyPlanYearOptions.map((y) => ({ label: y, value: y })),
+                      ]}
+                    />
+                    <label>Học kỳ</label>
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.semester}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, semester: e.target.value }))}
+                      options={[
+                        { label: '---- Tất cả ----', value: '' },
+                        ...getSemesterOptionsForYear(studentFilters.year).map((s) => ({ label: s, value: s })),
+                      ]}
+                    />
+                    <label>Mã học phần</label>
+                    <div className="cp-khht-search-line">
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.searchField}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, searchField: e.target.value, searchValue: '' }))}
+                        options={[
+                          { label: 'Mã học phần', value: 'code' },
+                          { label: 'Tên học phần', value: 'name' },
+                        ]}
+                      />
+                      <Select
+                        selectSize="sm"
+                        value={studentFilters.searchValue}
+                        onChange={(e) => setStudentFilters((c) => ({ ...c, searchValue: e.target.value }))}
+                        aria-label="Tìm học phần"
+                        options={[
+                          { label: '---- Tất cả ----', value: '' },
+                          ...studentSearchOptions.map((option) => ({ label: option, value: option })),
+                        ]}
+                      />
+                    </div>
+                    <label>Số dòng mỗi trang</label>
+                    <Select
+                      selectSize="sm"
+                      value={studyPlanPageSize}
+                      onChange={(e) => setStudyPlanPageSize(e.target.value)}
+                      options={['1', '5', '10', '20', '50', '100', '500', '1000'].map((value) => ({ label: value, value }))}
+                    />
                   </div>
                 </div>
 
-                <div className="cp-study-plan-meta">
-                  <span>Năm học: <strong>{studentFilters.year || sysAcademicYear}</strong></span>
-                  <span>Học kỳ: <strong>{studentFilters.semester || sysSemester}</strong></span>
-                  {plannedConfirmedAt && (
-                    <span>Đã xác nhận: <strong>{new Date(plannedConfirmedAt).toLocaleString('vi-VN')}</strong></span>
-                  )}
-                </div>
+                <div className="cp-khht-action-row">{renderStudyPlanActions()}</div>
 
                 <div className="cp-table-wrap">
-                  <table className="cp-study-plan-table">
+                  <table className="cp-khht-table">
                     <thead>
                       <tr>
-                        <th>Chọn</th>
                         <th>Stt</th>
                         <th>Mã học phần</th>
                         <th>Tên học phần</th>
                         <th>ĐVHT/TC</th>
-                        <th>Năm học mở</th>
-                        <th>Học kỳ mở</th>
-                        <th>Bắt buộc</th>
+                        <th>Duyệt</th>
+                        <th>Năm học</th>
+                        <th>Học kỳ</th>
+                        <th>Chọn</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredStudentRows.map((course) => (
+                      {studyPlanVisibleRows.length > 0 ? studyPlanVisibleRows.map((course) => (
                         <tr key={`plan-${course.id}`}>
+                          <td>{course.studentRowNo}</td>
+                          <td>{course.ma_hoc_phan}</td>
+                          <td>{course.ten_hoc_phan}</td>
+                          <td>{course.so_tin_chi}</td>
+                          <td>Đã duyệt</td>
+                          <td>
+                            <select
+                              value={course.nam_hoc_mo_hien_thi ?? studentFilters.year}
+                              onChange={(e) => updatePlannedCourseTerm(course.id, 'year', e.target.value)}
+                              disabled={!studyPlanCanRegister}
+                              aria-label={`Năm học đăng ký ${course.ma_hoc_phan}`}
+                            >
+                              {studyPlanYearOptions.map((year) => (
+                                <option key={year} value={year}>{year}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              value={course.hoc_ky_mo_hien_thi ?? studentFilters.semester}
+                              onChange={(e) => updatePlannedCourseTerm(course.id, 'semester', e.target.value)}
+                              disabled={!studyPlanCanRegister}
+                              aria-label={`Học kỳ đăng ký ${course.ma_hoc_phan}`}
+                            >
+                              {getSemesterOptionsForYear(course.nam_hoc_mo_hien_thi).map((semester) => (
+                                <option key={semester} value={semester}>{semester}</option>
+                              ))}
+                            </select>
+                          </td>
                           <td>
                             <input
                               type="checkbox"
-                              checked={plannedCourseIds.includes(course.id)}
+                              checked={selectedStudyPlanCourseIds.includes(course.id)}
                               onChange={() => togglePlannedCourse(course.id)}
+                              disabled={!studyPlanCanRegister}
                               aria-label={`Chọn học phần ${course.ma_hoc_phan}`}
                             />
                           </td>
-                          <td>{course.studentRowNo}</td>
-                          <td>{course.ma_hoc_phan}</td>
-                          <td className="cp-course-name">{course.ten_hoc_phan}</td>
-                          <td>{course.so_tin_chi}</td>
-                          <td>{course.nam_hoc_mo_hien_thi ?? ''}</td>
-                          <td>{course.hoc_ky_mo_hien_thi ?? ''}</td>
-                          <td>{course.vai_tro === 'bat_buoc' ? 'X' : ''}</td>
                         </tr>
-                      ))}
+                      )) : (
+                        <tr>
+                          <td colSpan={8}>Không có học phần nào trong bảng năm học/học kỳ đang chọn.</td>
+                        </tr>
+                      )}
+                      <tr className="cp-khht-select-all-row">
+                        <td colSpan={7}>Chọn tất cả</td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={studyPlanVisibleRows.length > 0 && studyPlanVisibleRows.every((course) => selectedStudyPlanCourseIds.includes(course.id))}
+                            onChange={toggleAllVisiblePlannedCourses}
+                            disabled={!studyPlanCanRegister || studyPlanVisibleRows.length === 0}
+                            aria-label="Chọn tất cả học phần đang hiển thị"
+                          />
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
 
-                <div className="cp-study-plan-actions">
-                  <div>
-                    <strong>{plannedStudentRows.length}</strong> học phần được chọn
-                    <span> / {plannedStudentTotalCredits} tín chỉ</span>
-                  </div>
-                  <button type="button" onClick={confirmStudentStudyPlan} disabled={plannedCourseIds.length === 0}>
-                    Xác nhận kế hoạch học tập
-                  </button>
+                <div className="cp-khht-note">
+                  <span>
+                    <strong>Tổng số tín chỉ:</strong> {studyPlanFilteredTotalCredits}
+                  </span>
+                  {studyPlanCanRegister && (
+                    <span>
+                      <strong>Đã chọn:</strong> {studyPlanFilteredTotalCredits}/{studyPlanMaxCredits}
+                    </span>
+                  )}
+                  <span>
+                    <strong>Số học phần:</strong> {studyPlanFilteredRows.length}
+                  </span>
+                  <br />
+                  <strong>Ghi chú:</strong> <strong>CTĐT:</strong> Chương trình đào tạo - <strong>HP:</strong> Học phần - <strong>KHHT:</strong> Kế hoạch học tập
+                  {plannedConfirmedAt && (
+                    <>
+                      <br />
+                      <strong>Đã xác nhận:</strong> {new Date(plannedConfirmedAt).toLocaleString('vi-VN')}
+                    </>
+                  )}
+                  {!studyPlanCanRegister && (
+                    <>
+                      <br />
+                      <strong>Trạng thái:</strong> Ngoài thời gian đăng ký KHHT
+                    </>
+                  )}
+                  {studyPlanWindowText && (
+                    <>
+                      <br />
+                      <strong>Đợt đăng ký:</strong> {studyPlanWindowText}
+                    </>
+                  )}
                 </div>
+
+                <div className="cp-khht-action-row cp-khht-action-row-bottom">{renderStudyPlanActions()}</div>
               </section>
             ) : (
               <section className="cp-curriculum-frame">
@@ -1308,7 +2169,6 @@ export default function StudentStudyPlanPage() {
           </>
         )}
 
-        {isLoading && <div className="cp-loading">Đang tải kế hoạch học tập...</div>}
       </div>
     </main>
   )

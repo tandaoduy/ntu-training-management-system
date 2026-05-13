@@ -14,6 +14,11 @@ const tasks = [
     link: '/chuyenvien/curriculum',
   },
   {
+    title: 'Thống kê đăng ký KHHT',
+    note: 'Xem số lượng sinh viên đăng ký theo từng học phần và biểu đồ nhanh.',
+    link: '/chuyenvien/study-plan-statistics',
+  },
+  {
     title: 'Validate timetable changes',
     note: '2 departments submitted schedule change requests.',
   },

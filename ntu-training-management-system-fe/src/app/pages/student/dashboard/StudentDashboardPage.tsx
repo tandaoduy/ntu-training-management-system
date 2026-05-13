@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { apiGet } from '../../../../api/core/request'
+import { authStorage } from '../../../../api/features/auth'
 import { useAuth } from '../../../../api/query'
 import { Modal } from '@/components/modal'
-import logoImage from '../../../../assets/Logo_NTU.png'
+import { StudentHeader } from '../components/StudentHeader'
 import './StudentDashboardPage.css'
 
 // ── Placeholder data (thay bằng API thật sau) ────────────────────────
@@ -65,13 +66,6 @@ const statusLabel: Record<string, string> = {
   active: 'Đang học',
 }
 
-interface StudentDashboardResponse {
-  student?: {
-    ten_sinh_vien?: string | null
-    he_dao_tao?: string | null
-  } | null
-}
-
 interface CurrentAcademicTermResponse {
   data?: {
     id?: number
@@ -82,23 +76,49 @@ interface CurrentAcademicTermResponse {
   is_configured?: boolean
 }
 
-interface LegacyStudentDashboardResponse extends StudentDashboardResponse {
-  hoc_ky_hien_hanh?: {
-    id?: number
-    nam_hoc_id?: number
-    nam_hoc?: string | null
-    hoc_ky?: string | null
-  } | null
+const CURRENT_TERM_CACHE_KEY = 'student-current-academic-term'
+const FALLBACK_CURRENT_TERM = {
+  year: '2024-2025',
+  semester: '1',
+}
+
+function readCachedCurrentTerm() {
+  try {
+    const cached = window.localStorage.getItem(CURRENT_TERM_CACHE_KEY)
+    if (!cached) {
+      return FALLBACK_CURRENT_TERM
+    }
+
+    const parsed = JSON.parse(cached) as { year?: string, semester?: string }
+    return {
+      year: parsed.year?.trim() || FALLBACK_CURRENT_TERM.year,
+      semester: parsed.semester?.trim() || FALLBACK_CURRENT_TERM.semester,
+    }
+  } catch {
+    return FALLBACK_CURRENT_TERM
+  }
+}
+
+function cacheCurrentTerm(year?: string | null, semester?: string | null) {
+  const normalizedYear = year?.trim()
+  const normalizedSemester = semester?.trim()
+
+  if (!normalizedYear || !normalizedSemester) {
+    return
+  }
+
+  window.localStorage.setItem(CURRENT_TERM_CACHE_KEY, JSON.stringify({
+    year: normalizedYear,
+    semester: normalizedSemester,
+  }))
 }
 
 export default function StudentDashboardPage() {
   const navigate = useNavigate()
   const { user, logout, me } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [sysAcademicYear, setSysAcademicYear] = useState('Đang tải')
-  const [sysSemester, setSysSemester] = useState('Đang tải')
-  const [studentName, setStudentName] = useState<string | null>(null)
-  const [educationSystem, setEducationSystem] = useState<string | null>(null)
+  const [sysAcademicYear, setSysAcademicYear] = useState(() => readCachedCurrentTerm().year)
+  const [sysSemester, setSysSemester] = useState(() => readCachedCurrentTerm().semester)
 
   // Lấy thông tin user khi vào trang
   useEffect(() => {
@@ -111,8 +131,7 @@ export default function StudentDashboardPage() {
     let isMounted = true
 
     const fetchStudentDashboard = async () => {
-      const [dashboardResult, currentTermResult] = await Promise.allSettled([
-        apiGet<LegacyStudentDashboardResponse>('/student/dashboard'),
+      const [currentTermResult] = await Promise.allSettled([
         apiGet<CurrentAcademicTermResponse>('/academic-catalog/current-term'),
       ])
 
@@ -120,27 +139,15 @@ export default function StudentDashboardPage() {
         return
       }
 
-      if (dashboardResult.status === 'fulfilled') {
-        const name = dashboardResult.value.student?.ten_sinh_vien?.trim() || null
-        const heDaoTao = dashboardResult.value.student?.he_dao_tao?.trim() || null
-
-        setStudentName(name)
-        setEducationSystem(heDaoTao)
-      } else {
-        setStudentName(null)
-        setEducationSystem(null)
-      }
-
       const currentTerm = currentTermResult.status === 'fulfilled'
         ? currentTermResult.value.data
-        : dashboardResult.status === 'fulfilled'
-          ? dashboardResult.value.hoc_ky_hien_hanh
-          : null
+        : null
       const namHoc = currentTerm?.nam_hoc?.trim() || null
       const hocKy = currentTerm?.hoc_ky?.trim() || null
 
-      setSysAcademicYear(namHoc ?? 'Chưa cấu hình')
-      setSysSemester(hocKy ?? 'Chưa cấu hình')
+      setSysAcademicYear(namHoc ?? FALLBACK_CURRENT_TERM.year)
+      setSysSemester(hocKy ?? FALLBACK_CURRENT_TERM.semester)
+      cacheCurrentTerm(namHoc, hocKy)
     }
 
     void fetchStudentDashboard()
@@ -150,67 +157,24 @@ export default function StudentDashboardPage() {
     }
   }, [])
 
-  const handleLogout = async () => {
-    await logout()
+  const handleLogout = () => {
+    setShowLogoutConfirm(false)
+    void logout()
     navigate('/login', { replace: true })
   }
 
-  const displayName = studentName || user?.name?.trim() || 'Sinh viên'
+  const cachedUserName = authStorage.getUser()?.name?.trim() || null
+  const displayName = user?.name?.trim() || cachedUserName || ''
 
   return (
     <div className="sd-root">
-      {/* ── HEADER HIỆN ĐẠI ── */}
-      <header className="sd-header-modern">
-        {/* Main Topbar */}
-        <div className="sd-topbar-main">
-          <div className="sd-brand-group">
-            <img src={logoImage} alt="NTU" className="sd-brand-logo" />
-            <div className="sd-brand-text">
-              <h1 className="sd-brand-title">TRƯỜNG ĐẠI HỌC NHA TRANG</h1>
-              <span className="sd-brand-subtitle">Hệ thống Tích hợp Thông tin</span>
-            </div>
-          </div>
-
-          <div className="sd-user-group">
-            <div className="sd-user-info">
-              <span className="sd-user-role">SINH VIÊN</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Academic Info Bar */}
-        <div className="sd-academic-bar">
-          <div className="sd-academic-left">
-            <div className="sd-academic-badge">
-              <span className="sd-academic-label">Hệ đào tạo:</span>
-              <span className="sd-academic-value">{educationSystem || user?.educationSystem || 'Đại học và Cao đẳng chính quy'}</span>
-            </div>
-            <div className="sd-academic-dot"></div>
-            <div className="sd-academic-badge">
-              <span className="sd-academic-label">Năm học:</span>
-              <span className="sd-academic-value">{sysAcademicYear}</span>
-            </div>
-            <div className="sd-academic-dot"></div>
-            <div className="sd-academic-badge">
-              <span className="sd-academic-label">Học kỳ:</span>
-              <span className="sd-academic-value">{sysSemester}</span>
-            </div>
-          </div>
-          <div className="sd-academic-right">
-            <span className="sd-academic-greeting" style={{ fontWeight: 600, color: '#2b6cb0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              Xin chào, {displayName}
-            </span>
-            <div className="sd-academic-divider"></div>
-            <Link to="/sinhvien" className="sd-btn-home-small" title="Trang chủ" aria-label="Trang chủ">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
-            </Link>
-            <button type="button" className="sd-btn-logout-small" onClick={() => setShowLogoutConfirm(true)} title="Đăng xuất">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </button>
-          </div>
-        </div>
-      </header>
+      <StudentHeader
+        displayName={displayName}
+        academicYear={sysAcademicYear}
+        semester={sysSemester}
+        onHomeClick={() => navigate('/sinhvien')}
+        onLogoutClick={() => setShowLogoutConfirm(true)}
+      />
 
       {/* MODAL XÁC NHẬN ĐĂNG XUẤT */}
       {showLogoutConfirm && (
