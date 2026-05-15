@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
+import RoleLayout from '../../../layout/RoleLayout'
 import './LecturerDashboardPage.css'
 
-// ── Placeholder data (thay bằng API thật sau) ────────────────────────
+// ── Dữ liệu mẫu (thay bằng API thật sau) ─────────────────────────
 const stats = [
   { icon: '📚', label: 'Lớp học trong học kỳ', value: '6', colorClass: 'blue' },
   { icon: '📝', label: 'Bài tập chưa chấm', value: '24', colorClass: 'amber' },
@@ -13,7 +14,7 @@ const quickAccessLinks = [
   { label: 'Lớp học của tôi', icon: '🏫', colorClass: 'blue', link: '/canbo/classes' },
   { label: 'Chấm bài tập', icon: '📝', colorClass: 'amber', link: '/canbo/grading' },
   { label: 'Danh sách sinh viên', icon: '👥', colorClass: 'cyan', link: '/canbo/students' },
-  { label: 'Điểm danh', icon: '✓', colorClass: 'green', link: '/canbo/attendance' },
+  { label: 'Điểm danh', icon: '✅', colorClass: 'green', link: '/canbo/attendance' },
   { label: 'Tài liệu học tập', icon: '📄', colorClass: 'orange', link: '/canbo/materials' },
   { label: 'Kế hoạch học tập', icon: '🗺️', colorClass: 'teal', link: '/canbo/studyplan' },
   { label: 'Tin nhắn sinh viên', icon: '💬', colorClass: 'purple', link: '/canbo/messages' },
@@ -21,24 +22,24 @@ const quickAccessLinks = [
 ]
 
 const pendingTasks = [
-  { id: 'TASK-001', title: 'Chấm bài kiểm tra Tuần 8', dueDate: '2024-05-08', priority: 'high' },
-  { id: 'TASK-002', title: 'Gửi bảng điểm học kỳ', dueDate: '2024-05-15', priority: 'high' },
-  { id: 'TASK-003', title: 'Trả lời tư vấn học tập', dueDate: '2024-05-10', priority: 'medium' },
-  { id: 'TASK-004', title: 'Cập nhật tài liệu bài giảng', dueDate: '2024-05-12', priority: 'low' },
+  { id: 'TASK-001', title: 'Chấm bài kiểm tra Tuần 8', dueDate: '08/05/2025', priority: 'high' },
+  { id: 'TASK-002', title: 'Gửi bảng điểm học kỳ', dueDate: '15/05/2025', priority: 'high' },
+  { id: 'TASK-003', title: 'Trả lời tư vấn học tập', dueDate: '10/05/2025', priority: 'medium' },
+  { id: 'TASK-004', title: 'Cập nhật tài liệu bài giảng', dueDate: '12/05/2025', priority: 'low' },
 ]
 
 const recentActivities = [
-  { action: 'Sinh viên Nguyễn Văn A nộp bài tập', time: '2 giờ trước' },
-  { action: 'Tạo lớp học mới: Lập trình Python', time: '4 giờ trước' },
-  { action: 'Cập nhật điểm danh buổi học', time: 'Hôm qua' },
-  { action: 'Phê duyệt yêu cầu tư vấn từ sinh viên', time: 'Hôm qua' },
+  { action: 'Sinh viên Nguyễn Văn A nộp bài tập', time: '2 giờ trước', icon: '📥' },
+  { action: 'Cập nhật điểm danh buổi học chiều', time: '4 giờ trước', icon: '✅' },
+  { action: 'Phê duyệt yêu cầu tư vấn từ sinh viên', time: 'Hôm qua', icon: '💬' },
+  { action: 'Đăng tài liệu bài giảng mới', time: 'Hôm qua', icon: '📄' },
 ]
 
 const classSummary = [
   { className: 'Lập trình C++', students: '32', avgGrade: '7.8', attendance: '92%' },
   { className: 'Cấu trúc dữ liệu', students: '28', avgGrade: '8.1', attendance: '95%' },
   { className: 'Thuật toán', students: '30', avgGrade: '7.5', attendance: '88%' },
-  { className: 'Phát triển web', students: '26', avgGrade: '8.3', attendance: '96%' },
+  { className: 'Phát triển Web', students: '26', avgGrade: '8.3', attendance: '96%' },
 ]
 
 const priorityLabel: Record<string, string> = {
@@ -49,13 +50,17 @@ const priorityLabel: Record<string, string> = {
 
 export default function LecturerDashboardPage() {
   return (
-    <div className="ld-root">
-
-      {/* ── MAIN ── */}
+    <RoleLayout
+      brandSubtitle="Hệ thống Đào tạo"
+      roleLabel="GIẢNG VIÊN"
+      roleColor="blue"
+      homeRoute="/canbo"
+      roleTitle="Giảng viên"
+    >
       <main className="ld-main">
-        {/* Quick Access */}
+        {/* ── Quick Access ── */}
         <div className="ld-quick-access-section">
-          <h2 className="ld-section-title">Quản lý nhanh</h2>
+          <h2 className="ld-section-title">Truy cập nhanh</h2>
           <div className="ld-qa-grid">
             {quickAccessLinks.map((item) => (
               <Link to={item.link} key={item.label} className="ld-qa-card">
@@ -68,7 +73,7 @@ export default function LecturerDashboardPage() {
           </div>
         </div>
 
-        {/* Stat cards */}
+        {/* ── Stat Cards ── */}
         <div className="ld-stats">
           {stats.map((s) => (
             <div key={s.label} className="ld-stat-card">
@@ -79,7 +84,7 @@ export default function LecturerDashboardPage() {
           ))}
         </div>
 
-        {/* Grid 2 cột */}
+        {/* ── Grid 2 cột ── */}
         <div className="ld-grid">
           {/* Công việc cần làm */}
           <div className="ld-panel">
@@ -111,7 +116,7 @@ export default function LecturerDashboardPage() {
               <div className="ld-timeline">
                 {recentActivities.map((log, idx) => (
                   <div key={idx} className="ld-timeline-item">
-                    <div className="ld-timeline-icon">📝</div>
+                    <div className="ld-timeline-icon">{log.icon}</div>
                     <div className="ld-timeline-content">
                       <div className="ld-timeline-title">{log.action}</div>
                       <div className="ld-timeline-time">{log.time}</div>
@@ -122,27 +127,37 @@ export default function LecturerDashboardPage() {
             </div>
           </div>
 
-          {/* Tóm tắt lớp học */}
+          {/* Tóm tắt lớp học – full width */}
           <div className="ld-panel" style={{ gridColumn: '1 / -1' }}>
             <div className="ld-panel-header">
               <span className="ld-panel-title">📚 Tóm tắt các lớp học</span>
+              <a href="/canbo/classes" className="ld-panel-link">Xem tất cả</a>
             </div>
             <div className="ld-panel-body">
-              <div className="ld-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '14px' }}>
-                {classSummary.map((c, idx) => (
-                  <div key={idx} className="ld-list-item">
-                    <div className="ld-list-content">
-                      <span className="ld-list-title">{c.className}</span>
-                      <span className="ld-list-desc">Sinh viên: {c.students} | Điểm trung bình: {c.avgGrade}</span>
-                      <span className="ld-list-desc">Điểm danh: {c.attendance}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <table className="ld-class-table">
+                <thead>
+                  <tr>
+                    <th>Tên lớp</th>
+                    <th>Sinh viên</th>
+                    <th>Điểm TB</th>
+                    <th>Điểm danh</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {classSummary.map((c, idx) => (
+                    <tr key={idx}>
+                      <td>{c.className}</td>
+                      <td>{c.students}</td>
+                      <td>{c.avgGrade}</td>
+                      <td>{c.attendance}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </main>
-    </div>
+    </RoleLayout>
   )
 }

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
+import RoleLayout from '../../../layout/RoleLayout'
 import './ManagerDashboardPage.css'
 
-// ── Placeholder data (thay bằng API thật sau) ────────────────────────
 const stats = [
   { icon: '📊', label: 'KPI phòng ban', value: '91%', colorClass: 'teal' },
   { icon: '📋', label: 'Đề xuất chờ duyệt', value: '7', colorClass: 'amber' },
@@ -12,7 +12,7 @@ const stats = [
 const quickAccessLinks = [
   { label: 'Theo dõi CTĐT', icon: '🗺️', colorClass: 'teal', link: '/quanly/curriculum' },
   { label: 'Quản lý giáo viên', icon: '👨‍🏫', colorClass: 'blue', link: '/quanly/staff' },
-  { label: 'Duyệt đề xuất', icon: '✓', colorClass: 'green', link: '/quanly/proposals' },
+  { label: 'Duyệt đề xuất', icon: '✅', colorClass: 'green', link: '/quanly/proposals' },
   { label: 'Quản lý phòng ban', icon: '🏢', colorClass: 'cyan', link: '/quanly/department' },
   { label: 'Yêu cầu nghỉ phép', icon: '📅', colorClass: 'orange', link: '/quanly/leaves' },
   { label: 'Báo cáo chất lượng', icon: '📊', colorClass: 'indigo', link: '/quanly/quality' },
@@ -21,55 +21,50 @@ const quickAccessLinks = [
 ]
 
 const pendingApprovals = [
-  { id: 'APP-001', title: 'Mở 2 lớp Lập trình Python', requester: 'Trần Thị B', status: 'pending' },
-  { id: 'APP-002', title: 'Mua thiết bị lab thực hành', requester: 'Nguyễn Văn C', status: 'pending' },
-  { id: 'APP-003', title: 'Tuyển thêm 1 giáo viên', requester: 'Lê Văn D', status: 'pending' },
-  { id: 'APP-004', title: 'Tổ chức hội thảo khoa học', requester: 'Phạm Thị E', status: 'pending' },
+  { id: 'APP-001', title: 'Mở 2 lớp Lập trình Python', requester: 'Trần Thị B' },
+  { id: 'APP-002', title: 'Mua thiết bị lab thực hành', requester: 'Nguyễn Văn C' },
+  { id: 'APP-003', title: 'Tuyển thêm 1 giáo viên', requester: 'Lê Văn D' },
+  { id: 'APP-004', title: 'Tổ chức hội thảo khoa học', requester: 'Phạm Thị E' },
 ]
 
 const recentActivities = [
-  { action: 'Phê duyệt đề xuất mở lớp học', time: '1 giờ trước' },
-  { action: 'Cập nhật kế hoạch học kỳ mới', time: '3 giờ trước' },
-  { action: 'Xem xét báo cáo chất lượng', time: 'Hôm qua' },
-  { action: 'Duyệt yêu cầu nghỉ phép của nhân viên', time: 'Hôm qua' },
+  { action: 'Phê duyệt đề xuất mở lớp học', time: '1 giờ trước', icon: '✅' },
+  { action: 'Cập nhật kế hoạch học kỳ mới', time: '3 giờ trước', icon: '📅' },
+  { action: 'Xem xét báo cáo chất lượng', time: 'Hôm qua', icon: '📊' },
+  { action: 'Duyệt yêu cầu nghỉ phép nhân viên', time: 'Hôm qua', icon: '📋' },
 ]
 
-const departmentMetrics = [
-  { metric: 'Tỷ lệ hoàn thành KPI', value: '91%', status: 'success' },
-  { metric: 'Độ hài lòng sinh viên', value: '88%', status: 'success' },
-  { metric: 'Tỷ lệ chất lượng giáo dục', value: '85%', status: 'warning' },
-  { metric: 'Tỷ lệ sắp xếp lực lượng', value: '92%', status: 'success' },
+const kpiMetrics = [
+  { label: 'Tỷ lệ hoàn thành KPI', value: '91%', percent: 91, warn: false },
+  { label: 'Độ hài lòng sinh viên', value: '88%', percent: 88, warn: false },
+  { label: 'Chất lượng giáo dục', value: '85%', percent: 85, warn: true },
+  { label: 'Tỷ lệ sắp xếp nhân lực', value: '92%', percent: 92, warn: false },
 ]
-
-const statusLabel: Record<string, string> = {
-  success: 'Tốt',
-  warning: 'Cảnh báo',
-  error: 'Lỗi',
-  info: 'Thông tin',
-}
 
 export default function ManagerDashboardPage() {
   return (
-    <div className="md-root">
-
-      {/* ── MAIN ── */}
+    <RoleLayout
+      brandSubtitle="Hệ thống Đào tạo"
+      roleLabel="QUẢN LÝ"
+      roleColor="teal"
+      homeRoute="/quanly"
+      roleTitle="Quản lý"
+    >
       <main className="md-main">
         {/* Quick Access */}
         <div className="md-quick-access-section">
-          <h2 className="md-section-title">Quản lý nhanh</h2>
+          <h2 className="md-section-title">Truy cập nhanh</h2>
           <div className="md-qa-grid">
             {quickAccessLinks.map((item) => (
               <Link to={item.link} key={item.label} className="md-qa-card">
-                <div className={`md-qa-icon ${item.colorClass}`}>
-                  {item.icon}
-                </div>
+                <div className={`md-qa-icon ${item.colorClass}`}>{item.icon}</div>
                 <span className="md-qa-label">{item.label}</span>
               </Link>
             ))}
           </div>
         </div>
 
-        {/* Stat cards */}
+        {/* Stat Cards */}
         <div className="md-stats">
           {stats.map((s) => (
             <div key={s.label} className="md-stat-card">
@@ -112,7 +107,7 @@ export default function ManagerDashboardPage() {
               <div className="md-timeline">
                 {recentActivities.map((log, idx) => (
                   <div key={idx} className="md-timeline-item">
-                    <div className="md-timeline-icon">📝</div>
+                    <div className="md-timeline-icon">{log.icon}</div>
                     <div className="md-timeline-content">
                       <div className="md-timeline-title">{log.action}</div>
                       <div className="md-timeline-time">{log.time}</div>
@@ -123,20 +118,25 @@ export default function ManagerDashboardPage() {
             </div>
           </div>
 
-          {/* Chỉ số hiệu suất phòng ban */}
+          {/* KPI phòng ban – full width */}
           <div className="md-panel" style={{ gridColumn: '1 / -1' }}>
             <div className="md-panel-header">
               <span className="md-panel-title">📊 Chỉ số hiệu suất phòng ban</span>
             </div>
             <div className="md-panel-body">
-              <div className="md-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '14px' }}>
-                {departmentMetrics.map((d, idx) => (
-                  <div key={idx} className="md-list-item">
-                    <div className="md-list-content">
-                      <span className="md-list-title">{d.metric}</span>
-                      <span className="md-list-desc">Giá trị: {d.value}</span>
+              <div className="md-kpi-row">
+                {kpiMetrics.map((k, idx) => (
+                  <div key={idx} className="md-kpi-item">
+                    <div className="md-kpi-header">
+                      <span className="md-kpi-label">{k.label}</span>
+                      <span className="md-kpi-value">{k.value}</span>
                     </div>
-                    <span className={`md-badge ${d.status}`}>{statusLabel[d.status]}</span>
+                    <div className="md-kpi-bar-bg">
+                      <div
+                        className={`md-kpi-bar-fill${k.warn ? ' warning' : ''}`}
+                        style={{ width: `${k.percent}%` }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -144,6 +144,6 @@ export default function ManagerDashboardPage() {
           </div>
         </div>
       </main>
-    </div>
+    </RoleLayout>
   )
 }

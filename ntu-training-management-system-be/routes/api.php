@@ -99,6 +99,7 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::get('/admin/study-plan-registration-periods', [StudyPlanRegistrationController::class, 'index']);
     Route::post('/admin/study-plan-registration-periods', [StudyPlanRegistrationController::class, 'store']);
     Route::get('/training-officer/study-plan-statistics', [StudyPlanRegistrationController::class, 'statistics']);
+    Route::get('/training-officer/study-plan-statistics/courses/{hocPhan}/students', [StudyPlanRegistrationController::class, 'courseRegistrations']);
 
     Route::get('/admin/don-vis', [LopController::class, 'donVis']);
     Route::get('/admin/lops', [LopController::class, 'index']);
