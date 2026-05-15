@@ -1,0 +1,174 @@
+/* ── RoleLayout – Shared Header for Lecturer / Manager / Training Officer ── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+/* ── ROOT ─────────────────────────────────────────────────────────── */
+
+.rl-root {
+  min-height: 100vh;
+  background: #f4f5f7;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ───────────────────────────────────────────────────────── */
+
+.rl-header {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+
+/* ── TOP BAR ──────────────────────────────────────────────────────── */
+
+.rl-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 32px;
+  border-bottom: 1px solid #f4f5f7;
+}
+
+.rl-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rl-brand-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.rl-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rl-brand-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #1a202c;
+  letter-spacing: 0.2px;
+}
+
+.rl-brand-subtitle {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #718096;
+}
+
+/* ── ROLE CHIP ────────────────────────────────────────────────────── */
+
+.rl-role-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.rl-role-chip.blue   { background: #ebf8ff; color: #2b6cb0; }
+.rl-role-chip.teal   { background: #e6fffa; color: #285e61; }
+.rl-role-chip.orange { background: #fffaf0; color: #c05621; }
+.rl-role-chip.purple { background: #faf5ff; color: #553c9a; }
+.rl-role-chip.red    { background: #fff5f5; color: #c53030; }
+
+/* ── GREETING BAR ─────────────────────────────────────────────────── */
+
+.rl-system-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10px 32px;
+  background: #fafafb;
+  border-bottom: 1px solid #edf2f7;
+  gap: 12px;
+}
+
+.rl-greeting-text {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.92rem;
+}
+
+/* ── ACTION BUTTONS ───────────────────────────────────────────────── */
+
+.rl-home-btn,
+.rl-logout-btn {
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rl-home-btn {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.rl-home-btn:hover {
+  background: #cbd5e0;
+  color: #2d3748;
+  transform: scale(1.05);
+}
+
+.rl-logout-btn {
+  background: #fff0f0;
+  color: #e53e3e;
+}
+
+.rl-logout-btn:hover {
+  background: #fed7d7;
+  transform: scale(1.05);
+}
+
+/* ── MAIN CONTENT WRAPPER ────────────────────────────────────────── */
+
+.rl-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .rl-topbar,
+  .rl-system-bar {
+    padding: 12px 16px;
+  }
+
+  .rl-brand-title {
+    font-size: 0.95rem;
+  }
+
+  .rl-greeting-text {
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .rl-brand-subtitle {
+    display: none;
+  }
+}

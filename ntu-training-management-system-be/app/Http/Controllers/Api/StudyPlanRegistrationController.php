@@ -235,20 +235,25 @@ class StudyPlanRegistrationController extends Controller
     {
         $payload = $request->validate([
             'hoc_ky_id' => ['nullable', 'integer', 'exists:hoc_kys,id'],
+            'nam_hoc' => ['nullable', 'string', 'exists:nam_hocs,nam_hoc'],
+            'hoc_ky' => ['nullable', 'string'],
         ]);
 
-        $termId = isset($payload['hoc_ky_id'])
-            ? (int) $payload['hoc_ky_id']
-            : (int) (KeHoachHocTapDotDangKy::query()->latest('id')->value('target_hoc_ky_id') ?? 0);
+        $termIds = $this->statisticsTermIds($payload);
+        $termId = count($termIds) === 1 ? (int) $termIds[0] : 0;
 
         $term = $termId > 0 ? HocKy::query()->with('namHoc:id,nam_hoc')->find($termId) : null;
+
+        $allCourses = HocPhan::query()
+            ->orderBy('ma_hoc_phan')
+            ->get(['id', 'ma_hoc_phan', 'ten_hoc_phan', 'so_tin_chi']);
 
         $rows = DB::table('ke_hoach_hoc_tap_chi_tiets as ct')
             ->join('ke_hoach_hoc_taps as khht', 'khht.id', '=', 'ct.ke_hoach_hoc_tap_id')
             ->join('hoc_phans as hp', 'hp.id', '=', 'ct.hoc_phan_id')
-            ->when($termId > 0, fn ($query) => Schema::hasColumn('ke_hoach_hoc_tap_chi_tiets', 'hoc_ky_id')
-                ? $query->whereRaw('COALESCE(ct.hoc_ky_id, khht.hoc_ky_id) = ?', [$termId])
-                : $query->where('khht.hoc_ky_id', $termId))
+            ->when(! empty($termIds), fn ($query) => Schema::hasColumn('ke_hoach_hoc_tap_chi_tiets', 'hoc_ky_id')
+                ? $query->whereIn(DB::raw('COALESCE(ct.hoc_ky_id, khht.hoc_ky_id)'), $termIds)
+                : $query->whereIn('khht.hoc_ky_id', $termIds))
             ->whereIn('khht.status', ['submitted', 'locked'])
             ->groupBy('hp.id', 'hp.ma_hoc_phan', 'hp.ten_hoc_phan', 'hp.so_tin_chi')
             ->select([
@@ -266,9 +271,79 @@ class StudyPlanRegistrationController extends Controller
             'data' => [
                 'term' => $term ? $this->termPayload($term) : null,
                 'total_students' => (int) $rows->sum('so_luong_sinh_vien'),
+                'all_courses' => $allCourses,
                 'courses' => $rows,
             ],
         ]);
+    }
+
+    public function courseRegistrations(Request $request, HocPhan $hocPhan): JsonResponse
+    {
+        $payload = $request->validate([
+            'hoc_ky_id' => ['nullable', 'integer', 'exists:hoc_kys,id'],
+            'nam_hoc' => ['nullable', 'string', 'exists:nam_hocs,nam_hoc'],
+            'hoc_ky' => ['nullable', 'string'],
+        ]);
+
+        $termIds = $this->statisticsTermIds($payload);
+        $termId = count($termIds) === 1 ? (int) $termIds[0] : 0;
+
+        $term = $termId > 0 ? HocKy::query()->with('namHoc:id,nam_hoc')->find($termId) : null;
+
+        $students = DB::table('ke_hoach_hoc_tap_chi_tiets as ct')
+            ->join('ke_hoach_hoc_taps as khht', 'khht.id', '=', 'ct.ke_hoach_hoc_tap_id')
+            ->join('sinh_viens as sv', 'sv.id', '=', 'khht.sinh_vien_id')
+            ->leftJoin('lops as lop', 'lop.id', '=', 'sv.lop_id')
+            ->where('ct.hoc_phan_id', $hocPhan->id)
+            ->when(! empty($termIds), fn ($query) => Schema::hasColumn('ke_hoach_hoc_tap_chi_tiets', 'hoc_ky_id')
+                ? $query->whereIn(DB::raw('COALESCE(ct.hoc_ky_id, khht.hoc_ky_id)'), $termIds)
+                : $query->whereIn('khht.hoc_ky_id', $termIds))
+            ->whereIn('khht.status', ['submitted', 'locked'])
+            ->select([
+                'sv.id',
+                'sv.user_id as ma_sinh_vien',
+                'sv.ten_sinh_vien',
+                'sv.ngay_sinh',
+                DB::raw('COALESCE(lop.lop_hoc_phan, sv.ma_lop) as ma_lop'),
+                'khht.status',
+                'khht.submitted_at',
+            ])
+            ->orderBy('sv.user_id')
+            ->get();
+
+        return $this->jsonResponse([
+            'data' => [
+                'term' => $term ? $this->termPayload($term) : null,
+                'course' => [
+                    'id' => $hocPhan->id,
+                    'ma_hoc_phan' => $hocPhan->ma_hoc_phan,
+                    'ten_hoc_phan' => $hocPhan->ten_hoc_phan,
+                    'so_tin_chi' => $hocPhan->so_tin_chi,
+                ],
+                'students' => $students,
+            ],
+        ]);
+    }
+
+    private function statisticsTermIds(array $payload): array
+    {
+        if (isset($payload['hoc_ky_id'])) {
+            return [(int) $payload['hoc_ky_id']];
+        }
+
+        $year = trim((string) ($payload['nam_hoc'] ?? ''));
+        $semester = trim((string) ($payload['hoc_ky'] ?? ''));
+
+        if ($year === '' && $semester === '') {
+            return [];
+        }
+
+        return HocKy::query()
+            ->when($year !== '', fn ($query) => $query->whereHas('namHoc', fn ($yearQuery) => $yearQuery->where('nam_hoc', $year)))
+            ->when($semester !== '', fn ($query) => $query->where('hoc_ky', $semester))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     private function currentTerm(): ?HocKy

@@ -21,6 +21,7 @@ import ComponentTestPage from './app/pages/test/ComponentTestPage'
 import TrainingOfficerDashboardPage from './app/pages/training-officer/dashboard/TrainingOfficerDashboardPage.tsx'
 import TrainingOfficerCurriculumPage from './app/pages/training-officer/curriculum/TrainingOfficerCurriculumPage.tsx'
 import TrainingOfficerStudyPlanStatisticsPage from './app/pages/training-officer/study-plan-statistics/TrainingOfficerStudyPlanStatisticsPage.tsx'
+import TrainingOfficerStudyPlanCourseRegistrationsPage from './app/pages/training-officer/study-plan-statistics/TrainingOfficerStudyPlanCourseRegistrationsPage.tsx'
 import { AlertProvider } from '@/components/alert'
 import { useAuthSession } from './hooks'
 
@@ -164,6 +165,16 @@ function AppShell() {
           element={
             isAuthenticated && user?.role === 'training_officer' ? (
               <TrainingOfficerStudyPlanStatisticsPage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
+          path="/chuyenvien/study-plan-statistics/:courseId"
+          element={
+            isAuthenticated && user?.role === 'training_officer' ? (
+              <TrainingOfficerStudyPlanCourseRegistrationsPage />
             ) : (
               <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
             )
