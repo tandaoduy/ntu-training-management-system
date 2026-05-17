@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api\Admin\Account;
 
 use App\Http\Controllers\Controller;
+use App\Models\CanBo;
+use App\Models\ChuyenVien;
 use App\Models\DanToc;
 use App\Models\DonVi;
 use App\Models\Lop;
 use App\Models\NganhDaoTao;
+use App\Models\QuanLy;
+use App\Models\SinhVien;
 use App\Models\TonGiao;
 use App\Models\User;
 use App\Services\Admin\AccountProvisioningService;
@@ -112,9 +116,14 @@ class AdminAccountController extends Controller
                 'required',
                 'string',
                 'max:50',
+                Rule::unique('users', 'username'),
                 function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
                     if ($request->input('role') === 'student' && ! preg_match('/^\d{8}$/', (string) $value)) {
                         $fail('MSSV phải gồm đúng 8 chữ số.');
+                    }
+
+                    if ($request->input('role') === 'lecturer' && ! preg_match('/^\d{7}$/', (string) $value)) {
+                        $fail('Mã giảng viên phải gồm đúng 7 chữ số.');
                     }
                 },
             ],
@@ -134,19 +143,24 @@ class AdminAccountController extends Controller
                 'email',
                 'max:255',
                 function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->isProfileEmailTaken($value)) {
+                        $fail('Email này đã được sử dụng ở một tài khoản khác.');
+                    }
+                },
+                function (string $attribute, mixed $value, \Closure $fail): void {
                     if ($value && ! str_ends_with(mb_strtolower((string) $value, 'UTF-8'), '@ntu.edu.vn')) {
                         $fail('Email liên hệ phải thuộc tên miền @ntu.edu.vn.');
                     }
                 },
             ],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'regex:/^\d{10}$/'],
             'status' => ['sometimes', 'boolean'],
             'gioi_tinh' => ['nullable', 'string', 'max:20'],
-            'ngay_sinh' => ['nullable', 'date'],
+            'ngay_sinh' => ['nullable', 'date_format:Y-m-d', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'noi_sinh' => ['nullable', 'string', 'max:255'],
             'ma_lop' => ['nullable', 'string', 'max:100'],
             'lop_id' => ['nullable', 'integer', 'exists:lops,id'],
-            'don_vi_id' => ['nullable', 'integer', 'exists:don_vis,id'],
+            'don_vi_id' => ['required_if:role,lecturer', 'nullable', 'integer', 'exists:don_vis,id'],
             'nganh_dao_tao_id' => [
                 'nullable',
                 'integer',
@@ -159,7 +173,7 @@ class AdminAccountController extends Controller
             'nam_nhap_hoc' => ['required_if:role,student', 'integer', 'min:2023', 'max:2100'],
             'khoa_hoc' => ['nullable', 'string', 'regex:/^\d{4}-\d{4}$/'],
             'so_cccd' => ['required_if:role,student', 'string', 'regex:/^\d{12}$/'],
-            'ngay_cap_cccd' => ['nullable', 'date'],
+            'ngay_cap_cccd' => ['nullable', 'date_format:Y-m-d', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'noi_cap_cccd' => ['nullable', 'string', 'max:255'],
             'ho_khau_tinh_thanh_pho' => ['nullable', 'string', 'max:255'],
             'ho_khau_quan_huyen' => ['nullable', 'string', 'max:255'],
@@ -214,6 +228,7 @@ class AdminAccountController extends Controller
     public function storeLecturer(Request $request): JsonResponse
     {
         $payload = $request->validate($this->lecturerRules());
+        $payload['ten_giang_vien'] = $this->normalizePersonName($payload['ten_giang_vien']);
         $user = $this->accountProvisioningService->createLecturerAccount($payload);
 
         return $this->createdResponse($user);
@@ -249,18 +264,24 @@ class AdminAccountController extends Controller
                 'nullable',
                 'email',
                 'max:255',
+                function (string $attribute, mixed $value, \Closure $fail) use ($user): void {
+                    if ($this->isProfileEmailTaken($value, $user)) {
+                        $fail('Email này đã được sử dụng ở một tài khoản khác.');
+                    }
+                },
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     if ($value && ! str_ends_with(mb_strtolower((string) $value, 'UTF-8'), '@ntu.edu.vn')) {
                         $fail('Email liên hệ phải thuộc tên miền @ntu.edu.vn.');
                     }
                 },
             ],
-            'profile.so_dien_thoai' => ['nullable', 'string', 'max:20'],
-            'profile.phone' => ['nullable', 'string', 'max:20'],
-            'profile.ngay_sinh' => ['nullable', 'date'],
+            'profile.so_dien_thoai' => ['nullable', 'string', 'regex:/^\d{10}$/'],
+            'profile.phone' => ['nullable', 'string', 'regex:/^\d{10}$/'],
+            'profile.ngay_sinh' => ['nullable', 'date_format:Y-m-d', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'profile.noi_sinh' => ['nullable', 'string', 'max:255'],
             'profile.gioi_tinh' => ['nullable', 'string', 'max:20'],
             'profile.que_quan' => ['nullable', 'string', 'max:255'],
+            'profile.don_vi_id' => ['nullable', 'integer', 'exists:don_vis,id'],
             'profile.ten_don_vi' => ['nullable', 'string', 'max:255'],
             'profile.ten_nganh_hoc' => ['nullable', 'string', 'max:255'],
             'profile.nganh_dao_tao_id' => ['nullable', 'integer', 'exists:nganh_dao_taos,id'],
@@ -272,7 +293,7 @@ class AdminAccountController extends Controller
             'profile.nam_nhap_hoc' => ['nullable', 'integer', 'min:2023', 'max:2100'],
             'profile.khoa_hoc' => ['nullable', 'string', 'regex:/^\d{4}-\d{4}$/'],
             'profile.so_cccd' => ['nullable', 'string', 'regex:/^\d{12}$/'],
-            'profile.ngay_cap_cccd' => ['nullable', 'date'],
+            'profile.ngay_cap_cccd' => ['nullable', 'date_format:Y-m-d', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'profile.noi_cap_cccd' => ['nullable', 'string', 'max:255'],
             'profile.ho_khau_tinh_thanh_pho' => ['nullable', 'string', 'max:255'],
             'profile.ho_khau_quan_huyen' => ['nullable', 'string', 'max:255'],
@@ -291,7 +312,7 @@ class AdminAccountController extends Controller
         }
 
         if (isset($payload['profile']['phone']) && ! isset($payload['profile']['so_dien_thoai'])) {
-            $payload['profile']['phone'] = $payload['profile']['phone'];
+            $payload['profile']['so_dien_thoai'] = $payload['profile']['phone'];
             unset($payload['profile']['phone']);
         }
 
@@ -358,6 +379,23 @@ class AdminAccountController extends Controller
         ]);
     }
 
+    public function destroy(User $user): JsonResponse
+    {
+        $user->loadMissing('role');
+
+        if (! in_array($user->role?->code, ['lecturer', 'training_officer', 'manager'], true)) {
+            return $this->jsonResponse([
+                'message' => 'Chỉ được xóa tài khoản giảng viên, chuyên viên hoặc quản lý.',
+            ], 422);
+        }
+
+        $this->accountProvisioningService->deleteAccount($user);
+
+        return $this->jsonResponse([
+            'message' => 'Đã xóa tài khoản thành công',
+        ]);
+    }
+
     /**
      * Upload student image
      * POST /api/admin/accounts/{id}/upload-image
@@ -414,24 +452,55 @@ class AdminAccountController extends Controller
         ], 201);
     }
 
+    private function isProfileEmailTaken(mixed $email, ?User $exceptUser = null): bool
+    {
+        $normalizedEmail = mb_strtolower(trim((string) ($email ?? '')), 'UTF-8');
+
+        if ($normalizedEmail === '') {
+            return false;
+        }
+
+        $exceptProfileType = $exceptUser?->profile_type;
+        $exceptProfileId = $exceptUser?->profile_id;
+
+        foreach ([SinhVien::class, CanBo::class, ChuyenVien::class, QuanLy::class] as $modelClass) {
+            $query = $modelClass::query()->whereRaw('LOWER(email) = ?', [$normalizedEmail]);
+
+            if ($exceptProfileType === $modelClass && $exceptProfileId) {
+                $query->whereKeyNot($exceptProfileId);
+            }
+
+            if ($query->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function baseCreateRules(): array
     {
         return [
-            'username' => ['required', 'string', 'max:50'],
+            'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')],
             'password' => ['sometimes', 'string', 'min:6'],
             'email' => [
                 'nullable',
                 'email',
                 'max:255',
                 function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->isProfileEmailTaken($value)) {
+                        $fail('Email này đã được sử dụng ở một tài khoản khác.');
+                    }
+                },
+                function (string $attribute, mixed $value, \Closure $fail): void {
                     if ($value && ! str_ends_with(mb_strtolower((string) $value, 'UTF-8'), '@ntu.edu.vn')) {
                         $fail('Email liên hệ phải thuộc tên miền @ntu.edu.vn.');
                     }
                 },
             ],
-            'so_dien_thoai' => ['nullable', 'string', 'max:20'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'ngay_sinh' => ['nullable', 'date'],
+            'so_dien_thoai' => ['nullable', 'string', 'regex:/^\d{10}$/'],
+            'phone' => ['nullable', 'string', 'regex:/^\d{10}$/'],
+            'ngay_sinh' => ['nullable', 'date_format:Y-m-d', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'gioi_tinh' => ['nullable', 'string', 'max:20'],
             'que_quan' => ['nullable', 'string', 'max:255'],
             'dan_toc' => ['nullable', 'string', 'max:100'],
@@ -445,7 +514,7 @@ class AdminAccountController extends Controller
     {
         return [
             ...$this->baseCreateRules(),
-            'username' => ['required', 'string', 'regex:/^\d{8}$/'],
+            'username' => ['required', 'string', 'regex:/^\d{8}$/', Rule::unique('users', 'username')],
             'ten_sinh_vien' => [
                 'required',
                 'string',
@@ -471,7 +540,7 @@ class AdminAccountController extends Controller
             'nam_nhap_hoc' => ['required', 'integer', 'min:2023', 'max:2100'],
             'khoa_hoc' => ['nullable', 'string', 'regex:/^\d{4}-\d{4}$/'],
             'so_cccd' => ['required', 'string', 'regex:/^\d{12}$/'],
-            'ngay_cap_cccd' => ['nullable', 'date'],
+            'ngay_cap_cccd' => ['nullable', 'date_format:Y-m-d', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'noi_cap_cccd' => ['nullable', 'string', 'max:255'],
             'ho_khau_tinh_thanh_pho' => ['nullable', 'string', 'max:255'],
             'ho_khau_quan_huyen' => ['nullable', 'string', 'max:255'],
@@ -532,7 +601,18 @@ class AdminAccountController extends Controller
     {
         return [
             ...$this->baseCreateRules(),
-            'ten_giang_vien' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'regex:/^\d{7}$/', Rule::unique('users', 'username')],
+            'don_vi_id' => ['required', 'integer', 'exists:don_vis,id'],
+            'ten_giang_vien' => [
+                'required',
+                'string',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! preg_match('/^[\p{L}\s]+$/u', trim((string) $value))) {
+                        $fail('Tên giảng viên chỉ được gồm chữ cái và khoảng trắng.');
+                    }
+                },
+            ],
             'dia_chi' => ['nullable', 'string'],
             'chuc_vu' => ['nullable', 'string', 'max:255'],
             'chuc_danh' => ['nullable', 'string', 'max:255'],

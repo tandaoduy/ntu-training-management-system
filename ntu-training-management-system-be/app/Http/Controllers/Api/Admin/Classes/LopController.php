@@ -32,6 +32,8 @@ class LopController extends Controller
                     $query->where(function ($subQuery) use ($keyword): void {
                         $subQuery
                             ->where('lop_hoc_phan', 'like', "%{$keyword}%")
+                            ->orWhere('ten_hoc_phan', 'like', "%{$keyword}%")
+                            ->orWhere('ten_giang_vien', 'like', "%{$keyword}%")
                             ->orWhere('ma_khoi', 'like', "%{$keyword}%")
                             ->orWhere('ma_don_vi', 'like', "%{$keyword}%")
                             ->orWhere('ten_don_vi', 'like', "%{$keyword}%");
@@ -62,6 +64,8 @@ class LopController extends Controller
         $payload = $request->validate([
             'don_vi_id' => ['required', 'integer', 'exists:don_vis,id'],
             'lop_hoc_phan' => ['required', 'string', 'max:255'],
+            'ten_hoc_phan' => ['nullable', 'string', 'max:255'],
+            'ten_giang_vien' => ['nullable', 'string', 'max:255'],
             'mo_hinh_dao_tao' => ['nullable', 'string', 'max:100'],
             'ma_khoi' => ['required', 'string', 'max:100'],
             'ten_khoi' => ['nullable', 'string', 'max:255'],
@@ -72,6 +76,8 @@ class LopController extends Controller
         $lop = Lop::query()->create([
             'don_vi_id' => $donVi->id,
             'lop_hoc_phan' => trim($payload['lop_hoc_phan']),
+            'ten_hoc_phan' => trim($payload['ten_hoc_phan'] ?? '') ?: null,
+            'ten_giang_vien' => trim($payload['ten_giang_vien'] ?? '') ?: null,
             'si_so' => 0,
             'mo_hinh_dao_tao' => trim($payload['mo_hinh_dao_tao'] ?? 'Tín chỉ') ?: 'Tín chỉ',
             'ma_khoi' => trim($payload['ma_khoi']),
@@ -92,6 +98,8 @@ class LopController extends Controller
         $payload = $request->validate([
             'don_vi_id' => ['required', 'integer', 'exists:don_vis,id'],
             'lop_hoc_phan' => ['required', 'string', 'max:255'],
+            'ten_hoc_phan' => ['nullable', 'string', 'max:255'],
+            'ten_giang_vien' => ['nullable', 'string', 'max:255'],
             'mo_hinh_dao_tao' => ['nullable', 'string', 'max:100'],
             'ma_khoi' => ['required', 'string', 'max:100'],
             'ten_khoi' => ['nullable', 'string', 'max:255'],
@@ -102,6 +110,8 @@ class LopController extends Controller
         $lop->fill([
             'don_vi_id' => $donVi->id,
             'lop_hoc_phan' => trim($payload['lop_hoc_phan']),
+            'ten_hoc_phan' => trim($payload['ten_hoc_phan'] ?? '') ?: null,
+            'ten_giang_vien' => trim($payload['ten_giang_vien'] ?? '') ?: null,
             'ma_khoi' => trim($payload['ma_khoi']),
             'ten_khoi' => trim($payload['ten_khoi'] ?? $payload['ma_khoi']),
             'mo_hinh_dao_tao' => trim($payload['mo_hinh_dao_tao'] ?? $lop->mo_hinh_dao_tao ?: 'Tín chỉ'),
@@ -140,6 +150,8 @@ class LopController extends Controller
             'id' => $lop->id,
             'don_vi_id' => $lop->don_vi_id,
             'lop_hoc_phan' => $lop->lop_hoc_phan,
+            'ten_hoc_phan' => $lop->ten_hoc_phan,
+            'ten_giang_vien' => $lop->ten_giang_vien,
             'si_so' => $lop->si_so,
             'mo_hinh_dao_tao' => $lop->mo_hinh_dao_tao,
             'ma_khoi' => $lop->ma_khoi,

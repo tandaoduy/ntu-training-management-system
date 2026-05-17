@@ -230,7 +230,7 @@ class StudentCurriculumController extends Controller
     {
         $payload = $request->validate([
             'phien_ban_ctdt_id' => ['required', 'integer', 'exists:phien_ban_ctdts,id'],
-            'ngay_ap_dung' => ['nullable', 'date'],
+            'ngay_ap_dung' => ['nullable', 'date_format:Y-m-d', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'locked' => ['sometimes', 'boolean'],
             'ghi_chu' => ['nullable', 'string'],
         ]);

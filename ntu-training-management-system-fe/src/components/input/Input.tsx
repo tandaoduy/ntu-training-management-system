@@ -1,4 +1,6 @@
+import type { FormEventHandler } from 'react';
 import type { InputProps, InputSize, InputState } from './types';
+import { sanitizeDateInputValue } from '@/utils/dateInput';
 
 const sizeClasses: Record<InputSize, string> = {
   sm: 'h-9 px-3 text-sm',
@@ -28,6 +30,18 @@ export const Input = ({
 }: InputProps) => {
   const inputId = id ?? props.name;
   const visualState = error ? 'error' : state;
+  const isDateInput = props.type === 'date';
+  const handleInput: FormEventHandler<HTMLInputElement> = (event) => {
+    if (isDateInput) {
+      const sanitizedValue = sanitizeDateInputValue(event.currentTarget.value);
+
+      if (sanitizedValue !== event.currentTarget.value) {
+        event.currentTarget.value = sanitizedValue;
+      }
+    }
+
+    props.onInput?.(event as never);
+  };
 
   return (
     <div className={`w-full space-y-1.5 ${containerClassName}`}>
@@ -51,6 +65,8 @@ export const Input = ({
           aria-describedby={error || helperText ? `${inputId}-message` : undefined}
           className={`block w-full rounded-lg border bg-white text-gray-900 shadow-sm outline-none transition-colors placeholder:text-gray-400 focus:ring-2 focus:ring-offset-0 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 ${sizeClasses[inputSize]} ${stateClasses[visualState]} ${leftIcon ? 'pl-10' : ''} ${rightIcon ? 'pr-10' : ''} ${className}`}
           {...props}
+          max={isDateInput ? props.max ?? '9999-12-31' : props.max}
+          onInput={handleInput}
         />
 
         {rightIcon && (

@@ -226,7 +226,7 @@
 
 .acl-table {
   width: 100%;
-  min-width: 900px;
+  min-width: 1120px;
   border-collapse: collapse;
 }
 
@@ -294,13 +294,14 @@
 }
 
 .acl-actions button {
-  width: 34px;
+  width: auto;
   height: 34px;
   min-height: 34px;
-  padding: 0;
+  padding: 0 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   color: #374151;
   background: #f3f4f6;
 }
@@ -318,6 +319,11 @@
   width: 18px;
   height: 18px;
   stroke-width: 2.2;
+}
+
+.acl-action-text {
+  font-size: 0.78rem;
+  line-height: 1;
 }
 
 .acl-empty {

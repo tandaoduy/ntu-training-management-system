@@ -80,7 +80,7 @@ class AcademicTermController extends Controller
     public function storeAcademicYear(Request $request): JsonResponse
     {
         $payload = $request->validate([
-            'nam_hoc' => ['required', 'string', 'max:20', 'unique:nam_hocs,nam_hoc'],
+            'nam_hoc' => ['required', 'string', 'regex:/^\d{4}-\d{4}$/', 'unique:nam_hocs,nam_hoc'],
             'set_current' => ['sometimes', 'boolean'],
             'hoc_ky' => ['required_if:set_current,true', Rule::in(self::HOC_KY_OPTIONS)],
         ]);
@@ -128,7 +128,7 @@ class AcademicTermController extends Controller
     {
         $payload = $request->validate([
             'nam_hoc_id' => ['sometimes', 'integer', 'exists:nam_hocs,id'],
-            'nam_hoc' => ['required_without:nam_hoc_id', 'string', 'max:20'],
+            'nam_hoc' => ['required_without:nam_hoc_id', 'string', 'regex:/^\d{4}-\d{4}$/'],
             'hoc_ky' => ['required', Rule::in(self::HOC_KY_OPTIONS)],
         ]);
 

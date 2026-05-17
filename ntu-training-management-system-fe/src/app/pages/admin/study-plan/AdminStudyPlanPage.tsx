@@ -4,6 +4,7 @@ import { Alert, useAlert } from '@/components/alert'
 import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import { Select } from '@/components/select'
+import { isFourDigitYearDate, sanitizeDateInputValue } from '@/utils/dateInput'
 import '../configuration/AdminConfigurationPage.css'
 
 type AcademicTerm = {
@@ -152,6 +153,16 @@ export default function AdminStudyPlanPage() {
       return
     }
 
+    if (!isFourDigitYearDate(studyPlanStartDate) || !isFourDigitYearDate(studyPlanEndDate)) {
+      showStudyPlanFormFeedback('error', 'Ngày không hợp lệ', 'Năm trong ngày bắt đầu/kết thúc chỉ được nhập đúng 4 chữ số.')
+      showAlert({
+        title: 'Ngày không hợp lệ',
+        message: 'Năm trong ngày bắt đầu/kết thúc chỉ được nhập đúng 4 chữ số.',
+        variant: 'error',
+      })
+      return
+    }
+
     if (!startDateTime || !endDateTime) {
       showStudyPlanFormFeedback('error', 'Ngày giờ không hợp lệ', 'Vui lòng kiểm tra lại ngày bắt đầu, giờ bắt đầu, ngày kết thúc và giờ kết thúc.')
       showAlert({
@@ -261,7 +272,7 @@ export default function AdminStudyPlanPage() {
               </div>
               <div className="ac-form-group">
                 <label className="ac-label">Ngày bắt đầu</label>
-                <Input type="date" className="ac-input" value={studyPlanStartDate} onChange={(e) => setStudyPlanStartDate(e.target.value)} />
+                <Input type="date" className="ac-input" value={studyPlanStartDate} onChange={(e) => setStudyPlanStartDate(sanitizeDateInputValue(e.target.value))} />
               </div>
               <div className="ac-form-group">
                 <label className="ac-label">Giờ bắt đầu</label>
@@ -269,7 +280,7 @@ export default function AdminStudyPlanPage() {
               </div>
               <div className="ac-form-group">
                 <label className="ac-label">Ngày kết thúc</label>
-                <Input type="date" className="ac-input" value={studyPlanEndDate} min={studyPlanStartDate || undefined} onChange={(e) => setStudyPlanEndDate(e.target.value)} />
+                <Input type="date" className="ac-input" value={studyPlanEndDate} min={studyPlanStartDate || undefined} onChange={(e) => setStudyPlanEndDate(sanitizeDateInputValue(e.target.value))} />
               </div>
               <div className="ac-form-group">
                 <label className="ac-label">Giờ kết thúc</label>

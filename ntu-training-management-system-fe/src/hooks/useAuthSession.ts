@@ -45,6 +45,27 @@ const resolveDashboardPath = (role: string | null | undefined): string => {
   }
 };
 
+let bootstrapRequest: {
+  token: string;
+  promise: Promise<CurrentUserResponse>;
+} | null = null;
+
+const getCurrentUserForToken = (token: string): Promise<CurrentUserResponse> => {
+  if (bootstrapRequest?.token === token) {
+    return bootstrapRequest.promise;
+  }
+
+  const promise = authMutations.me().finally(() => {
+    if (bootstrapRequest?.token === token) {
+      bootstrapRequest = null;
+    }
+  });
+
+  bootstrapRequest = { token, promise };
+
+  return promise;
+};
+
 export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
@@ -80,7 +101,7 @@ export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
 
     const bootstrapSession = async () => {
       try {
-        const response = await authMutations.me();
+        const response = await getCurrentUserForToken(requestToken);
 
         if (!isMounted) {
           return;

@@ -14,6 +14,7 @@ const quickAccessLinks = [
   { label: 'Phân quyền hệ thống', icon: '🔑', colorClass: 'purple', link: '/admin/roles' },
   { label: 'Quản lý phòng ban', icon: '🏢', colorClass: 'cyan', link: '/admin/departments' },
   { label: 'Quản lý lớp học', icon: '🏫', colorClass: 'orange', link: '/quantri/lophoc' },
+  { label: 'Quản lí phòng học', icon: 'PH', colorClass: 'cyan', link: '/quantri/phonghoc' },
   { label: 'Chương trình đào tạo', icon: '🗺️', colorClass: 'teal', link: '/quantri/curriculum' },
   { label: 'Kế hoạch học tập', icon: '📝', colorClass: 'amber', link: '/quantri/studyplan' },
   { label: 'Cấu hình hệ thống', icon: '⚙️', colorClass: 'gray', link: '/quantri/cauhinh' },

@@ -42,8 +42,8 @@ class StudyPlanRegistrationController extends Controller
     {
         $payload = $request->validate([
             'target_hoc_ky_id' => ['required', 'integer', 'exists:hoc_kys,id'],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'starts_at' => ['required', 'date', 'regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/'],
+            'ends_at' => ['required', 'date', 'after:starts_at', 'regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/'],
             'status' => ['sometimes', Rule::in(['draft', 'open', 'closed'])],
             'ghi_chu' => ['nullable', 'string', 'max:500'],
         ]);
