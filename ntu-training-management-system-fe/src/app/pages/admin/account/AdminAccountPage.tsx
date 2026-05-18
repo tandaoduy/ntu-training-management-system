@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, FormEvent, ReactNode } from 'react'
 
-import { apiGet, apiPost } from '../../../../api/core/request'
+import { apiDelete, apiGet, apiPost, apiPut } from '../../../../api/core/request'
 import { useAlert } from '@/components/alert'
 import { Button } from '@/components/button'
 import { DatePicker } from '@/components/date-picker'
 import { Input } from '@/components/input'
+import { useModal } from '@/components/modal'
 import { Select } from '@/components/select'
+import { isFourDigitYearDate } from '@/utils/dateInput'
 import './AdminAccountPage.css'
 
 type RoleId = 'student' | 'lecturer' | 'training_officer' | 'manager'
@@ -26,6 +28,12 @@ interface AdminAccount {
   status: boolean
   display_name: string | null
   email: string | null
+  profile?: {
+    don_vi_id?: number | null
+    ten_giang_vien?: string | null
+    email?: string | null
+    so_dien_thoai?: string | null
+  } | null
 }
 
 interface AccountsResponse {
@@ -103,10 +111,15 @@ interface StudentCatalogResponse {
   }
 }
 
+interface DonVisResponse {
+  data: Array<Pick<DonViOption, 'id' | 'ma_don_vi' | 'ten_don_vi' | 'loai_don_vi'>>
+}
+
 interface NewAccountState {
   username: string
   fullName: string
   email: string
+  phone: string
   password: string
   gioiTinh: string
   ngaySinh: string
@@ -140,14 +153,20 @@ interface NewAccountState {
 interface AccountFormErrors {
   username?: string
   fullName?: string
+  email?: string
+  phone?: string
+  donViId?: string
   soCccd?: string
   namNhapHoc?: string
+  ngaySinh?: string
+  ngayCapCccd?: string
 }
 
 const EMPTY_ACCOUNT: NewAccountState = {
   username: '',
   fullName: '',
   email: '',
+  phone: '',
   password: '123456789',
   gioiTinh: '',
   ngaySinh: '',
@@ -227,6 +246,7 @@ const formatProvinceOption = (province: Province): string => {
 }
 
 const STUDENT_CODE_REGEX = /^\d{8}$/
+const LECTURER_CODE_REGEX = /^\d{7}$/
 const CCCD_REGEX = /^\d{12}$/
 const ADMISSION_YEAR_REGEX = /^\d{4}$/
 const MIN_ADMISSION_YEAR = 2023
@@ -235,6 +255,14 @@ const NTU_EMAIL_DOMAIN = '@ntu.edu.vn'
 
 const sanitizeStudentCode = (value: string): string => {
   return value.replace(/\D/g, '').slice(0, 8)
+}
+
+const sanitizeLecturerCode = (value: string): string => {
+  return value.replace(/\D/g, '').slice(0, 7)
+}
+
+const sanitizePhoneNumber = (value: string): string => {
+  return value.replace(/\D/g, '').slice(0, 10)
 }
 
 const sanitizeCccd = (value: string): string => {
@@ -281,6 +309,28 @@ const normalizePersonName = (value: string): string => {
     .join(' ')
 }
 
+const getPersonNameError = (value: string): string | undefined => {
+  const fullName = value.trim()
+
+  if (!fullName) {
+    return 'Vui lòng nhập họ và tên.'
+  }
+
+  if (!PERSON_NAME_REGEX.test(fullName)) {
+    return 'Họ và tên chỉ được gồm chữ cái và khoảng trắng.'
+  }
+
+  return undefined
+}
+
+const getPhoneError = (value: string): string | undefined => {
+  if (!value || value.length === 10) {
+    return undefined
+  }
+
+  return 'Số điện thoại phải gồm đúng 10 chữ số.'
+}
+
 const getEmailLocalPart = (value: string): string => {
   return value.replace(NTU_EMAIL_DOMAIN, '').split('@')[0] ?? ''
 }
@@ -291,15 +341,52 @@ const normalizeNtuEmail = (value: string): string => {
   return localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : ''
 }
 
+const removeVietnameseMarks = (value: string): string => {
+  return value
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+const generateNtuEmailFromName = (value: string): string => {
+  const words = normalizePersonName(value)
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (words.length === 0) {
+    return ''
+  }
+
+  const asciiWords = words.map((word) => removeVietnameseMarks(word).toLocaleLowerCase('vi-VN'))
+  const lastNamePart = asciiWords.at(-1) ?? ''
+  const initialPart = asciiWords
+    .slice(0, -1)
+    .map((word) => word.charAt(0))
+    .join('')
+  const localPart = `${lastNamePart}${initialPart}`.replace(/[^a-z0-9]/g, '')
+
+  return localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : ''
+}
+
+const shouldAutoGenerateEmail = (role: RoleId | null): boolean => {
+  return role === 'lecturer' || role === 'training_officer' || role === 'manager'
+}
+
 export default function AdminAccountPage() {
   const { showAlert } = useAlert()
+  const { open: openModal, close: closeModal } = useModal()
   const [selectedRole, setSelectedRole] = useState<RoleId | null>(null)
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [deletingAccountId, setDeletingAccountId] = useState<number | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<AdminAccount | null>(null)
   const [createdAccount, setCreatedAccount] = useState<AdminAccount | null>(null)
   const [newAccount, setNewAccount] = useState<NewAccountState>(EMPTY_ACCOUNT)
+  const [accountSearch, setAccountSearch] = useState('')
+  const [unitFilter, setUnitFilter] = useState('')
   const [formErrors, setFormErrors] = useState<AccountFormErrors>({})
   const [donVis, setDonVis] = useState<DonViOption[]>([])
   const [danTocs, setDanTocs] = useState<DanTocOption[]>([])
@@ -331,6 +418,11 @@ export default function AdminAccountPage() {
     void loadAccounts()
   }, [loadAccounts])
 
+  useEffect(() => {
+    setAccountSearch('')
+    setUnitFilter('')
+  }, [selectedRole])
+
   const loadStudentCatalog = useCallback(async () => {
     setIsCatalogLoading(true)
 
@@ -342,6 +434,27 @@ export default function AdminAccountPage() {
     } catch (error: unknown) {
       showAlert({
         title: 'Không tải được danh mục sinh viên',
+        message: getErrorMessage(error, 'Vui lòng thử lại sau.'),
+        variant: 'error',
+      })
+    } finally {
+      setIsCatalogLoading(false)
+    }
+  }, [showAlert])
+
+  const loadDonVis = useCallback(async () => {
+    setIsCatalogLoading(true)
+
+    try {
+      const response = await apiGet<DonVisResponse>('/admin/don-vis')
+      setDonVis(response.data.map((donVi) => ({
+        ...donVi,
+        lops: [],
+        nganh_dao_taos: [],
+      })))
+    } catch (error: unknown) {
+      showAlert({
+        title: 'Không tải được danh sách đơn vị',
         message: getErrorMessage(error, 'Vui lòng thử lại sau.'),
         variant: 'error',
       })
@@ -405,6 +518,18 @@ export default function AdminAccountPage() {
     }
   }, [loadStudentCatalog, loadProvinces, showModal, selectedRole])
 
+  useEffect(() => {
+    if (showModal && selectedRole === 'lecturer') {
+      void loadDonVis()
+    }
+  }, [loadDonVis, showModal, selectedRole])
+
+  useEffect(() => {
+    if (selectedRole === 'lecturer') {
+      void loadDonVis()
+    }
+  }, [loadDonVis, selectedRole])
+
   const accountCounts = useMemo(() => {
     return ROLES.reduce<Record<RoleId, number>>((acc, role) => {
       acc[role.id] = accounts.filter((account) => account.role === role.id).length
@@ -418,9 +543,42 @@ export default function AdminAccountPage() {
   }, [accounts])
 
   const activeRole = ROLES.find((role) => role.id === selectedRole)
-  const currentAccounts = selectedRole
-    ? accounts.filter((account) => account.role === selectedRole)
-    : []
+  const currentAccounts = useMemo(() => {
+    if (!selectedRole) {
+      return []
+    }
+
+    let roleAccounts = accounts.filter((account) => account.role === selectedRole)
+
+    if (selectedRole === 'lecturer') {
+      const keyword = accountSearch.trim().toLowerCase()
+
+      roleAccounts = roleAccounts
+        .filter((account) => {
+          const unitId = account.profile?.don_vi_id
+          const unit = donVis.find((donVi) => donVi.id === unitId)
+
+          if (unitFilter && String(unitId ?? '') !== unitFilter) {
+            return false
+          }
+
+          if (!keyword) {
+            return true
+          }
+
+          return [
+            account.username,
+            account.display_name ?? '',
+            account.email ?? '',
+            unit?.ten_don_vi ?? '',
+            unit?.ma_don_vi ?? '',
+          ].some((value) => value.toLowerCase().includes(keyword))
+        })
+        .sort((a, b) => a.username.localeCompare(b.username, 'vi', { numeric: true }))
+    }
+
+    return roleAccounts
+  }, [accountSearch, accounts, donVis, selectedRole, unitFilter])
   const selectedDonVi = donVis.find((donVi) => String(donVi.id) === newAccount.donViId)
   const selectedLop = selectedDonVi?.lops.find((lop) => String(lop.id) === newAccount.lopId)
   const selectedNganhDaoTao = selectedDonVi?.nganh_dao_taos.find(
@@ -428,12 +586,56 @@ export default function AdminAccountPage() {
   )
   const selectedTrainingDuration = getTrainingDuration(selectedNganhDaoTao)
 
+  const findAccountByUsername = (username: string, exceptId?: number): AdminAccount | undefined => {
+    const normalizedUsername = username.trim().toLowerCase()
+
+    return accounts.find((account) =>
+      account.id !== exceptId && account.username.trim().toLowerCase() === normalizedUsername,
+    )
+  }
+
+  const findAccountByEmail = (email: string, exceptId?: number): AdminAccount | undefined => {
+    const normalizedEmail = normalizeNtuEmail(email).trim().toLowerCase()
+
+    if (!normalizedEmail) {
+      return undefined
+    }
+
+    return accounts.find((account) =>
+      account.id !== exceptId && (account.email ?? '').trim().toLowerCase() === normalizedEmail,
+    )
+  }
+
   const validateAccountForm = (account: NewAccountState): AccountFormErrors => {
     const errors: AccountFormErrors = {}
     const fullName = account.fullName.trim()
 
     if (selectedRole === 'student' && !STUDENT_CODE_REGEX.test(account.username)) {
       errors.username = 'MSSV phải gồm đúng 8 chữ số.'
+    }
+
+    if (selectedRole === 'lecturer' && !LECTURER_CODE_REGEX.test(account.username)) {
+      errors.username = 'Mã giảng viên phải gồm đúng 7 chữ số.'
+    }
+
+    if (selectedRole === 'lecturer' && !account.donViId) {
+      errors.donViId = 'Vui lòng chọn đơn vị.'
+    }
+
+    if (findAccountByUsername(account.username)) {
+      errors.username = 'Mã tài khoản này đã tồn tại ở một vai trò khác.'
+    }
+
+    if (findAccountByEmail(account.email)) {
+      errors.email = 'Email này đã được sử dụng ở một tài khoản khác.'
+    }
+
+    if (selectedRole === 'lecturer') {
+      const phoneError = getPhoneError(account.phone)
+
+      if (phoneError) {
+        errors.phone = phoneError
+      }
     }
 
     if (selectedRole === 'student' && !CCCD_REGEX.test(account.soCccd)) {
@@ -446,12 +648,20 @@ export default function AdminAccountPage() {
       if (!ADMISSION_YEAR_REGEX.test(account.namNhapHoc) || admissionYear < MIN_ADMISSION_YEAR) {
         errors.namNhapHoc = `Năm nhập học phải từ ${MIN_ADMISSION_YEAR} trở đi.`
       }
+
+      if (account.ngaySinh && !isFourDigitYearDate(account.ngaySinh)) {
+        errors.ngaySinh = 'Năm trong ngày sinh chỉ được nhập đúng 4 chữ số.'
+      }
+
+      if (account.ngayCapCccd && !isFourDigitYearDate(account.ngayCapCccd)) {
+        errors.ngayCapCccd = 'Năm trong ngày cấp CCCD chỉ được nhập đúng 4 chữ số.'
+      }
     }
 
-    if (!fullName) {
-      errors.fullName = 'Vui lòng nhập họ và tên.'
-    } else if (!PERSON_NAME_REGEX.test(fullName)) {
-      errors.fullName = 'Họ và tên chỉ được gồm chữ cái và khoảng trắng.'
+    const fullNameError = getPersonNameError(fullName)
+
+    if (fullNameError) {
+      errors.fullName = fullNameError
     }
 
     return errors
@@ -463,6 +673,22 @@ export default function AdminAccountPage() {
     }
 
     return 'MSSV phải gồm đúng 8 chữ số.'
+  }
+
+  const getUsernameError = (value: string): string | undefined => {
+    if (value.trim() && findAccountByUsername(value)) {
+      return 'Mã tài khoản này đã tồn tại ở một vai trò khác.'
+    }
+
+    if (selectedRole === 'student') {
+      return getStudentCodeError(value)
+    }
+
+    if (selectedRole === 'lecturer' && value.length > 0 && value.length !== 7) {
+      return 'Mã giảng viên phải gồm đúng 7 chữ số.'
+    }
+
+    return undefined
   }
 
   const getCccdError = (value: string): string | undefined => {
@@ -494,7 +720,11 @@ export default function AdminAccountPage() {
 
     const normalizedAccount = {
       ...newAccount,
-      username: selectedRole === 'student' ? sanitizeStudentCode(newAccount.username) : newAccount.username.trim(),
+      username: selectedRole === 'student'
+        ? sanitizeStudentCode(newAccount.username)
+        : selectedRole === 'lecturer'
+          ? sanitizeLecturerCode(newAccount.username)
+          : newAccount.username.trim(),
       soCccd: selectedRole === 'student' ? sanitizeCccd(newAccount.soCccd) : newAccount.soCccd.trim(),
       namNhapHoc: selectedRole === 'student' ? sanitizeAdmissionYear(newAccount.namNhapHoc) : newAccount.namNhapHoc.trim(),
       khoaHoc: selectedRole === 'student'
@@ -502,6 +732,7 @@ export default function AdminAccountPage() {
         : newAccount.khoaHoc.trim(),
       fullName: normalizePersonName(newAccount.fullName),
       email: normalizeNtuEmail(newAccount.email),
+      phone: selectedRole === 'lecturer' ? sanitizePhoneNumber(newAccount.phone) : newAccount.phone.trim(),
     }
     const errors = validateAccountForm(normalizedAccount)
     setNewAccount(normalizedAccount)
@@ -526,9 +757,12 @@ export default function AdminAccountPage() {
         password: normalizedAccount.password || '123456789',
         name: normalizedAccount.fullName,
         email: normalizedAccount.email || null,
+        phone: selectedRole === 'lecturer' ? normalizedAccount.phone || null : undefined,
         gioi_tinh: selectedRole === 'student' ? normalizedAccount.gioiTinh || null : undefined,
         ngay_sinh: selectedRole === 'student' ? normalizedAccount.ngaySinh || null : undefined,
-        don_vi_id: selectedRole === 'student' ? Number(normalizedAccount.donViId) || null : undefined,
+        don_vi_id: selectedRole === 'student' || selectedRole === 'lecturer'
+          ? Number(normalizedAccount.donViId) || null
+          : undefined,
         lop_id: selectedRole === 'student' ? Number(normalizedAccount.lopId) || null : undefined,
         nganh_dao_tao_id: selectedRole === 'student' ? Number(normalizedAccount.nganhDaoTaoId) || null : undefined,
         ma_lop: selectedRole === 'student' ? selectedLop?.lop_hoc_phan ?? null : undefined,
@@ -581,6 +815,107 @@ export default function AdminAccountPage() {
     }
   }
 
+  const openCreateModal = () => {
+    setEditingAccount(null)
+    setNewAccount(EMPTY_ACCOUNT)
+    setFormErrors({})
+    setShowModal(true)
+  }
+
+  const openEditModal = (account: AdminAccount) => {
+    setEditingAccount(account)
+    setNewAccount({
+      ...EMPTY_ACCOUNT,
+      username: account.username,
+      fullName: account.display_name ?? '',
+      email: account.email ?? '',
+      phone: account.profile?.so_dien_thoai ?? '',
+      donViId: account.profile?.don_vi_id ? String(account.profile.don_vi_id) : '',
+    })
+    setFormErrors({})
+    setShowModal(true)
+  }
+
+  const handleUpdateLecturer = async (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault()
+
+    if (!editingAccount) {
+      return
+    }
+
+    const normalizedAccount = {
+      ...newAccount,
+      fullName: normalizePersonName(newAccount.fullName),
+      email: normalizeNtuEmail(newAccount.email),
+      phone: sanitizePhoneNumber(newAccount.phone),
+    }
+    const errors: AccountFormErrors = {}
+    const fullNameError = getPersonNameError(normalizedAccount.fullName)
+
+    if (fullNameError) {
+      errors.fullName = fullNameError
+    }
+
+    if (!normalizedAccount.donViId) {
+      errors.donViId = 'Vui lòng chọn đơn vị.'
+    }
+
+    if (findAccountByEmail(normalizedAccount.email, editingAccount.id)) {
+      errors.email = 'Email này đã được sử dụng ở một tài khoản khác.'
+    }
+
+    const phoneError = getPhoneError(normalizedAccount.phone)
+
+    if (phoneError) {
+      errors.phone = phoneError
+    }
+
+    setNewAccount(normalizedAccount)
+    setFormErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      showAlert({
+        title: 'Dữ liệu chưa hợp lệ',
+        message: Object.values(errors)[0] ?? 'Vui lòng kiểm tra lại thông tin.',
+        variant: 'error',
+      })
+
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      await apiPut(`/admin/accounts/${editingAccount.id}`, {
+        profile: {
+          ten_giang_vien: normalizedAccount.fullName,
+          email: normalizedAccount.email || null,
+          so_dien_thoai: normalizedAccount.phone || null,
+          don_vi_id: Number(normalizedAccount.donViId),
+        },
+      })
+
+      showAlert({
+        title: 'Đã cập nhật giảng viên',
+        message: `Thông tin tài khoản ${editingAccount.username} đã được lưu.`,
+        variant: 'success',
+      })
+      setShowModal(false)
+      setEditingAccount(null)
+      setNewAccount(EMPTY_ACCOUNT)
+      setFormErrors({})
+      await loadAccounts()
+    } catch (error: unknown) {
+      showAlert({
+        title: 'Cập nhật giảng viên thất bại',
+        message: getErrorMessage(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'),
+        variant: 'error',
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleToggleLock = async (account: AdminAccount) => {
     const action = account.status ? 'lock' : 'unlock'
 
@@ -594,6 +929,67 @@ export default function AdminAccountPage() {
         variant: 'error',
       })
     }
+  }
+
+  const confirmDeleteAccount = async (account: AdminAccount) => {
+    setDeletingAccountId(account.id)
+
+    try {
+      await apiDelete(`/admin/accounts/${account.id}`)
+      showAlert({
+        title: 'Đã xóa tài khoản',
+        message: `Tài khoản ${account.username} đã được xóa thành công.`,
+        variant: 'success',
+      })
+      await loadAccounts()
+    } catch (error: unknown) {
+      showAlert({
+        title: 'Xóa tài khoản thất bại',
+        message: getErrorMessage(error, 'Vui lòng thử lại sau.'),
+        variant: 'error',
+      })
+    } finally {
+      setDeletingAccountId(null)
+    }
+  }
+
+  const handleDeleteAccount = (account: AdminAccount) => {
+    const accountName = account.display_name || account.username
+
+    openModal({
+      title: 'Xác nhận xóa tài khoản',
+      content: (
+        <div className="aa-confirm-delete">
+          <div className="aa-confirm-delete-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </div>
+          <div>
+            <p>
+              Bạn có chắc muốn xóa tài khoản <strong>{accountName}</strong>?
+            </p>
+            <span>Thao tác này sẽ xóa tài khoản và hồ sơ liên kết khỏi hệ thống.</span>
+          </div>
+        </div>
+      ),
+      size: 'sm',
+      dismissible: true,
+      closeOnOverlayClick: false,
+      actions: [
+        {
+          label: 'Hủy',
+          variant: 'secondary',
+        },
+        {
+          label: 'Xóa tài khoản',
+          variant: 'danger',
+          autoClose: false,
+          onClick: () => {
+            closeModal()
+            void confirmDeleteAccount(account)
+          },
+        },
+      ],
+    })
   }
 
   return (
@@ -632,11 +1028,48 @@ export default function AdminAccountPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
               Quay lại danh sách vai trò
             </Button>
-            <Button className="aa-btn-primary" onClick={() => setShowModal(true)}>
+            <Button className="aa-btn-primary" onClick={openCreateModal}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
               Tạo tài khoản {activeRole.title.toLowerCase()}
             </Button>
           </div>
+
+          {selectedRole === 'lecturer' && (
+            <div className="aa-filter-bar">
+              <Input
+                type="search"
+                className="aa-input"
+                containerClassName="aa-filter-field"
+                placeholder="Tìm mã, tên, email..."
+                value={accountSearch}
+                onChange={(event) => setAccountSearch(event.target.value)}
+              />
+              <Select
+                className="aa-input"
+                containerClassName="aa-filter-field"
+                value={unitFilter}
+                placeholder="Tất cả đơn vị"
+                disabled={isCatalogLoading}
+                options={donVis.map((donVi) => ({
+                  label: `${donVi.ma_don_vi} - ${donVi.ten_don_vi}`,
+                  value: String(donVi.id),
+                }))}
+                onChange={(event) => setUnitFilter(event.target.value)}
+              />
+              {(accountSearch || unitFilter) && (
+                <Button
+                  className="aa-btn-cancel"
+                  variant="secondary"
+                  onClick={() => {
+                    setAccountSearch('')
+                    setUnitFilter('')
+                  }}
+                >
+                  Xóa lọc
+                </Button>
+              )}
+            </div>
+          )}
 
           <div className="aa-table-container">
             <table className="aa-table">
@@ -644,21 +1077,22 @@ export default function AdminAccountPage() {
                 <tr>
                   <th>Mã tài khoản</th>
                   <th>Họ và Tên</th>
+                  {selectedRole === 'lecturer' && <th>Tên đơn vị</th>}
                   <th>Email</th>
                   <th>Trạng thái</th>
-                  <th style={{ width: '80px', textAlign: 'center' }}>Thao tác</th>
+                  <th style={{ width: selectedRole === 'student' ? '80px' : selectedRole === 'lecturer' ? '150px' : '112px', textAlign: 'center' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#718096' }}>
+                    <td colSpan={selectedRole === 'lecturer' ? 6 : 5} style={{ textAlign: 'center', padding: '32px', color: '#718096' }}>
                       Đang tải dữ liệu...
                     </td>
                   </tr>
                 ) : currentAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#718096' }}>
+                    <td colSpan={selectedRole === 'lecturer' ? 6 : 5} style={{ textAlign: 'center', padding: '32px', color: '#718096' }}>
                       Chưa có tài khoản nào
                     </td>
                   </tr>
@@ -667,6 +1101,11 @@ export default function AdminAccountPage() {
                     <tr key={account.id}>
                       <td style={{ fontWeight: 500 }}>{account.username}</td>
                       <td>{account.display_name || account.username}</td>
+                      {selectedRole === 'lecturer' && (
+                        <td>
+                          {donVis.find((donVi) => donVi.id === account.profile?.don_vi_id)?.ten_don_vi ?? 'Chưa có đơn vị'}
+                        </td>
+                      )}
                       <td>{account.email || 'Chưa có email'}</td>
                       <td>
                         <span className={`aa-status ${account.status ? 'active' : 'inactive'}`}>
@@ -675,6 +1114,15 @@ export default function AdminAccountPage() {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <div className="aa-actions">
+                          {selectedRole === 'lecturer' && (
+                            <button
+                              className="aa-action-btn aa-action-btn-edit"
+                              title="Sửa giảng viên"
+                              onClick={() => openEditModal(account)}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            </button>
+                          )}
                           <button
                             className="aa-action-btn"
                             title={account.status ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
@@ -686,6 +1134,16 @@ export default function AdminAccountPage() {
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
                             )}
                           </button>
+                          {selectedRole !== 'student' && (
+                            <button
+                              className="aa-action-btn aa-action-btn-danger"
+                              title="Xóa tài khoản"
+                              disabled={deletingAccountId === account.id}
+                              onClick={() => handleDeleteAccount(account)}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -701,36 +1159,54 @@ export default function AdminAccountPage() {
         <div className="aa-modal-overlay">
           <div className="aa-modal">
             <div className="aa-modal-header">
-              <h2>Tạo tài khoản {activeRole.title} mới</h2>
-              <button className="aa-btn-close" onClick={() => setShowModal(false)}>
+              <h2>{editingAccount ? 'Sửa thông tin giảng viên' : `Tạo tài khoản ${activeRole.title} mới`}</h2>
+              <button className="aa-btn-close" onClick={() => {
+                setShowModal(false)
+                setEditingAccount(null)
+              }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
 
-            <form onSubmit={handleCreateAccount} className="aa-form">
+            <form onSubmit={editingAccount ? handleUpdateLecturer : handleCreateAccount} className="aa-form">
               <Input
-                label="Mã tài khoản / MSSV *"
+                label={
+                  selectedRole === 'student'
+                    ? 'MSSV *'
+                    : selectedRole === 'lecturer'
+                      ? 'Mã giảng viên *'
+                      : 'Mã tài khoản *'
+                }
                 type="text"
                 className="aa-input"
                 containerClassName="aa-form-group"
                 required
-                inputMode={selectedRole === 'student' ? 'numeric' : undefined}
-                maxLength={selectedRole === 'student' ? 8 : undefined}
-                pattern={selectedRole === 'student' ? '\\d{8}' : undefined}
-                placeholder={selectedRole === 'student' ? 'Nhập đúng 8 chữ số...' : 'Nhập mã tài khoản...'}
+                inputMode={selectedRole === 'student' || selectedRole === 'lecturer' ? 'numeric' : undefined}
+                maxLength={selectedRole === 'student' ? 8 : selectedRole === 'lecturer' ? 7 : undefined}
+                pattern={selectedRole === 'student' ? '\\d{8}' : selectedRole === 'lecturer' ? '\\d{7}' : undefined}
+                placeholder={
+                  selectedRole === 'student'
+                    ? 'Nhập đúng 8 chữ số...'
+                    : selectedRole === 'lecturer'
+                      ? 'Nhập đúng 7 chữ số...'
+                      : 'Nhập mã tài khoản...'
+                }
                 value={newAccount.username}
                 error={formErrors.username}
+                disabled={Boolean(editingAccount)}
                 onChange={(event) => {
                   const username = selectedRole === 'student'
                     ? sanitizeStudentCode(event.target.value)
-                    : event.target.value
+                    : selectedRole === 'lecturer'
+                      ? sanitizeLecturerCode(event.target.value)
+                      : event.target.value
 
                   setNewAccount({ ...newAccount, username })
-                  setFormErrors({ ...formErrors, username: getStudentCodeError(username) })
+                  setFormErrors({ ...formErrors, username: getUsernameError(username) })
                 }}
               />
               <Input
-                label="Họ và Tên *"
+                label={selectedRole === 'lecturer' ? 'Tên giảng viên *' : 'Họ và Tên *'}
                 type="text"
                 className="aa-input"
                 containerClassName="aa-form-group"
@@ -739,17 +1215,95 @@ export default function AdminAccountPage() {
                 value={newAccount.fullName}
                 error={formErrors.fullName}
                 onChange={(event) => {
-                  setNewAccount({ ...newAccount, fullName: event.target.value })
-                  setFormErrors({ ...formErrors, fullName: undefined })
+                  const fullName = event.target.value
+                  const email = shouldAutoGenerateEmail(selectedRole)
+                    ? generateNtuEmailFromName(fullName)
+                    : newAccount.email
+
+                  setNewAccount({
+                    ...newAccount,
+                    fullName,
+                    email,
+                  })
+                  setFormErrors({
+                    ...formErrors,
+                    fullName: getPersonNameError(fullName),
+                    email: findAccountByEmail(email, editingAccount?.id)
+                      ? 'Email này đã được sử dụng ở một tài khoản khác.'
+                      : undefined,
+                  })
                 }}
-                onBlur={() => setNewAccount({
-                  ...newAccount,
-                  fullName: normalizePersonName(newAccount.fullName),
-                })}
+                onBlur={() => {
+                  const fullName = normalizePersonName(newAccount.fullName)
+                  const email = shouldAutoGenerateEmail(selectedRole)
+                    ? generateNtuEmailFromName(fullName)
+                    : newAccount.email
+
+                  setNewAccount({
+                    ...newAccount,
+                    fullName,
+                    email,
+                  })
+                  setFormErrors({
+                    ...formErrors,
+                    email: findAccountByEmail(email, editingAccount?.id)
+                      ? 'Email này đã được sử dụng ở một tài khoản khác.'
+                      : undefined,
+                  })
+                }}
               />
+              {selectedRole === 'lecturer' && (
+                <Select
+                  label="Tên đơn vị *"
+                  className="aa-input"
+                  containerClassName="aa-form-group"
+                  required
+                  value={newAccount.donViId}
+                  error={formErrors.donViId}
+                  placeholder={isCatalogLoading ? 'Đang tải danh sách đơn vị...' : 'Chọn đơn vị'}
+                  disabled={isCatalogLoading}
+                  options={donVis.map((donVi) => ({
+                    label: `${donVi.ma_don_vi} - ${donVi.ten_don_vi}`,
+                    value: String(donVi.id),
+                  }))}
+                  onChange={(event) => {
+                    const donVi = donVis.find((item) => String(item.id) === event.target.value)
+
+                    setNewAccount({
+                      ...newAccount,
+                      donViId: event.target.value,
+                      tenDonVi: donVi?.ten_don_vi ?? '',
+                    })
+                    setFormErrors({
+                      ...formErrors,
+                      donViId: event.target.value ? undefined : 'Vui lòng chọn đơn vị.',
+                    })
+                  }}
+                />
+              )}
+              {selectedRole === 'lecturer' && (
+                <Input
+                  label="Số điện thoại"
+                  type="text"
+                  className="aa-input"
+                  containerClassName="aa-form-group"
+                  inputMode="numeric"
+                  maxLength={10}
+                  pattern="\d{10}"
+                  placeholder="Nhập đúng 10 chữ số..."
+                  value={newAccount.phone}
+                  error={formErrors.phone}
+                  onChange={(event) => {
+                    const phone = sanitizePhoneNumber(event.target.value)
+
+                    setNewAccount({ ...newAccount, phone })
+                    setFormErrors({ ...formErrors, phone: getPhoneError(phone) })
+                  }}
+                />
+              )}
               <div className="aa-form-group">
                 <label>Email liên hệ</label>
-                <div className="aa-email-input">
+                <div className={`aa-email-input ${formErrors.email ? 'aa-email-input-error' : ''}`}>
                   <input
                     type="text"
                     className="aa-input aa-email-local"
@@ -761,10 +1315,17 @@ export default function AdminAccountPage() {
                         ...newAccount,
                         email: localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : '',
                       })
+                      setFormErrors({
+                        ...formErrors,
+                        email: findAccountByEmail(localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : '', editingAccount?.id)
+                          ? 'Email này đã được sử dụng ở một tài khoản khác.'
+                          : undefined,
+                      })
                     }}
                   />
                   <span>{NTU_EMAIL_DOMAIN}</span>
                 </div>
+                {formErrors.email && <span className="aa-field-error">{formErrors.email}</span>}
               </div>
               {selectedRole === 'student' && (
                 <>
@@ -787,6 +1348,7 @@ export default function AdminAccountPage() {
                       className="aa-input"
                       containerClassName="aa-form-group"
                       value={newAccount.ngaySinh}
+                      error={formErrors.ngaySinh}
                       onChange={(event) => setNewAccount({ ...newAccount, ngaySinh: event.target.value })}
                     />
                     <div className="aa-form-group">
@@ -967,6 +1529,7 @@ export default function AdminAccountPage() {
                       className="aa-input"
                       containerClassName="aa-form-group"
                       value={newAccount.ngayCapCccd}
+                      error={formErrors.ngayCapCccd}
                       onChange={(event) => setNewAccount({ ...newAccount, ngayCapCccd: event.target.value })}
                     />
                     <Input
@@ -1150,23 +1713,32 @@ export default function AdminAccountPage() {
                   </div>
                 </>
               )}
-              <Input
-                label="Mật khẩu mặc định"
-                type="text"
-                className="aa-input"
-                containerClassName="aa-form-group"
-                value={newAccount.password}
-                disabled
-                readOnly
-              />
+              {!editingAccount && (
+                <Input
+                  label="Mật khẩu mặc định"
+                  type="text"
+                  className="aa-input"
+                  containerClassName="aa-form-group"
+                  value={newAccount.password}
+                  disabled
+                  readOnly
+                />
+              )}
             </form>
 
             <div className="aa-form-actions">
-              <Button className="aa-btn-cancel" variant="secondary" onClick={() => setShowModal(false)}>
+              <Button className="aa-btn-cancel" variant="secondary" onClick={() => {
+                setShowModal(false)
+                setEditingAccount(null)
+              }}>
                 Hủy bỏ
               </Button>
-              <Button className="aa-btn-primary" onClick={() => void handleCreateAccount()} disabled={isSaving}>
-                {isSaving ? 'Đang lưu...' : 'Lưu tài khoản'}
+              <Button
+                className="aa-btn-primary"
+                onClick={() => void (editingAccount ? handleUpdateLecturer() : handleCreateAccount())}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Đang lưu...' : editingAccount ? 'Lưu thay đổi' : 'Lưu tài khoản'}
               </Button>
             </div>
           </div>

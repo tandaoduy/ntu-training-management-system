@@ -15,6 +15,8 @@ class Lop extends Model
     protected $fillable = [
         'don_vi_id',
         'lop_hoc_phan',
+        'ten_hoc_phan',
+        'ten_giang_vien',
         'si_so',
         'mo_hinh_dao_tao',
         'ma_khoi',

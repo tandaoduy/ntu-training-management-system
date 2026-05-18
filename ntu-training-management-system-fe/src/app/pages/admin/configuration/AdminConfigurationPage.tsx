@@ -4,6 +4,8 @@ import { useAlert } from '@/components/alert'
 import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import { Select } from '@/components/select'
+import { isFourDigitYearDate, sanitizeDateInputValue } from '@/utils/dateInput'
+import { clampPositiveInteger } from '@/utils/numberInput'
 import './AdminConfigurationPage.css'
 
 type AcademicTerm = {
@@ -30,9 +32,50 @@ type SwitchAcademicTermResponse = {
   }
 }
 
+type WeekConfig = {
+  id: number
+  hoc_ky_id: number
+  tuan_1_bat_dau: string
+  so_tuan_mac_dinh: number
+  hoc_ky?: {
+    id: number
+    hoc_ky: string
+    nam_hoc?: string | null
+  } | null
+}
+
+type TimetableCatalogResponse = {
+  data: {
+    cau_hinh_tuan_hocs: WeekConfig[]
+  }
+}
+
+type WeekConfigForm = {
+  hoc_ky_id: string
+  tuan_1_bat_dau: string
+  so_tuan_mac_dinh: string
+}
+
+const emptyWeekForm: WeekConfigForm = { hoc_ky_id: '', tuan_1_bat_dau: '', so_tuan_mac_dinh: '19' }
+
+const toMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error && 'message' in error && typeof error.message === 'string') {
+    return error.message
+  }
+
+  return fallback
+}
+
+const formatDate = (value?: string | null) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+}
+
 export default function AdminConfigurationPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSavingWeekConfig, setIsSavingWeekConfig] = useState(false)
   const { showAlert } = useAlert()
 
   const [academicYearsList, setAcademicYearsList] = useState<AcademicYear[]>([])
@@ -41,8 +84,23 @@ export default function AdminConfigurationPage() {
   const [newYearInput, setNewYearInput] = useState('')
   const [yearError, setYearError] = useState('')
   const [semester, setSemester] = useState('2')
+  const [weekConfigs, setWeekConfigs] = useState<WeekConfig[]>([])
+  const [weekForm, setWeekForm] = useState<WeekConfigForm>(emptyWeekForm)
 
   const minAcademicYear = 2023
+
+  const termOptions = academicYearsList.flatMap((year) =>
+    (year.hoc_kys ?? []).map((term) => ({
+      id: term.id,
+      label: `${year.nam_hoc} - Học kỳ ${term.hoc_ky}`,
+    })),
+  )
+
+  const fetchTimetableManagementCatalogs = async () => {
+    const response = await apiGet<TimetableCatalogResponse>('/admin/timetable-management/catalogs')
+
+    setWeekConfigs(response.data.cau_hinh_tuan_hocs)
+  }
 
   const fetchAcademicTerms = async () => {
     const response = await apiGet<AcademicTermsResponse>('/admin/academic-terms')
@@ -54,12 +112,17 @@ export default function AdminConfigurationPage() {
     if (currentTerm) {
       setAcademicYear(currentTerm.nam_hoc)
       setSemester(currentTerm.hoc_ky)
+      setWeekForm((current) => ({ ...current, hoc_ky_id: String(currentTerm.id) }))
       return
     }
 
     const firstYear = years[0]?.nam_hoc ?? ''
+    const firstTerm = years.flatMap((year) => year.hoc_kys ?? [])[0]
     setAcademicYear(firstYear)
     setSemester('2')
+    if (firstTerm) {
+      setWeekForm((current) => ({ ...current, hoc_ky_id: String(firstTerm.id) }))
+    }
   }
 
   useEffect(() => {
@@ -69,7 +132,10 @@ export default function AdminConfigurationPage() {
       setIsLoading(true)
 
       try {
-        const response = await apiGet<AcademicTermsResponse>('/admin/academic-terms')
+        const [response, timetableCatalogsResponse] = await Promise.all([
+          apiGet<AcademicTermsResponse>('/admin/academic-terms'),
+          apiGet<TimetableCatalogResponse>('/admin/timetable-management/catalogs'),
+        ])
 
         if (!isMounted) {
           return
@@ -81,6 +147,13 @@ export default function AdminConfigurationPage() {
         setAcademicYearsList(years)
         setAcademicYear(currentTerm?.nam_hoc ?? years[0]?.nam_hoc ?? '')
         setSemester(currentTerm?.hoc_ky ?? '2')
+        setWeekConfigs(timetableCatalogsResponse.data.cau_hinh_tuan_hocs)
+
+        const firstTerm = years.flatMap((year) => year.hoc_kys ?? [])[0]
+        const selectedTermId = currentTerm?.id ?? firstTerm?.id
+        if (selectedTermId) {
+          setWeekForm((current) => ({ ...current, hoc_ky_id: String(selectedTermId) }))
+        }
       } catch {
         if (!isMounted) {
           return
@@ -117,6 +190,10 @@ export default function AdminConfigurationPage() {
         return
       }
       const yearStr = newYearInput.split('-')[0]
+      if (!/^\d{4}$/.test(yearStr)) {
+        setYearError('Năm học phải gồm đúng 4 chữ số')
+        return
+      }
       const yearNum = parseInt(yearStr, 10)
       if (isNaN(yearNum) || yearNum < minAcademicYear) {
         setYearError(`Năm học phải lớn hơn hoặc bằng ${minAcademicYear}`)
@@ -168,6 +245,53 @@ export default function AdminConfigurationPage() {
       })
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleSaveWeekConfig = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (!weekForm.hoc_ky_id || !weekForm.tuan_1_bat_dau || !weekForm.so_tuan_mac_dinh) {
+      showAlert({
+        title: 'Thiếu thông tin',
+        message: 'Vui lòng chọn học kỳ, ngày bắt đầu tuần 1 và số tuần mặc định.',
+        variant: 'warning',
+      })
+      return
+    }
+
+    if (!isFourDigitYearDate(weekForm.tuan_1_bat_dau)) {
+      showAlert({
+        title: 'Ngày không hợp lệ',
+        message: 'Năm trong ngày bắt đầu tuần 1 chỉ được nhập đúng 4 chữ số.',
+        variant: 'error',
+      })
+      return
+    }
+
+    setIsSavingWeekConfig(true)
+    try {
+      await apiPost('/admin/timetable-management/week-configs', {
+        hoc_ky_id: Number(weekForm.hoc_ky_id),
+        tuan_1_bat_dau: weekForm.tuan_1_bat_dau,
+        so_tuan_mac_dinh: Number(weekForm.so_tuan_mac_dinh),
+      })
+
+      showAlert({
+        title: 'Thành công',
+        message: 'Đã lưu cấu hình tuần học.',
+        variant: 'success',
+      })
+
+      await fetchTimetableManagementCatalogs()
+    } catch (error) {
+      showAlert({
+        title: 'Lưu thất bại',
+        message: toMessage(error, 'Không thể lưu cấu hình tuần học. Vui lòng thử lại.'),
+        variant: 'error',
+      })
+    } finally {
+      setIsSavingWeekConfig(false)
     }
   }
 
@@ -235,6 +359,9 @@ export default function AdminConfigurationPage() {
                           type="text"
                           className="ac-input"
                           value={newYearInput}
+                          inputMode="numeric"
+                          maxLength={4}
+                          pattern="\d{4}"
                           onFocus={() => {
                             if (newYearInput.includes('-')) {
                               setNewYearInput(newYearInput.split('-')[0])
@@ -243,17 +370,19 @@ export default function AdminConfigurationPage() {
                           onBlur={() => {
                             const yearStr = newYearInput.split('-')[0]
                             const yearNum = parseInt(yearStr, 10)
-                            if (!isNaN(yearNum) && yearNum >= minAcademicYear) {
+                            if (/^\d{4}$/.test(yearStr) && !isNaN(yearNum) && yearNum >= minAcademicYear) {
                               setNewYearInput(`${yearNum}-${yearNum + 1}`)
                             }
                           }}
                           onChange={(e) => {
                             // Chỉ cho phép nhập số
-                            const val = e.target.value.replace(/\D/g, '')
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 4)
                             setNewYearInput(val)
                             
-                            if (val && parseInt(val, 10) < minAcademicYear) {
+                            if (val.length === 4 && parseInt(val, 10) < minAcademicYear) {
                               setYearError(`Năm học phải lớn hơn hoặc bằng ${minAcademicYear}`)
+                            } else if (val && val.length < 4) {
+                              setYearError('Năm học phải gồm đúng 4 chữ số')
                             } else {
                               setYearError('')
                             }
@@ -332,6 +461,83 @@ export default function AdminConfigurationPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </section>
+
+        <section className="ac-section">
+          <div className="ac-section-header">
+            <h2 className="ac-section-title">Cấu hình tuần học</h2>
+            <p className="ac-section-desc">Quy định ngày bắt đầu tuần 1 và số tuần mặc định cho từng học kỳ.</p>
+          </div>
+
+          <div className="ac-card">
+            <form onSubmit={handleSaveWeekConfig}>
+              <div className="ac-form-grid">
+                <div className="ac-form-group">
+                  <label className="ac-label">Học kỳ</label>
+                  <Select
+                    className="ac-select"
+                    value={weekForm.hoc_ky_id}
+                    disabled={isLoading}
+                    onChange={(event) => setWeekForm((current) => ({ ...current, hoc_ky_id: event.target.value }))}
+                    options={[
+                      { label: 'Chọn học kỳ', value: '' },
+                      ...termOptions.map((term) => ({ label: term.label, value: String(term.id) })),
+                    ]}
+                  />
+                </div>
+
+                <div className="ac-form-group">
+                  <label className="ac-label">Tuần 1 bắt đầu</label>
+                  <Input
+                    type="date"
+                    className="ac-input"
+                    value={weekForm.tuan_1_bat_dau}
+                    disabled={isLoading}
+                    onChange={(event) => setWeekForm((current) => ({
+                      ...current,
+                      tuan_1_bat_dau: sanitizeDateInputValue(event.target.value),
+                    }))}
+                  />
+                </div>
+
+                <div className="ac-form-group">
+                  <label className="ac-label">Số tuần mặc định</label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[1-9][0-9]*"
+                    className="ac-input"
+                    value={weekForm.so_tuan_mac_dinh}
+                    disabled={isLoading}
+                    onChange={(event) => setWeekForm((current) => ({
+                      ...current,
+                      so_tuan_mac_dinh: clampPositiveInteger(event.target.value, 52),
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div className="ac-form-actions">
+                <Button type="submit" className="ac-btn-save" disabled={isLoading || isSavingWeekConfig}>
+                  {isSavingWeekConfig ? 'Đang lưu...' : 'Lưu cấu hình tuần học'}
+                </Button>
+              </div>
+            </form>
+
+            <div className="ac-week-list">
+              {weekConfigs.map((config) => (
+                <div className="ac-week-item" key={config.id}>
+                  <strong>
+                    {config.hoc_ky?.nam_hoc ?? 'Năm học'} - Học kỳ {config.hoc_ky?.hoc_ky ?? config.hoc_ky_id}
+                  </strong>
+                  <span>Tuần 1: {formatDate(config.tuan_1_bat_dau)} - {config.so_tuan_mac_dinh} tuần</span>
+                </div>
+              ))}
+              {weekConfigs.length === 0 && (
+                <div className="ac-empty-state">Chưa có cấu hình tuần học.</div>
+              )}
+            </div>
           </div>
         </section>
 

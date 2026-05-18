@@ -20,6 +20,8 @@ interface Lop {
   id: number
   don_vi_id: number
   lop_hoc_phan: string
+  ten_hoc_phan: string | null
+  ten_giang_vien: string | null
   si_so: number
   mo_hinh_dao_tao: string
   ma_khoi: string
@@ -28,6 +30,13 @@ interface Lop {
   ten_don_vi: string
   trang_thai: boolean
   don_vi?: DonVi | null
+}
+
+interface LecturerAccount {
+  id: number
+  username: string
+  display_name: string | null
+  email: string | null
 }
 
 interface ListResponse<T> {
@@ -42,6 +51,7 @@ interface MutateResponse {
 interface ClassForm {
   donViId: string
   lopHocPhan: string
+  tenGiangVien: string
   moHinhDaoTao: string
   maKhoi: string
   tenKhoi: string
@@ -52,6 +62,8 @@ type ConfirmAction = 'edit' | 'delete'
 interface ClassPayload {
   don_vi_id: number
   lop_hoc_phan: string
+  ten_hoc_phan: string | null
+  ten_giang_vien: string | null
   mo_hinh_dao_tao: string
   ma_khoi: string
   ten_khoi: string
@@ -60,6 +72,7 @@ interface ClassPayload {
 const emptyForm: ClassForm = {
   donViId: '',
   lopHocPhan: '',
+  tenGiangVien: '',
   moHinhDaoTao: 'Tín chỉ',
   maKhoi: '',
   tenKhoi: '',
@@ -68,6 +81,7 @@ const emptyForm: ClassForm = {
 export default function AdminClassPage() {
   const alert = useAlert()
   const [donVis, setDonVis] = useState<DonVi[]>([])
+  const [lecturers, setLecturers] = useState<LecturerAccount[]>([])
   const [lops, setLops] = useState<Lop[]>([])
   const [form, setForm] = useState<ClassForm>(emptyForm)
   const [query, setQuery] = useState('')
@@ -88,6 +102,7 @@ export default function AdminClassPage() {
     return lops.filter((lop) =>
       [
         lop.lop_hoc_phan,
+        lop.ten_giang_vien ?? '',
         lop.ma_khoi,
         lop.ma_don_vi,
         lop.ten_don_vi,
@@ -100,12 +115,16 @@ export default function AdminClassPage() {
     setLoading(true)
 
     try {
-      const [donViResponse, lopResponse] = await Promise.all([
+      const [donViResponse, lecturerResponse, lopResponse] = await Promise.all([
         apiGet<ListResponse<DonVi>>('/admin/don-vis'),
+        apiGet<ListResponse<LecturerAccount>>('/admin/accounts', {
+          params: { role: 'lecturer' },
+        }),
         apiGet<ListResponse<Lop>>('/admin/lops'),
       ])
 
       setDonVis(donViResponse.data)
+      setLecturers(lecturerResponse.data)
       setLops(lopResponse.data)
     } catch {
       alert.showAlert({
@@ -132,6 +151,7 @@ export default function AdminClassPage() {
     setForm({
       donViId: String(lop.don_vi_id),
       lopHocPhan: lop.lop_hoc_phan,
+      tenGiangVien: lop.ten_giang_vien ?? '',
       moHinhDaoTao: lop.mo_hinh_dao_tao || 'Tín chỉ',
       maKhoi: lop.ma_khoi,
       tenKhoi: lop.ten_khoi,
@@ -198,6 +218,8 @@ export default function AdminClassPage() {
     const payload: ClassPayload = {
       don_vi_id: Number(form.donViId),
       lop_hoc_phan: form.lopHocPhan.trim(),
+      ten_hoc_phan: null,
+      ten_giang_vien: form.tenGiangVien.trim() || null,
       mo_hinh_dao_tao: form.moHinhDaoTao.trim(),
       ma_khoi: form.maKhoi.trim(),
       ten_khoi: form.tenKhoi.trim(),
@@ -338,12 +360,31 @@ export default function AdminClassPage() {
           </label>
 
           <label className="acl-field">
-            <span>Lớp học phần</span>
+            <span>Lớp hành chính</span>
             <input
               value={form.lopHocPhan}
               onChange={(event) => setForm((prev) => ({ ...prev, lopHocPhan: event.target.value }))}
               required
             />
+          </label>
+
+          <label className="acl-field">
+            <span>Giảng viên cố vấn học tập</span>
+            <select
+              value={form.tenGiangVien}
+              onChange={(event) => setForm((prev) => ({ ...prev, tenGiangVien: event.target.value }))}
+            >
+              <option value="">Không chọn CVHT</option>
+              {lecturers.map((lecturer) => {
+                const displayName = lecturer.display_name || lecturer.username
+
+                return (
+                  <option key={lecturer.id} value={displayName}>
+                    {lecturer.username} - {displayName}
+                  </option>
+                )
+              })}
+            </select>
           </label>
 
           <div className="acl-form-grid">
@@ -408,7 +449,8 @@ export default function AdminClassPage() {
             <table className="acl-table">
               <thead>
                 <tr>
-                  <th>Tên lớp học phần</th>
+                  <th>Lớp hành chính</th>
+                  <th>CVHT</th>
                   <th>Sĩ số</th>
                   <th>Mô hình đào tạo</th>
                   <th>Mã khối</th>
@@ -422,12 +464,13 @@ export default function AdminClassPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="acl-empty">Đang tải dữ liệu...</td>
+                    <td colSpan={10} className="acl-empty">Đang tải dữ liệu...</td>
                   </tr>
                 ) : filteredLops.length ? (
                   filteredLops.map((lop) => (
                     <tr key={lop.id}>
                       <td className="acl-strong">{lop.lop_hoc_phan}</td>
+                      <td>{lop.ten_giang_vien || 'Chưa có CVHT'}</td>
                       <td>{lop.si_so}</td>
                       <td>{lop.mo_hinh_dao_tao}</td>
                       <td>{lop.ma_khoi}</td>
@@ -447,6 +490,7 @@ export default function AdminClassPage() {
                         <div className="acl-actions">
                           <button type="button" onClick={() => fillEditForm(lop)} title="Sửa lớp" aria-label="Sửa lớp">
                             <PencilSquareIcon className="acl-action-icon" />
+                            <span className="acl-action-text">Sửa</span>
                           </button>
                           <button type="button" className="danger" onClick={() => setConfirmAction({ type: 'delete', lop })} title="Xóa lớp" aria-label="Xóa lớp">
                             <TrashIcon className="acl-action-icon" />
@@ -457,7 +501,7 @@ export default function AdminClassPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className="acl-empty">Chưa có lớp phù hợp.</td>
+                    <td colSpan={10} className="acl-empty">Chưa có lớp phù hợp.</td>
                   </tr>
                 )}
               </tbody>

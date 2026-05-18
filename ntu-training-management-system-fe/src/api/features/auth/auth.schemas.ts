@@ -23,9 +23,14 @@ export const authStorage = {
   },
 
   clearToken(): void {
+    const hadSession = Boolean(localStorage.getItem(AUTH_TOKEN_KEY) || localStorage.getItem(AUTH_USER_KEY));
+
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_USER_KEY);
-    notifySessionChanged();
+
+    if (hadSession) {
+      notifySessionChanged();
+    }
   },
 
   getUser(): AuthUser | null {

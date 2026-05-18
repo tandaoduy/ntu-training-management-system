@@ -10,6 +10,7 @@ import { authStorage } from '../features/auth/auth.schemas';
 declare module 'axios' {
   interface AxiosRequestConfig {
     skipAuth?: boolean;
+    authToken?: string;
   }
 }
 
@@ -40,6 +41,9 @@ httpClient.interceptors.request.use((config) => {
   }
 
   if (config.headers.Authorization) {
+    const explicitToken = String(config.headers.Authorization).replace(/^Bearer\s+/i, '');
+    config.authToken = explicitToken || undefined;
+
     return config;
   }
 
@@ -50,6 +54,7 @@ httpClient.interceptors.request.use((config) => {
   }
 
   config.headers.Authorization = `Bearer ${token}`;
+  config.authToken = token;
 
   return config;
 });
@@ -65,8 +70,13 @@ httpClient.interceptors.response.use(
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
       const url = error.config?.url ?? '';
+      const requestToken = error.config?.authToken;
+      const currentToken = authStorage.getToken();
 
-      if (status === 401 || (status === 403 && url.startsWith('/student/'))) {
+      if (
+        (status === 401 || (status === 403 && url.startsWith('/student/'))) &&
+        (!requestToken || requestToken === currentToken)
+      ) {
         authStorage.clearToken();
       }
     }

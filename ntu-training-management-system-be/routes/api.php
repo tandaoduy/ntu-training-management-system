@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Admin\Province\ProvinceController;
 use App\Http\Controllers\Api\Student\Curriculum\StudentCurriculumController as StudentCurriculumApiController;
 use App\Http\Controllers\Api\StudentDashboardController;
 use App\Http\Controllers\Api\StudyPlanRegistrationController;
+use App\Http\Controllers\Api\TrainingOfficer\TimetableController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/test', function () {
@@ -29,12 +30,12 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])->name('password.forgot');
     Route::post('/verify-reset-token', [PasswordResetController::class, 'verify'])->name('password.verify');
     Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.reset');
+    Route::get('/me', [AuthController::class, 'me']);
     Route::get('/email/verify/{user}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware('signed:relative')
         ->name('auth.verification.verify');
 
     Route::middleware('auth:sanctum')->group(function (): void {
-        Route::get('/me', [AuthController::class, 'me']);
         Route::post('/change-password', [AuthController::class, 'changePassword']);
         Route::get('/email/verification-status', [EmailVerificationController::class, 'status']);
         Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
@@ -94,12 +95,26 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::post('/admin/accounts/{user}/reset-password', [AdminAccountController::class, 'resetPassword']);
     Route::post('/admin/accounts/{user}/lock', [AdminAccountController::class, 'lock']);
     Route::post('/admin/accounts/{user}/unlock', [AdminAccountController::class, 'unlock']);
+    Route::delete('/admin/accounts/{user}', [AdminAccountController::class, 'destroy']);
     Route::post('/admin/accounts/{user}/upload-image', [AdminAccountController::class, 'uploadStudentImage']);
 
     Route::get('/admin/study-plan-registration-periods', [StudyPlanRegistrationController::class, 'index']);
     Route::post('/admin/study-plan-registration-periods', [StudyPlanRegistrationController::class, 'store']);
+    Route::get('/admin/timetable-management/catalogs', [TimetableController::class, 'catalogs']);
+    Route::post('/admin/timetable-management/week-configs', [TimetableController::class, 'saveWeekConfig']);
+    Route::post('/admin/timetable-management/buildings', [TimetableController::class, 'storeBuilding']);
+    Route::put('/admin/timetable-management/buildings/{giangDuong}', [TimetableController::class, 'updateBuilding']);
+    Route::delete('/admin/timetable-management/buildings/{giangDuong}', [TimetableController::class, 'deleteBuilding']);
+    Route::post('/admin/timetable-management/rooms', [TimetableController::class, 'storeRoom']);
+    Route::put('/admin/timetable-management/rooms/{phongHoc}', [TimetableController::class, 'updateRoom']);
+    Route::delete('/admin/timetable-management/rooms/{phongHoc}', [TimetableController::class, 'deleteRoom']);
     Route::get('/training-officer/study-plan-statistics', [StudyPlanRegistrationController::class, 'statistics']);
     Route::get('/training-officer/study-plan-statistics/courses/{hocPhan}/students', [StudyPlanRegistrationController::class, 'courseRegistrations']);
+    Route::get('/training-officer/timetable', [TimetableController::class, 'index']);
+    Route::post('/training-officer/timetable', [TimetableController::class, 'store']);
+    Route::put('/training-officer/timetable/{thoiKhoaBieu}', [TimetableController::class, 'update']);
+    Route::delete('/training-officer/timetable/{thoiKhoaBieu}', [TimetableController::class, 'destroy']);
+    Route::get('/training-officer/timetable/catalogs', [TimetableController::class, 'catalogs']);
 
     Route::get('/admin/don-vis', [LopController::class, 'donVis']);
     Route::get('/admin/lops', [LopController::class, 'index']);

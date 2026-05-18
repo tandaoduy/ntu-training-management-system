@@ -77,7 +77,27 @@ class AuthController extends Controller
     // API: Lấy thông tin người dùng hiện tại
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()?->loadMissing(['role', 'profile', 'emailVerification']);
+        $user = $request->user();
+
+        if (! $user && $request->bearerToken()) {
+            $token = PersonalAccessToken::findToken((string) $request->bearerToken());
+            $tokenUser = $token?->tokenable;
+            $user = $tokenUser instanceof User ? $tokenUser : null;
+        }
+
+        if (! $user || ! $user->status) {
+            return response()->json([
+                'id' => null,
+                'username' => null,
+                'name' => null,
+                'role' => null,
+                'email' => null,
+                'education_system' => null,
+                'email_verified' => false,
+            ]);
+        }
+
+        $user->loadMissing(['role', 'profile', 'emailVerification']);
 
         return response()->json([
             'id' => $user?->id,

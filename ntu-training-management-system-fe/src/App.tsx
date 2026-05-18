@@ -8,6 +8,7 @@ import AdminDashboardPage from './app/pages/admin/dashboard/AdminDashboardPage.t
 import AdminCurriculumPage from './app/pages/admin/curriculum/AdminCurriculumPage.tsx'
 import AdminConfigurationPage from './app/pages/admin/configuration/AdminConfigurationPage.tsx'
 import AdminStudyPlanPage from './app/pages/admin/study-plan/AdminStudyPlanPage.tsx'
+import AdminRoomManagementPage from './app/pages/admin/rooms/AdminRoomManagementPage.tsx'
 import LecturerDashboardPage from './app/pages/lecturer/dashboard/LecturerDashboardPage.tsx'
 import LecturerStudyPlanPage from './app/pages/lecturer/study-plan/LecturerStudyPlanPage.tsx'
 import ManagerDashboardPage from './app/pages/manager/dashboard/ManagerDashboardPage.tsx'
@@ -22,7 +23,9 @@ import TrainingOfficerDashboardPage from './app/pages/training-officer/dashboard
 import TrainingOfficerCurriculumPage from './app/pages/training-officer/curriculum/TrainingOfficerCurriculumPage.tsx'
 import TrainingOfficerStudyPlanStatisticsPage from './app/pages/training-officer/study-plan-statistics/TrainingOfficerStudyPlanStatisticsPage.tsx'
 import TrainingOfficerStudyPlanCourseRegistrationsPage from './app/pages/training-officer/study-plan-statistics/TrainingOfficerStudyPlanCourseRegistrationsPage.tsx'
+import TrainingOfficerTimetablePage from './app/pages/training-officer/timetable/TrainingOfficerTimetablePage.tsx'
 import { AlertProvider } from '@/components/alert'
+import { ModalProvider } from '@/components/modal'
 import { useAuthSession } from './hooks'
 
 function AppShell() {
@@ -181,6 +184,16 @@ function AppShell() {
           }
         />
         <Route
+          path="/chuyenvien/timetable"
+          element={
+            isAuthenticated && user?.role === 'training_officer' ? (
+              <TrainingOfficerTimetablePage />
+            ) : (
+              <Navigate to={isAuthenticated ? redirectForAuthenticatedUser : '/login'} replace />
+            )
+          }
+        />
+        <Route
           path="/quantri"
           element={
             isAuthenticated && user?.role === 'admin' ? (
@@ -194,6 +207,7 @@ function AppShell() {
           <Route path="taikhoan" element={<AdminAccountPage />} />
           <Route path="lophoc" element={<AdminClassPage />} />
           <Route path="cauhinh" element={<AdminConfigurationPage />} />
+          <Route path="phonghoc" element={<AdminRoomManagementPage />} />
           <Route path="curriculum" element={<AdminCurriculumPage />} />
           <Route path="studyplan" element={<AdminStudyPlanPage />} />
           <Route path="taikhoan" element={<AdminAccountPage />} />
@@ -217,7 +231,9 @@ function App() {
   return (
     <BrowserRouter>
       <AlertProvider>
-        <AppShell />
+        <ModalProvider>
+          <AppShell />
+        </ModalProvider>
       </AlertProvider>
     </BrowserRouter>
   )

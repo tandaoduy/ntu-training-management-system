@@ -93,6 +93,7 @@ class AccountProvisioningService
                 'ngay_sinh' => $payload['ngay_sinh'] ?? null,
                 'gioi_tinh' => $payload['gioi_tinh'] ?? null,
                 'que_quan' => $payload['que_quan'] ?? null,
+                'don_vi_id' => $payload['don_vi_id'] ?? null,
                 'chuc_vu' => $payload['chuc_vu'] ?? null,
                 'chuc_danh' => $payload['chuc_danh'] ?? null,
                 'dia_chi' => $payload['dia_chi'] ?? null,
@@ -233,6 +234,13 @@ class AccountProvisioningService
         $user->update(['status' => $status]);
 
         return $user->refresh()->load(['role', 'profile']);
+    }
+
+    public function deleteAccount(User $user): void
+    {
+        DB::transaction(function () use ($user): void {
+            $user->delete();
+        });
     }
 
     private function incrementLopSize(null|int|string $lopId): void
