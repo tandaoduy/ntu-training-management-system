@@ -79,22 +79,8 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (! $user && $request->bearerToken()) {
-            $token = PersonalAccessToken::findToken((string) $request->bearerToken());
-            $tokenUser = $token?->tokenable;
-            $user = $tokenUser instanceof User ? $tokenUser : null;
-        }
-
         if (! $user || ! $user->status) {
-            return response()->json([
-                'id' => null,
-                'username' => null,
-                'name' => null,
-                'role' => null,
-                'email' => null,
-                'education_system' => null,
-                'email_verified' => false,
-            ]);
+            return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         $user->loadMissing(['role', 'profile', 'emailVerification']);

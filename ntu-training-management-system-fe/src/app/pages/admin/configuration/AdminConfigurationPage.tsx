@@ -56,7 +56,7 @@ type WeekConfigForm = {
   so_tuan_mac_dinh: string
 }
 
-const emptyWeekForm: WeekConfigForm = { hoc_ky_id: '', tuan_1_bat_dau: '', so_tuan_mac_dinh: '19' }
+const emptyWeekForm: WeekConfigForm = { hoc_ky_id: '', tuan_1_bat_dau: '', so_tuan_mac_dinh: '' }
 
 const toMessage = (error: unknown, fallback: string) => {
   if (typeof error === 'object' && error && 'message' in error && typeof error.message === 'string') {

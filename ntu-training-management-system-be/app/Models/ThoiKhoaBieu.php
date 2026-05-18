@@ -16,6 +16,14 @@ class ThoiKhoaBieu extends Model
         'lop_hoc_phan_id',
         'phong_hoc_id',
         'hoc_ky_id',
+        'ma_hoc_phan_snapshot',
+        'ten_hoc_phan_snapshot',
+        'lop_hoc_phan_snapshot',
+        'nhom_hoc_phan_snapshot',
+        'ten_giang_vien_snapshot',
+        'giang_vien_id_snapshot',
+        'si_so_snapshot',
+        'ma_phong_snapshot',
         'thu',
         'tiet_bat_dau',
         'so_tiet',
@@ -30,6 +38,8 @@ class ThoiKhoaBieu extends Model
         'lop_hoc_phan_id' => 'integer',
         'phong_hoc_id' => 'integer',
         'hoc_ky_id' => 'integer',
+        'giang_vien_id_snapshot' => 'integer',
+        'si_so_snapshot' => 'integer',
         'thu' => 'integer',
         'tiet_bat_dau' => 'integer',
         'so_tiet' => 'integer',
@@ -41,7 +51,7 @@ class ThoiKhoaBieu extends Model
 
     public function lopHocPhan(): BelongsTo
     {
-        return $this->belongsTo(Lop::class, 'lop_hoc_phan_id');
+        return $this->belongsTo(LopHocPhan::class, 'lop_hoc_phan_id');
     }
 
     public function phongHoc(): BelongsTo
