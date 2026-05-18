@@ -30,12 +30,12 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])->name('password.forgot');
     Route::post('/verify-reset-token', [PasswordResetController::class, 'verify'])->name('password.verify');
     Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.reset');
-    Route::get('/me', [AuthController::class, 'me']);
     Route::get('/email/verify/{user}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware('signed:relative')
         ->name('auth.verification.verify');
 
     Route::middleware('auth:sanctum')->group(function (): void {
+        Route::get('/me', [AuthController::class, 'me']);
         Route::post('/change-password', [AuthController::class, 'changePassword']);
         Route::get('/email/verification-status', [EmailVerificationController::class, 'status']);
         Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
@@ -115,6 +115,8 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::put('/training-officer/timetable/{thoiKhoaBieu}', [TimetableController::class, 'update']);
     Route::delete('/training-officer/timetable/{thoiKhoaBieu}', [TimetableController::class, 'destroy']);
     Route::get('/training-officer/timetable/catalogs', [TimetableController::class, 'catalogs']);
+    Route::post('/training-officer/timetable/class-sections', [TimetableController::class, 'storeClassSection']);
+    Route::post('/training-officer/timetable/break-weeks', [TimetableController::class, 'saveBreakWeeks']);
 
     Route::get('/admin/don-vis', [LopController::class, 'donVis']);
     Route::get('/admin/lops', [LopController::class, 'index']);

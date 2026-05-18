@@ -30,6 +30,21 @@ export const httpClient = axios.create({
   },
 });
 
+let isRedirectingToLogin = false;
+
+const redirectToLogin = () => {
+  if (typeof window === 'undefined' || isRedirectingToLogin) {
+    return;
+  }
+
+  if (window.location.pathname.startsWith('/login')) {
+    return;
+  }
+
+  isRedirectingToLogin = true;
+  window.location.replace('/login');
+};
+
 /**
  * Request interceptor:
  * - Nếu skipAuth=true thì không gắn token.
@@ -50,6 +65,8 @@ httpClient.interceptors.request.use((config) => {
   const token = authStorage.getToken();
 
   if (!token) {
+    authStorage.clearToken();
+    redirectToLogin();
     return Promise.reject(new axios.CanceledError('Missing auth token'));
   }
 
@@ -72,12 +89,15 @@ httpClient.interceptors.response.use(
       const url = error.config?.url ?? '';
       const requestToken = error.config?.authToken;
       const currentToken = authStorage.getToken();
+      const isPublicRequest = Boolean(error.config?.skipAuth);
 
       if (
+        !isPublicRequest &&
         (status === 401 || (status === 403 && url.startsWith('/student/'))) &&
         (!requestToken || requestToken === currentToken)
       ) {
         authStorage.clearToken();
+        redirectToLogin();
       }
     }
 

@@ -16,12 +16,14 @@ class CauHinhTuanHoc extends Model
         'hoc_ky_id',
         'tuan_1_bat_dau',
         'so_tuan_mac_dinh',
+        'tuan_nghis',
     ];
 
     protected $casts = [
         'hoc_ky_id' => 'integer',
         'tuan_1_bat_dau' => 'date',
         'so_tuan_mac_dinh' => 'integer',
+        'tuan_nghis' => 'array',
     ];
 
     public function hocKy(): BelongsTo

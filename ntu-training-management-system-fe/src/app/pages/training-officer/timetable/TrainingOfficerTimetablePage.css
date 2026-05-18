@@ -7,7 +7,7 @@
 
 .to-timetable-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -43,6 +43,52 @@
   padding: 18px 20px;
 }
 
+.to-timetable-form-horizontal {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+}
+
+.to-timetable-form-horizontal .span-2 {
+  grid-column: span 2;
+}
+
+.to-timetable-form-horizontal .span-3 {
+  grid-column: span 3;
+}
+
+.to-timetable-form-horizontal .span-4 {
+  grid-column: span 4;
+}
+
+.to-timetable-form-horizontal .span-6 {
+  grid-column: span 6;
+}
+
+.to-timetable-form-horizontal .top-term-row {
+  grid-column: span 12;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8f0f8;
+  margin-bottom: 4px;
+}
+
+.to-timetable-form-horizontal .top-term-row .top-term-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+}
+
+.to-timetable-form-horizontal .top-term-row .top-term-field select {
+  width: 180px;
+  font-weight: 700;
+  background: #fff;
+  border-color: #a8c8e8;
+}
+
 .to-timetable-mini-form {
   border-top: 1px solid #edf2f7;
 }
@@ -76,6 +122,21 @@
   gap: 10px;
 }
 
+.to-timetable-section-box {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d8e3f0;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 14px;
+}
+
+.to-timetable-section-title {
+  color: #10213d;
+  font-size: 15px;
+  font-weight: 900;
+}
+
 .to-timetable-btn {
   min-height: 42px;
   border: 1px solid #2f6fa5;
@@ -91,6 +152,54 @@
   border-color: #c7d6e7;
   background: #fff;
   color: #18324f;
+}
+
+.to-timetable-form-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.to-timetable-form-actions:has(.secondary) {
+  grid-template-columns: 1fr 1fr;
+}
+
+.to-break-week-box {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.to-break-week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.to-break-week-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid #d8e3f0;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #18324f;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.to-break-week-item input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2f6fa5;
+}
+
+.to-break-week-save {
+  justify-self: end;
+  min-width: 180px;
 }
 
 .to-timetable-alert {
@@ -159,14 +268,72 @@
   color: #b91c1c;
 }
 
+.to-timetable-action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 34px;
+  border: 1px solid #c7d6e7;
+  border-radius: 8px;
+  background: #fff;
+  color: #2f6fa5;
+  cursor: pointer;
+  padding: 0;
+}
+
+.to-timetable-action-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.to-timetable-action-icon-btn.danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
 .to-timetable-table-wrap {
   overflow-x: auto;
 }
 
+.to-timetable-total {
+  color: #162033;
+  font-size: 14px;
+  padding: 10px 12px 6px;
+}
+
+.to-timetable-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.to-timetable-breadcrumb a {
+  color: #2f6fa5;
+  text-decoration: none;
+}
+
+.to-timetable-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.to-timetable-breadcrumb svg {
+  width: 16px;
+  height: 16px;
+}
+
 .to-timetable-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 1420px;
   border-collapse: collapse;
+}
+
+.to-timetable-summary-table {
+  min-width: 1180px;
 }
 
 .to-timetable-table th {
@@ -184,9 +351,96 @@
 }
 
 .to-timetable-table td:nth-child(3),
-.to-timetable-table td:nth-child(4),
-.to-timetable-table td:nth-child(5) {
+.to-timetable-table td:nth-child(5),
+.to-timetable-table td:nth-child(8) {
   text-align: left;
+}
+
+.to-timetable-table tbody tr:nth-child(odd) td {
+  background: #f1f5f9;
+}
+
+.to-timetable-summary-table tbody tr.is-expanded td {
+  background: #dbeafe;
+}
+
+.to-timetable-summary-table td:nth-child(3),
+.to-timetable-summary-table td:nth-child(5) {
+  text-align: left;
+}
+
+.to-timetable-summary-table td:nth-child(8) {
+  text-align: center;
+}
+
+.to-timetable-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 42px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #4d9f16;
+  cursor: pointer;
+  padding: 0;
+}
+
+.to-timetable-detail-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.to-timetable-detail-row > td {
+  background: #fff !important;
+  padding: 10px 12px 16px;
+}
+
+.to-timetable-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.to-timetable-detail-table th {
+  background: #2f6fa5;
+  border: 1px solid #edf2f7;
+  color: #fff;
+  font-size: 14px;
+  padding: 7px 8px;
+}
+
+.to-timetable-detail-table th[colspan] {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.to-timetable-detail-table td {
+  border: 1px solid #edf2f7;
+  color: #10213d;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.to-timetable-detail-table td:nth-child(4) {
+  text-align: left;
+}
+
+.to-timetable-detail-page-body {
+  overflow-x: auto;
+  padding: 16px;
+}
+
+.to-timetable-detail-page-body .to-timetable-detail-table {
+  min-width: 980px;
+}
+
+.to-pattern-cell {
+  font-family: Consolas, 'Courier New', monospace;
+  letter-spacing: 1px;
+  white-space: normal;
+  word-break: break-all;
 }
 
 .to-timetable-empty {
@@ -195,8 +449,18 @@
 }
 
 @media (max-width: 1100px) {
-  .to-timetable-grid {
-    grid-template-columns: 1fr;
+  .to-timetable-form-horizontal {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .to-timetable-form-horizontal .span-2,
+  .to-timetable-form-horizontal .span-3,
+  .to-timetable-form-horizontal .span-4 {
+    grid-column: span 3;
+  }
+
+  .to-timetable-form-horizontal .span-6 {
+    grid-column: span 6;
   }
 }
 
@@ -207,5 +471,25 @@
 
   .to-timetable-two {
     grid-template-columns: 1fr;
+  }
+
+  .to-timetable-form-horizontal {
+    grid-template-columns: 1fr;
+  }
+
+  .to-timetable-form-horizontal .span-2,
+  .to-timetable-form-horizontal .span-3,
+  .to-timetable-form-horizontal .span-4,
+  .to-timetable-form-horizontal .span-6 {
+    grid-column: span 1;
+  }
+
+  .to-timetable-form-actions,
+  .to-timetable-form-actions:has(.secondary) {
+    grid-template-columns: 1fr;
+  }
+
+  .to-break-week-save {
+    justify-self: stretch;
   }
 }

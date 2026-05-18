@@ -103,7 +103,7 @@ export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
       try {
         const response = await getCurrentUserForToken(requestToken);
 
-        if (!isMounted) {
+        if (!isMounted || authStorage.getToken() !== requestToken) {
           return;
         }
 
