@@ -30,14 +30,12 @@ type Building = {
   id: number
   ma_giang_duong: string
   ten_giang_duong: string
-  mo_ta?: string | null
 }
 
 type Room = {
   id: number | null
   giang_duong_id: number | null
   ma_phong: string
-  suc_chua: number | null
   giang_duong?: Building
   da_xoa_phong_hoc?: boolean
 }
@@ -751,7 +749,7 @@ export default function TrainingOfficerTimetablePage() {
                     const isConflict = conflictingRoomIds.has(room.id)
                     return (
                       <option key={room.id} value={room.id} disabled={isConflict}>
-                        {room.ma_phong} - {room.suc_chua} chỗ{isConflict ? ' Đã có lịch' : ''}
+                        {room.ma_phong}{isConflict ? ' (Đã có lịch)' : ''}
                       </option>
                     )
                   })}

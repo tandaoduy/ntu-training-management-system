@@ -54,9 +54,6 @@ class StudyPlanRegistrationController extends Controller
         }
 
         $targetTerm = HocKy::query()->with('namHoc:id,nam_hoc')->findOrFail((int) $payload['target_hoc_ky_id']);
-        if ($this->termOrder($targetTerm) <= $this->termOrder($currentTerm)) {
-            return $this->jsonResponse(['message' => 'Chỉ được mở đăng ký KHHT cho học kỳ tiếp theo hoặc tương lai, không được chọn học kỳ hiện tại.'], 422);
-        }
 
         $period = KeHoachHocTapDotDangKy::query()->create([
             'current_hoc_ky_id' => $currentTerm->id,
@@ -335,7 +332,9 @@ class StudyPlanRegistrationController extends Controller
         $semester = trim((string) ($payload['hoc_ky'] ?? ''));
 
         if ($year === '' && $semester === '') {
-            return [];
+            $currentTerm = $this->currentTerm();
+
+            return $currentTerm ? [(int) $currentTerm->id] : [];
         }
 
         return HocKy::query()
@@ -404,20 +403,6 @@ class StudyPlanRegistrationController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
-    }
-
-    private function termOrder(HocKy $term): int
-    {
-        $term->loadMissing('namHoc:id,nam_hoc');
-        $year = (int) substr((string) $term->namHoc?->nam_hoc, 0, 4);
-        $semester = match ((string) $term->hoc_ky) {
-            '1' => 1,
-            '2' => 2,
-            'Hè' => 3,
-            default => 9,
-        };
-
-        return ($year * 10) + $semester;
     }
 
     private function periodPayload(KeHoachHocTapDotDangKy $period): array

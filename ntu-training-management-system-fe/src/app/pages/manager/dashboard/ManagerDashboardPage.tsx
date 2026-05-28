@@ -1,47 +1,87 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AcademicCapIcon, ChartBarSquareIcon, IdentificationIcon } from '@heroicons/react/24/outline'
 import RoleLayout from '../../../layout/RoleLayout'
+import { apiGet } from '@/api/core/request'
+import { useAuth } from '../../../../api/query'
 import './ManagerDashboardPage.css'
 
-const stats = [
-  { icon: '📊', label: 'KPI phòng ban', value: '91%', colorClass: 'teal' },
-  { icon: '📋', label: 'Đề xuất chờ duyệt', value: '7', colorClass: 'amber' },
-  { icon: '📅', label: 'Yêu cầu nghỉ phép', value: '3', colorClass: 'purple' },
-  { icon: '💰', label: 'Ngân sách sử dụng', value: '64%', colorClass: 'green' },
-]
+type AcademicYear = { id: number; nam_hoc: string }
+type AcademicTerm = { id: number; nam_hoc_id: number; hoc_ky: string }
+type CatalogResponse<T> = { data: T[] }
+type CurrentTermResponse = {
+  data: {
+    nam_hoc_id?: number | null
+    hoc_ky?: string | null
+  } | null
+}
 
 const quickAccessLinks = [
-  { label: 'Theo dõi CTĐT', icon: '🗺️', colorClass: 'teal', link: '/quanly/curriculum' },
-  { label: 'Quản lý giáo viên', icon: '👨‍🏫', colorClass: 'blue', link: '/quanly/staff' },
-  { label: 'Duyệt đề xuất', icon: '✅', colorClass: 'green', link: '/quanly/proposals' },
-  { label: 'Quản lý phòng ban', icon: '🏢', colorClass: 'cyan', link: '/quanly/department' },
-  { label: 'Yêu cầu nghỉ phép', icon: '📅', colorClass: 'orange', link: '/quanly/leaves' },
-  { label: 'Báo cáo chất lượng', icon: '📊', colorClass: 'indigo', link: '/quanly/quality' },
-  { label: 'Quản lý ngân sách', icon: '💼', colorClass: 'purple', link: '/quanly/budget' },
-  { label: 'Thống kê hiệu suất', icon: '📈', colorClass: 'rose', link: '/quanly/performance' },
-]
-
-const pendingApprovals = [
-  { id: 'APP-001', title: 'Mở 2 lớp Lập trình Python', requester: 'Trần Thị B' },
-  { id: 'APP-002', title: 'Mua thiết bị lab thực hành', requester: 'Nguyễn Văn C' },
-  { id: 'APP-003', title: 'Tuyển thêm 1 giáo viên', requester: 'Lê Văn D' },
-  { id: 'APP-004', title: 'Tổ chức hội thảo khoa học', requester: 'Phạm Thị E' },
-]
-
-const recentActivities = [
-  { action: 'Phê duyệt đề xuất mở lớp học', time: '1 giờ trước', icon: '✅' },
-  { action: 'Cập nhật kế hoạch học kỳ mới', time: '3 giờ trước', icon: '📅' },
-  { action: 'Xem xét báo cáo chất lượng', time: 'Hôm qua', icon: '📊' },
-  { action: 'Duyệt yêu cầu nghỉ phép nhân viên', time: 'Hôm qua', icon: '📋' },
-]
-
-const kpiMetrics = [
-  { label: 'Tỷ lệ hoàn thành KPI', value: '91%', percent: 91, warn: false },
-  { label: 'Độ hài lòng sinh viên', value: '88%', percent: 88, warn: false },
-  { label: 'Chất lượng giáo dục', value: '85%', percent: 85, warn: true },
-  { label: 'Tỷ lệ sắp xếp nhân lực', value: '92%', percent: 92, warn: false },
+  { label: 'Quản lí điểm', icon: ChartBarSquareIcon, colorClass: 'amber', link: '/quanly/diem', permission: 'manager.grades.view' },
+  { label: 'Thông tin sinh viên', icon: IdentificationIcon, colorClass: 'blue', link: '/quanly/thongtinsinhvien', permission: 'manager.student-info.view' },
+  { label: 'Theo dõi CTĐT', icon: AcademicCapIcon, colorClass: 'teal', link: '/quanly/curriculum', permission: 'manager.curriculum.view' },
 ]
 
 export default function ManagerDashboardPage() {
+  const { user, me } = useAuth()
+  const [trainingSystem, setTrainingSystem] = useState('Đại học và Cao đẳng chính quy')
+  const [academicYear, setAcademicYear] = useState('')
+  const [semester, setSemester] = useState('')
+  const [years, setYears] = useState<AcademicYear[]>([])
+  const [terms, setTerms] = useState<AcademicTerm[]>([])
+  const enabledLinks = quickAccessLinks.filter((item) => user?.permissions?.includes(item.permission))
+
+  useEffect(() => {
+    void me()
+  }, [me])
+
+  useEffect(() => {
+    let isMounted = true
+
+    Promise.all([
+      apiGet<CatalogResponse<AcademicYear>>('/academic-catalog/nam-hocs'),
+      apiGet<CurrentTermResponse>('/academic-catalog/current-term'),
+    ])
+      .then(([yearResponse, currentResponse]) => {
+        if (!isMounted) return
+        setYears(yearResponse.data ?? [])
+        setAcademicYear(String(currentResponse.data?.nam_hoc_id ?? yearResponse.data?.[0]?.id ?? ''))
+        setSemester(currentResponse.data?.hoc_ky ?? '')
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setYears([])
+        setAcademicYear('')
+        setSemester('')
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!academicYear) return
+
+    let isMounted = true
+    apiGet<CatalogResponse<AcademicTerm>>('/academic-catalog/hoc-kys', {
+      params: { nam_hoc_id: Number(academicYear) },
+    })
+      .then((response) => {
+        if (!isMounted) return
+        setTerms(response.data ?? [])
+        setSemester((current) => current || response.data?.[0]?.hoc_ky || '')
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setTerms([])
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [academicYear])
+
   return (
     <RoleLayout
       brandSubtitle="Hệ thống Đào tạo"
@@ -51,97 +91,58 @@ export default function ManagerDashboardPage() {
       roleTitle="Quản lý"
     >
       <main className="md-main">
-        {/* Quick Access */}
-        <div className="md-quick-access-section">
-          <h2 className="md-section-title">Truy cập nhanh</h2>
-          <div className="md-qa-grid">
-            {quickAccessLinks.map((item) => (
-              <Link to={item.link} key={item.label} className="md-qa-card">
-                <div className={`md-qa-icon ${item.colorClass}`}>{item.icon}</div>
-                <span className="md-qa-label">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <div className="md-content-container">
+          <section className="md-filter-bar" aria-label="Thông tin học kỳ">
+            <label>
+              <span>Hệ đào tạo</span>
+              <select value={trainingSystem} onChange={(event) => setTrainingSystem(event.target.value)}>
+                <option value="Đại học và Cao đẳng chính quy">Đại học và Cao đẳng chính quy</option>
+                <option value="Vừa học vừa làm">Vừa học vừa làm</option>
+                <option value="Đào tạo từ xa">Đào tạo từ xa</option>
+              </select>
+            </label>
+            <label>
+              <span>Năm học</span>
+              <select value={academicYear} onChange={(event) => { setAcademicYear(event.target.value); setSemester('') }}>
+                <option value="">Chọn năm học</option>
+                {years.map((year) => <option key={year.id} value={year.id}>{year.nam_hoc}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Học kỳ</span>
+              <select value={semester} onChange={(event) => setSemester(event.target.value)}>
+                <option value="">Chọn học kỳ</option>
+                {terms.map((term) => <option key={term.id} value={term.hoc_ky}>{term.hoc_ky}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Tên đơn vị quản lí</span>
+              <input value={user?.tenDonVi ?? ''} readOnly placeholder="Chưa có đơn vị" />
+            </label>
+          </section>
 
-        {/* Stat Cards */}
-        <div className="md-stats">
-          {stats.map((s) => (
-            <div key={s.label} className="md-stat-card">
-              <div className={`md-stat-icon ${s.colorClass}`}>{s.icon}</div>
-              <div className="md-stat-value">{s.value}</div>
-              <div className="md-stat-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
+          <section className="md-quick-access-section">
+            <div className="md-qa-grid">
+              {enabledLinks.map((item) => {
+                const Icon = item.icon
 
-        {/* Grid 2 cột */}
-        <div className="md-grid">
-          {/* Đề xuất chờ duyệt */}
-          <div className="md-panel">
-            <div className="md-panel-header">
-              <span className="md-panel-title">⏳ Đề xuất chờ duyệt</span>
-              <a href="#" className="md-panel-link">Xem tất cả</a>
-            </div>
-            <div className="md-panel-body">
-              <div className="md-list">
-                {pendingApprovals.map((a) => (
-                  <div key={a.id} className="md-list-item">
-                    <div className="md-list-content">
-                      <span className="md-list-title">{a.title}</span>
-                      <span className="md-list-desc">Người đề xuất: {a.requester}</span>
+                return (
+                  <Link to={item.link} key={item.label} className="md-qa-card">
+                    <div className="md-qa-card-inner">
+                      <div className={`md-qa-icon ${item.colorClass}`}><Icon aria-hidden="true" /></div>
+                      <span className="md-qa-label">{item.label}</span>
+                      <span className="md-qa-arrow" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="5" x2="19" y1="12" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                      </span>
                     </div>
-                    <span className="md-badge warning">Chờ duyệt</span>
-                  </div>
-                ))}
-              </div>
+                  </Link>
+                )
+              })}
             </div>
-          </div>
-
-          {/* Hoạt động gần đây */}
-          <div className="md-panel">
-            <div className="md-panel-header">
-              <span className="md-panel-title">📋 Hoạt động gần đây</span>
-            </div>
-            <div className="md-panel-body">
-              <div className="md-timeline">
-                {recentActivities.map((log, idx) => (
-                  <div key={idx} className="md-timeline-item">
-                    <div className="md-timeline-icon">{log.icon}</div>
-                    <div className="md-timeline-content">
-                      <div className="md-timeline-title">{log.action}</div>
-                      <div className="md-timeline-time">{log.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* KPI phòng ban – full width */}
-          <div className="md-panel" style={{ gridColumn: '1 / -1' }}>
-            <div className="md-panel-header">
-              <span className="md-panel-title">📊 Chỉ số hiệu suất phòng ban</span>
-            </div>
-            <div className="md-panel-body">
-              <div className="md-kpi-row">
-                {kpiMetrics.map((k, idx) => (
-                  <div key={idx} className="md-kpi-item">
-                    <div className="md-kpi-header">
-                      <span className="md-kpi-label">{k.label}</span>
-                      <span className="md-kpi-value">{k.value}</span>
-                    </div>
-                    <div className="md-kpi-bar-bg">
-                      <div
-                        className={`md-kpi-bar-fill${k.warn ? ' warning' : ''}`}
-                        style={{ width: `${k.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
       </main>
     </RoleLayout>

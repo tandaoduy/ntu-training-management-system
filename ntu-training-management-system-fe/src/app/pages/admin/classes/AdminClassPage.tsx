@@ -4,9 +4,10 @@ import {
   PencilSquareIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '../../../../api/core/request'
 import { useAlert } from '@/components/alert'
+import { Pagination, getPageSizeNumber } from '@/components/pagination'
 import './AdminClassPage.css'
 
 interface DonVi {
@@ -37,6 +38,9 @@ interface LecturerAccount {
   username: string
   display_name: string | null
   email: string | null
+  profile?: {
+    don_vi_id?: number | null
+  } | null
 }
 
 interface ListResponse<T> {
@@ -79,12 +83,16 @@ const emptyForm: ClassForm = {
 }
 
 export default function AdminClassPage() {
-  const alert = useAlert()
+  const { showAlert } = useAlert()
   const [donVis, setDonVis] = useState<DonVi[]>([])
   const [lecturers, setLecturers] = useState<LecturerAccount[]>([])
   const [lops, setLops] = useState<Lop[]>([])
   const [form, setForm] = useState<ClassForm>(emptyForm)
+  const [editForm, setEditForm] = useState<ClassForm>(emptyForm)
   const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState('10')
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingLop, setEditingLop] = useState<Lop | null>(null)
   const [confirmAction, setConfirmAction] = useState<{ type: ConfirmAction; lop: Lop } | null>(null)
   const [pendingUpdate, setPendingUpdate] = useState<ClassPayload | null>(null)
@@ -111,7 +119,28 @@ export default function AdminClassPage() {
     )
   }, [lops, query])
 
-  const loadData = async () => {
+  const pageSizeNumber = getPageSizeNumber(pageSize, filteredLops.length)
+  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(filteredLops.length / pageSizeNumber))
+  const pagedLops = useMemo(() => {
+    if (pageSize === 'all') return filteredLops
+
+    const safePage = Math.min(page, totalPages)
+    const start = (safePage - 1) * pageSizeNumber
+
+    return filteredLops.slice(start, start + pageSizeNumber)
+  }, [filteredLops, page, pageSize, pageSizeNumber, totalPages])
+
+  useEffect(() => {
+    setPage(1)
+  }, [pageSize, query])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
+
+  const loadData = useCallback(async () => {
     setLoading(true)
 
     try {
@@ -127,7 +156,7 @@ export default function AdminClassPage() {
       setLecturers(lecturerResponse.data)
       setLops(lopResponse.data)
     } catch {
-      alert.showAlert({
+      showAlert({
         variant: 'error',
         title: 'Không tải được dữ liệu lớp',
         message: 'Vui lòng kiểm tra kết nối API hoặc phiên đăng nhập.',
@@ -135,20 +164,25 @@ export default function AdminClassPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [showAlert])
 
   useEffect(() => {
     void loadData()
-  }, [])
+  }, [loadData])
 
   const resetForm = () => {
     setForm(emptyForm)
+    setShowCreateModal(false)
+  }
+
+  const closeEditModal = () => {
     setEditingLop(null)
+    setEditForm(emptyForm)
   }
 
   const fillEditForm = (lop: Lop) => {
     setEditingLop(lop)
-    setForm({
+    setEditForm({
       donViId: String(lop.don_vi_id),
       lopHocPhan: lop.lop_hoc_phan,
       tenGiangVien: lop.ten_giang_vien ?? '',
@@ -180,14 +214,18 @@ export default function AdminClassPage() {
         await loadData()
       }
 
-      alert.showAlert({
+      showAlert({
         variant: 'success',
         title: lopToUpdate ? 'Đã cập nhật lớp' : 'Đã tạo lớp',
         message: response.message,
       })
-      resetForm()
+      if (lopToUpdate) {
+        closeEditModal()
+      } else {
+        resetForm()
+      }
     } catch {
-      alert.showAlert({
+      showAlert({
         variant: 'error',
         title: lopToUpdate ? 'Không cập nhật được lớp' : 'Không tạo được lớp',
         message: 'Vui lòng kiểm tra dữ liệu nhập và thử lại.',
@@ -197,65 +235,60 @@ export default function AdminClassPage() {
     }
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
+  const buildPayload = (targetForm: ClassForm): ClassPayload | null => {
     if (
-      !form.donViId ||
-      !form.lopHocPhan.trim() ||
-      !form.moHinhDaoTao.trim() ||
-      !form.maKhoi.trim() ||
-      !form.tenKhoi.trim()
+      !targetForm.donViId ||
+      !targetForm.lopHocPhan.trim() ||
+      !targetForm.moHinhDaoTao.trim() ||
+      !targetForm.maKhoi.trim() ||
+      !targetForm.tenKhoi.trim()
     ) {
-      alert.showAlert({
+      showAlert({
         variant: 'warning',
         title: 'Thiếu thông tin',
         message: 'Vui lòng nhập đủ các cột của lớp học.',
       })
-      return
+      return null
     }
 
-    const payload: ClassPayload = {
-      don_vi_id: Number(form.donViId),
-      lop_hoc_phan: form.lopHocPhan.trim(),
+    return {
+      don_vi_id: Number(targetForm.donViId),
+      lop_hoc_phan: targetForm.lopHocPhan.trim(),
       ten_hoc_phan: null,
-      ten_giang_vien: form.tenGiangVien.trim() || null,
-      mo_hinh_dao_tao: form.moHinhDaoTao.trim(),
-      ma_khoi: form.maKhoi.trim(),
-      ten_khoi: form.tenKhoi.trim(),
+      ten_giang_vien: targetForm.tenGiangVien.trim() || null,
+      mo_hinh_dao_tao: targetForm.moHinhDaoTao.trim(),
+      ma_khoi: targetForm.maKhoi.trim(),
+      ten_khoi: targetForm.tenKhoi.trim(),
     }
+  }
 
-    if (editingLop) {
-      setPendingUpdate(payload)
-      setConfirmAction({ type: 'edit', lop: editingLop })
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const payload = buildPayload(form)
+
+    if (!payload) {
       return
     }
 
     await saveClass(payload, null)
   }
 
-  const handleToggleStatus = async (lop: Lop) => {
-    try {
-      const response = await apiPost<MutateResponse>(`/admin/lops/${lop.id}/toggle-status`)
+  const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
 
-      const savedLop = response.data
-
-      if (savedLop) {
-        setLops((prev) => prev.map((item) => (item.id === lop.id ? savedLop : item)))
-      }
-
-      alert.showAlert({
-        variant: 'success',
-        title: 'Đã cập nhật trạng thái',
-        message: response.message,
-      })
-    } catch {
-      alert.showAlert({
-        variant: 'error',
-        title: 'Không đổi được trạng thái',
-        message: 'Vui lòng thử lại sau.',
-      })
+    if (!editingLop) {
+      return
     }
+
+    const payload = buildPayload(editForm)
+
+    if (!payload) {
+      return
+    }
+
+    setPendingUpdate(payload)
+    setConfirmAction({ type: 'edit', lop: editingLop })
   }
 
   const deleteLop = async (lop: Lop) => {
@@ -264,16 +297,16 @@ export default function AdminClassPage() {
       setLops((prev) => prev.filter((item) => item.id !== lop.id))
 
       if (editingLop?.id === lop.id) {
-        resetForm()
+        closeEditModal()
       }
 
-      alert.showAlert({
+      showAlert({
         variant: 'success',
         title: 'Đã xóa lớp',
         message: response.message,
       })
     } catch {
-      alert.showAlert({
+      showAlert({
         variant: 'error',
         title: 'Không xóa được lớp',
         message: 'Lớp có thể đang được sử dụng bởi hồ sơ sinh viên.',
@@ -323,115 +356,12 @@ export default function AdminClassPage() {
           <h1 className="acl-title">Quản lý lớp học</h1>
           <p className="acl-subtitle">Tạo và cập nhật lớp hành chính dùng cho hồ sơ sinh viên.</p>
         </div>
+        <button className="acl-btn-primary acl-header-action" type="button" onClick={() => setShowCreateModal(true)}>
+          Tạo lớp học
+        </button>
       </div>
 
       <div className="acl-layout">
-        <form className="acl-form-card" onSubmit={handleSubmit}>
-          <div className="acl-form-header">
-            <h2>{editingLop ? 'Cập nhật lớp' : 'Tạo lớp học'}</h2>
-            {editingLop && (
-              <button className="acl-btn-link" type="button" onClick={resetForm}>
-                Hủy sửa
-              </button>
-            )}
-          </div>
-
-          <label className="acl-field">
-            <span>Đơn vị</span>
-            <select
-              value={form.donViId}
-              onChange={(event) => {
-                const donViId = event.target.value
-
-                setForm((prev) => ({
-                  ...prev,
-                  donViId,
-                }))
-              }}
-              required
-            >
-              <option value="">Chọn đơn vị</option>
-              {donVis.map((donVi) => (
-                <option key={donVi.id} value={donVi.id}>
-                  {donVi.ma_don_vi} - {donVi.ten_don_vi}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="acl-field">
-            <span>Lớp hành chính</span>
-            <input
-              value={form.lopHocPhan}
-              onChange={(event) => setForm((prev) => ({ ...prev, lopHocPhan: event.target.value }))}
-              required
-            />
-          </label>
-
-          <label className="acl-field">
-            <span>Giảng viên cố vấn học tập</span>
-            <select
-              value={form.tenGiangVien}
-              onChange={(event) => setForm((prev) => ({ ...prev, tenGiangVien: event.target.value }))}
-            >
-              <option value="">Không chọn CVHT</option>
-              {lecturers.map((lecturer) => {
-                const displayName = lecturer.display_name || lecturer.username
-
-                return (
-                  <option key={lecturer.id} value={displayName}>
-                    {lecturer.username} - {displayName}
-                  </option>
-                )
-              })}
-            </select>
-          </label>
-
-          <div className="acl-form-grid">
-            <label className="acl-field">
-              <span>Mô hình đào tạo</span>
-              <select
-                value={form.moHinhDaoTao}
-                onChange={(event) => setForm((prev) => ({ ...prev, moHinhDaoTao: event.target.value }))}
-                required
-              >
-                <option value="Tín chỉ">Tín chỉ</option>
-              </select>
-            </label>
-          </div>
-
-          <label className="acl-field">
-            <span>Mã khối</span>
-            <input
-              value={form.maKhoi}
-              onChange={(event) => {
-                const value = event.target.value
-
-                setForm((prev) => ({
-                  ...prev,
-                  maKhoi: value,
-                  tenKhoi: !prev.tenKhoi || prev.tenKhoi === prev.maKhoi ? value : prev.tenKhoi,
-                }))
-              }}
-              required
-            />
-          </label>
-
-          <label className="acl-field">
-            <span>Tên khối</span>
-            <input
-              value={form.tenKhoi}
-              onChange={(event) => setForm((prev) => ({ ...prev, tenKhoi: event.target.value }))}
-            />
-          </label>
-
-          <div className="acl-form-actions">
-            <button className="acl-btn-primary" type="submit" disabled={submitting}>
-              {submitting ? 'Đang lưu...' : editingLop ? 'Lưu thay đổi' : 'Tạo lớp'}
-            </button>
-          </div>
-        </form>
-
         <section className="acl-list-card">
           <div className="acl-list-toolbar">
             <div>
@@ -457,17 +387,16 @@ export default function AdminClassPage() {
                   <th>Tên khối</th>
                   <th>Mã đơn vị</th>
                   <th>Tên đơn vị</th>
-                  <th>Trạng thái</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={10} className="acl-empty">Đang tải dữ liệu...</td>
+                    <td colSpan={9} className="acl-empty">Đang tải dữ liệu...</td>
                   </tr>
                 ) : filteredLops.length ? (
-                  filteredLops.map((lop) => (
+                  pagedLops.map((lop) => (
                     <tr key={lop.id}>
                       <td className="acl-strong">{lop.lop_hoc_phan}</td>
                       <td>{lop.ten_giang_vien || 'Chưa có CVHT'}</td>
@@ -478,19 +407,9 @@ export default function AdminClassPage() {
                       <td>{lop.ma_don_vi}</td>
                       <td>{lop.ten_don_vi}</td>
                       <td>
-                        <button
-                          className={`acl-status ${lop.trang_thai ? 'active' : 'inactive'}`}
-                          type="button"
-                          onClick={() => void handleToggleStatus(lop)}
-                        >
-                          {lop.trang_thai ? 'Đang dùng' : 'Tạm khóa'}
-                        </button>
-                      </td>
-                      <td>
                         <div className="acl-actions">
                           <button type="button" onClick={() => fillEditForm(lop)} title="Sửa lớp" aria-label="Sửa lớp">
                             <PencilSquareIcon className="acl-action-icon" />
-                            <span className="acl-action-text">Sửa</span>
                           </button>
                           <button type="button" className="danger" onClick={() => setConfirmAction({ type: 'delete', lop })} title="Xóa lớp" aria-label="Xóa lớp">
                             <TrashIcon className="acl-action-icon" />
@@ -501,14 +420,239 @@ export default function AdminClassPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={10} className="acl-empty">Chưa có lớp phù hợp.</td>
+                    <td colSpan={9} className="acl-empty">Chưa có lớp phù hợp.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+          {filteredLops.length > 0 && (
+            <div className="acl-pagination">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                pageSize={pageSize}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
+          )}
         </section>
       </div>
+
+      {showCreateModal && (
+        <div className="acl-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="acl-create-title">
+          <form className="acl-edit-modal" onSubmit={handleSubmit}>
+            <div className="acl-edit-header">
+              <h3 id="acl-create-title">Tạo lớp học</h3>
+              <button type="button" className="acl-edit-close" onClick={resetForm} aria-label="Đóng">
+                ×
+              </button>
+            </div>
+
+            <div className="acl-edit-grid">
+              <label className="acl-field">
+                <span>Đơn vị</span>
+                <select
+                  value={form.donViId}
+                  onChange={(event) => setForm((prev) => ({ ...prev, donViId: event.target.value }))}
+                  required
+                >
+                  <option value="">Chọn đơn vị</option>
+                  {donVis.map((donVi) => (
+                    <option key={donVi.id} value={donVi.id}>
+                      {donVi.ma_don_vi} - {donVi.ten_don_vi}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="acl-field">
+                <span>Lớp hành chính</span>
+                <input
+                  value={form.lopHocPhan}
+                  onChange={(event) => setForm((prev) => ({ ...prev, lopHocPhan: event.target.value }))}
+                  required
+                />
+              </label>
+
+              <label className="acl-field">
+                <span>Giảng viên cố vấn học tập</span>
+                <select
+                  value={form.tenGiangVien}
+                  onChange={(event) => setForm((prev) => ({ ...prev, tenGiangVien: event.target.value }))}
+                >
+                  <option value="">Không chọn CVHT</option>
+                  {lecturers
+                    .filter((lecturer) => !form.donViId || lecturer.profile?.don_vi_id === Number(form.donViId))
+                    .map((lecturer) => {
+                      const displayName = lecturer.display_name || lecturer.username
+
+                      return (
+                        <option key={lecturer.id} value={displayName}>
+                          {lecturer.username} - {displayName}
+                        </option>
+                      )
+                    })}
+                </select>
+              </label>
+
+              <label className="acl-field">
+                <span>Mô hình đào tạo</span>
+                <select
+                  value={form.moHinhDaoTao}
+                  onChange={(event) => setForm((prev) => ({ ...prev, moHinhDaoTao: event.target.value }))}
+                  required
+                >
+                  <option value="Tín chỉ">Tín chỉ</option>
+                </select>
+              </label>
+
+              <label className="acl-field">
+                <span>Mã khối</span>
+                <input
+                  value={form.maKhoi}
+                  onChange={(event) => {
+                    const value = event.target.value
+
+                    setForm((prev) => ({
+                      ...prev,
+                      maKhoi: value,
+                      tenKhoi: !prev.tenKhoi || prev.tenKhoi === prev.maKhoi ? value : prev.tenKhoi,
+                    }))
+                  }}
+                  required
+                />
+              </label>
+
+              <label className="acl-field">
+                <span>Tên khối</span>
+                <input
+                  value={form.tenKhoi}
+                  onChange={(event) => setForm((prev) => ({ ...prev, tenKhoi: event.target.value }))}
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="acl-edit-actions">
+              <button className="acl-confirm-cancel" type="button" onClick={resetForm} disabled={submitting}>
+                Hủy
+              </button>
+              <button className="acl-btn-primary" type="submit" disabled={submitting}>
+                {submitting ? 'Đang lưu...' : 'Tạo lớp'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingLop && (
+        <div className="acl-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="acl-edit-title">
+          <form className="acl-edit-modal" onSubmit={handleEditSubmit}>
+            <div className="acl-edit-header">
+              <h3 id="acl-edit-title">Sửa lớp học</h3>
+              <button type="button" className="acl-edit-close" onClick={closeEditModal} aria-label="Đóng">
+                ×
+              </button>
+            </div>
+
+            <div className="acl-edit-grid">
+              <label className="acl-field">
+                <span>Đơn vị</span>
+                <select
+                  value={editForm.donViId}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, donViId: event.target.value }))}
+                  required
+                >
+                  <option value="">Chọn đơn vị</option>
+                  {donVis.map((donVi) => (
+                    <option key={donVi.id} value={donVi.id}>
+                      {donVi.ma_don_vi} - {donVi.ten_don_vi}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="acl-field">
+                <span>Lớp hành chính</span>
+                <input
+                  value={editForm.lopHocPhan}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, lopHocPhan: event.target.value }))}
+                  required
+                />
+              </label>
+
+              <label className="acl-field">
+                <span>Giảng viên cố vấn học tập</span>
+                <select
+                  value={editForm.tenGiangVien}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, tenGiangVien: event.target.value }))}
+                >
+                  <option value="">Không chọn CVHT</option>
+                  {lecturers
+                    .filter((lecturer) => !editForm.donViId || lecturer.profile?.don_vi_id === Number(editForm.donViId))
+                    .map((lecturer) => {
+                      const displayName = lecturer.display_name || lecturer.username
+
+                      return (
+                        <option key={lecturer.id} value={displayName}>
+                          {lecturer.username} - {displayName}
+                        </option>
+                      )
+                    })}
+                </select>
+              </label>
+
+              <label className="acl-field">
+                <span>Mô hình đào tạo</span>
+                <select
+                  value={editForm.moHinhDaoTao}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, moHinhDaoTao: event.target.value }))}
+                  required
+                >
+                  <option value="Tín chỉ">Tín chỉ</option>
+                </select>
+              </label>
+
+              <label className="acl-field">
+                <span>Mã khối</span>
+                <input
+                  value={editForm.maKhoi}
+                  onChange={(event) => {
+                    const value = event.target.value
+
+                    setEditForm((prev) => ({
+                      ...prev,
+                      maKhoi: value,
+                      tenKhoi: !prev.tenKhoi || prev.tenKhoi === prev.maKhoi ? value : prev.tenKhoi,
+                    }))
+                  }}
+                  required
+                />
+              </label>
+
+              <label className="acl-field">
+                <span>Tên khối</span>
+                <input
+                  value={editForm.tenKhoi}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, tenKhoi: event.target.value }))}
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="acl-edit-actions">
+              <button className="acl-confirm-cancel" type="button" onClick={closeEditModal} disabled={submitting}>
+                Hủy
+              </button>
+              <button className="acl-btn-primary" type="submit" disabled={submitting}>
+                {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {confirmAction && (
         <div className="acl-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="acl-confirm-title">

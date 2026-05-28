@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EyeIcon } from '@heroicons/react/24/outline'
 import { apiGet } from '@/api/core/request'
+import { PAGE_SIZE_OPTIONS, getPageSizeLabel, getPageSizeNumber } from '@/components/pagination'
 import RoleLayout from '../../../layout/RoleLayout'
 import './TrainingOfficerStudyPlanStatisticsPage.css'
 
@@ -39,6 +40,13 @@ type CatalogSemester = {
 
 type ApiListResponse<T> = {
   data: T
+}
+
+type CurrentTermResponse = {
+  data: {
+    nam_hoc?: string | null
+    hoc_ky?: string | null
+  } | null
 }
 
 type StatisticsParams = {
@@ -96,14 +104,17 @@ export default function TrainingOfficerStudyPlanStatisticsPage() {
 
     const loadCatalogs = async () => {
       try {
-        const [yearsResponse, semestersResponse] = await Promise.all([
+        const [yearsResponse, semestersResponse, currentTermResponse] = await Promise.all([
           apiGet<ApiListResponse<CatalogYear[]>>('/academic-catalog/nam-hocs'),
           apiGet<ApiListResponse<CatalogSemester[]>>('/academic-catalog/hoc-kys'),
+          apiGet<CurrentTermResponse>('/academic-catalog/current-term'),
         ])
         if (!active) return
 
         setCatalogYears(yearsResponse.data)
         setCatalogSemesters(semestersResponse.data)
+        setSelectedYear(currentTermResponse.data?.nam_hoc ?? '')
+        setSelectedSemester(currentTermResponse.data?.hoc_ky ?? '')
       } catch {
         if (!active) return
         setError('Không tải được danh sách năm học và học kỳ.')
@@ -188,7 +199,7 @@ export default function TrainingOfficerStudyPlanStatisticsPage() {
     return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right, 'vi'))
   }, [catalogCourses, searchField])
 
-  const visibleCourses = filteredCourses.slice(0, Number(pageSize) || 20)
+  const visibleCourses = filteredCourses.slice(0, getPageSizeNumber(pageSize, filteredCourses.length))
 
   const handleViewDetails = (course: StudyPlanCourseStat) => {
     const queryParams = new URLSearchParams()
@@ -271,8 +282,8 @@ export default function TrainingOfficerStudyPlanStatisticsPage() {
 
             <label>Số dòng mỗi trang</label>
             <select value={pageSize} onChange={(event) => setPageSize(event.target.value)}>
-              {['5', '10', '20', '50', '100', '500', '1000'].map((value) => (
-                <option key={value} value={value}>{value}</option>
+              {PAGE_SIZE_OPTIONS.map((value) => (
+                <option key={value} value={value}>{getPageSizeLabel(value)}</option>
               ))}
             </select>
           </div>
@@ -308,9 +319,14 @@ export default function TrainingOfficerStudyPlanStatisticsPage() {
                     <td>{course.so_tin_chi}</td>
                     <td><span className="sp-stat-count">{course.so_luong_sinh_vien}</span></td>
                     <td>
-                      <button type="button" className="sp-stat-row-action" onClick={() => void handleViewDetails(course)}>
+                      <button
+                        type="button"
+                        className="sp-stat-row-action"
+                        onClick={() => void handleViewDetails(course)}
+                        title="Xem chi tiết"
+                        aria-label={`Xem chi tiết ${course.ma_hoc_phan}`}
+                      >
                         <EyeIcon aria-hidden="true" />
-                        <span>Xem chi tiết</span>
                       </button>
                     </td>
                   </tr>

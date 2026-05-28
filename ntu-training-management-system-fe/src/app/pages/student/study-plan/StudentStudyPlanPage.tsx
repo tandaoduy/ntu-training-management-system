@@ -4,9 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../../api/core/request'
 import { authStorage } from '../../../../api/features/auth'
 import { useAuth } from '../../../../api/query'
+import { MINISTRY_NAME, printBrandHtml, printBrandStyles, printFaviconLink } from '@/app/branding'
 import { useAlert } from '@/components/alert'
 import { Modal } from '@/components/modal'
+import { PAGE_SIZE_OPTIONS, getPageSizeLabel, getPageSizeNumber } from '@/components/pagination'
 import { Select } from '@/components/select'
+import { formatDisplayDateTime } from '@/utils/dateFormat'
+import { dchpHrefForCourseCode } from '../../../data/dchpFiles'
 import { StudentHeader } from '../components/StudentHeader'
 import './StudentStudyPlanPage.css'
 
@@ -55,7 +59,7 @@ interface CurriculumCourse {
   hoc_ky_mo?: string | null
   nam_hoc_dat?: string | null
   hoc_ky_dat?: string | null
-  diem_dat?: number | null
+  diem_dat?: string | number | null
   de_cuong_hoc_phan_url?: string | null
   tai_lieu_tham_khao_url?: string | null
   ap_dung_cho: 'all' | 'major' | 'specialization'
@@ -97,6 +101,19 @@ interface CatalogSemester {
   id: number
   nam_hoc_id: number
   hoc_ky: string
+}
+
+interface StudentGradeRow {
+  ma_hoc_phan?: string | null
+  nam_hoc?: string | null
+  hoc_ky?: string | null
+  average_score?: string | number | null
+  result?: string | null
+  grade_mode?: 'numeric' | 'pass_fail' | string | null
+}
+
+interface StudentGradesResponse {
+  data: StudentGradeRow[]
 }
 
 interface StudentCurriculumResponse {
@@ -391,6 +408,33 @@ function termSortValue(year?: string | null, semester?: string | null) {
   return startYear * 10 + semesterOrder
 }
 
+function gradeNumber(value?: string | number | null) {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function displayAchievedScore(grade?: StudentGradeRow) {
+  if (!grade) {
+    return ''
+  }
+
+  const score = gradeNumber(grade.average_score)
+
+  if (score === null) {
+    return ''
+  }
+
+  if (grade.grade_mode === 'pass_fail') {
+    return score >= 10 ? 'Đạt' : 'Chưa đạt'
+  }
+
+  return score.toFixed(1)
+}
+
 function admissionYearFromCurriculum(curriculum?: CurriculumDetail | null) {
   const note = curriculum?.ghi_chu ?? ''
   const cohort = note.match(/K(\d+)/i)?.[1]
@@ -468,9 +512,10 @@ export default function StudentStudyPlanPage() {
   const [studyPlanDialog, setStudyPlanDialog] = useState<'curriculum' | 'quick' | null>(null)
   const [curriculumDialogCourseIds, setCurriculumDialogCourseIds] = useState<number[]>([])
   const [quickCourseCode, setQuickCourseCode] = useState('')
+  const [studentGrades, setStudentGrades] = useState<StudentGradeRow[]>([])
 
   useEffect(() => {
-    if (!user) {
+    if (!user || (user.role === 'student' && user.advisor === undefined)) {
       void me()
     }
   }, [me, user])
@@ -499,10 +544,11 @@ export default function StudentStudyPlanPage() {
         }
 
         if (isStudentMode) {
-          const [yearsResult, semestersResult, curriculumResult] = await Promise.allSettled([
+          const [yearsResult, semestersResult, curriculumResult, gradesResult] = await Promise.allSettled([
             apiGet<ApiListResponse<CatalogYear[]>>('/academic-catalog/nam-hocs'),
             apiGet<ApiListResponse<CatalogSemester[]>>('/academic-catalog/hoc-kys'),
             apiGet<StudentCurriculumResponse>('/student/curriculum'),
+            apiGet<StudentGradesResponse>('/student/grades'),
           ] as const)
 
           if (!active) return
@@ -513,6 +559,10 @@ export default function StudentStudyPlanPage() {
 
           if (semestersResult.status === 'fulfilled') {
             setCatalogSemesters(semestersResult.value.data)
+          }
+
+          if (gradesResult.status === 'fulfilled') {
+            setStudentGrades(gradesResult.value.data)
           }
 
           if (curriculumResult.status === 'rejected') {
@@ -593,7 +643,7 @@ export default function StudentStudyPlanPage() {
     return () => {
       active = false
     }
-  }, [endpointPrefix, isStudentMode, user?.role])
+  }, [endpointPrefix, isStudentMode, user?.role, user?.username])
 
   useEffect(() => {
     if (!isStudentMode || !user?.username) {
@@ -713,7 +763,7 @@ export default function StudentStudyPlanPage() {
         const targetYear = period?.target_term?.nam_hoc?.trim() ?? ''
         const targetSemester = period?.target_term?.hoc_ky?.trim() ?? ''
         const windowText = period
-          ? `${period.target_term?.nam_hoc ?? ''} - HK ${period.target_term?.hoc_ky ?? ''} (${period.starts_at ?? ''} Ä‘áº¿n ${period.ends_at ?? ''})`
+          ? `${period.target_term?.nam_hoc ?? ''} - HK ${period.target_term?.hoc_ky ?? ''} (${period.starts_at ?? ''} đến ${period.ends_at ?? ''})`
           : null
 
         setStudyPlanMaxCredits(data?.max_credits ?? 45)
@@ -915,6 +965,25 @@ export default function StudentStudyPlanPage() {
   const graduationRows = professionalRows.filter(({ group }) => group.ma_nhom.startsWith('GDCN_TOTNGHIEP'))
   const sumCredits = (rows: typeof curriculumRows) => rows.reduce((sum, row) => sum + row.group.min_tin_chi, 0)
   const studentAdmissionYear = admissionYearFromCurriculum(curriculum)
+  const achievedGradeByCourseCode = useMemo(() => {
+    const map = new Map<string, StudentGradeRow>()
+
+    studentGrades.forEach((grade) => {
+      const code = grade.ma_hoc_phan?.trim().toUpperCase()
+      const score = gradeNumber(grade.average_score)
+
+      if (!code || score === null || grade.result === 'failed') {
+        return
+      }
+
+      const current = map.get(code)
+      if (!current || termSortValue(grade.nam_hoc, grade.hoc_ky) >= termSortValue(current.nam_hoc, current.hoc_ky)) {
+        map.set(code, grade)
+      }
+    })
+
+    return map
+  }, [studentGrades])
   const studentPlanRows = curriculumRows
     .flatMap(({ requiredItems, optionalItems }) => [
       ...requiredItems.map((course) => ({ ...course, groupName: 'Kiến thức chung' })),
@@ -923,11 +992,15 @@ export default function StudentStudyPlanPage() {
     .filter((course) => !course.ma_hoc_phan.toUpperCase().startsWith('QPAD'))
     .map((course) => {
       const plannedTerm = plannedTermFromRecommendedSemester(course.hoc_ky_goi_y, studentAdmissionYear)
+      const achievedGrade = achievedGradeByCourseCode.get(course.ma_hoc_phan.trim().toUpperCase())
 
       return {
         ...course,
         nam_hoc_mo_hien_thi: course.nam_hoc_mo ?? plannedTerm.year,
         hoc_ky_mo_hien_thi: course.hoc_ky_mo ?? plannedTerm.semester,
+        nam_hoc_dat: achievedGrade?.nam_hoc ?? course.nam_hoc_dat,
+        hoc_ky_dat: achievedGrade?.hoc_ky ?? course.hoc_ky_dat,
+        diem_dat: displayAchievedScore(achievedGrade) || course.diem_dat,
       }
     })
     .filter((course, index, courses) => (
@@ -1008,6 +1081,15 @@ export default function StudentStudyPlanPage() {
   const studentMajor = studentProgram?.nganh_dao_tao
   const cachedUserName = authStorage.getUser()?.name?.trim() || null
   const displayName = user?.name?.trim() || cachedUserName || ''
+  const advisor = user?.advisor
+  const advisorLine = advisor?.hasAdvisor
+    ? [
+        advisor.code ? `Mã cố vấn: ${advisor.code}` : null,
+        advisor.name ? `Họ tên: ${advisor.name}` : null,
+        advisor.phone ? `Điện thoại: ${advisor.phone}` : null,
+        advisor.email ? `Email: ${advisor.email}` : null,
+      ].filter(Boolean).join('. ')
+    : 'Không có cố vấn học tập'
   const filteredStudentTotalCredits = filteredStudentRows.reduce((sum, course) => sum + course.so_tin_chi, 0)
   const plannedStudentRows = studentPlanRows
     .filter((course) => plannedCourseIds.includes(course.id))
@@ -1017,19 +1099,33 @@ export default function StudentStudyPlanPage() {
       hoc_ky_mo_hien_thi: plannedCourseTerms[course.id]?.semester || studyPlanTargetTerm?.semester || course.hoc_ky_mo_hien_thi,
       studentRowNo: index + 1,
     }))
+  const studyPlanCourseCodes = Array.from(new Set(plannedStudentRows.map((course) => course.ma_hoc_phan)))
+    .sort((left, right) => left.localeCompare(right))
+  const studyPlanCourseNames = Array.from(new Set(plannedStudentRows.map((course) => course.ten_hoc_phan)))
+    .sort((left, right) => left.localeCompare(right))
+  const studyPlanSearchOptions = studentFilters.searchField === 'name' ? studyPlanCourseNames : studyPlanCourseCodes
   const studyPlanFilteredRows = plannedStudentRows
     .filter((course) => (
       (!studentFilters.year || course.nam_hoc_mo_hien_thi === studentFilters.year)
       && (!studentFilters.semester || course.hoc_ky_mo_hien_thi === studentFilters.semester)
+      && (!studentFilters.searchValue || (
+        studentFilters.searchField === 'name'
+          ? course.ten_hoc_phan.toLowerCase().includes(studentFilters.searchValue.toLowerCase())
+          : course.ma_hoc_phan.toLowerCase().includes(studentFilters.searchValue.toLowerCase())
+      ))
     ))
     .map((course, index) => ({ ...course, studentRowNo: index + 1 }))
-  const studyPlanVisibleRows = studyPlanFilteredRows.slice(0, Number(studyPlanPageSize) || 20)
+  const studyPlanVisibleRows = studyPlanFilteredRows.slice(0, getPageSizeNumber(studyPlanPageSize, studyPlanFilteredRows.length))
   const studyPlanFilteredTotalCredits = studyPlanFilteredRows.reduce((sum, course) => sum + course.so_tin_chi, 0)
   const studentExportTitle = 'Danh Sách Học Phần Thuộc Chương Trình Đào Tạo Thực Hiện'
   const studentExportInfo = `Hệ: ${user?.educationSystem || 'Đại học và Cao đẳng chính quy'}. Ngành: ${studentMajor?.ten_nganh || 'Chưa cập nhật'} (${studentMajor?.ma_nganh || '---'}). Khóa học: ${studentAdmissionYear ?? 2023} (65). Mô hình đào tạo Tín chỉ.`
 
   const courseSyllabusHref = (course: CurriculumCourse) => (
-    `/dchp/${encodeURIComponent(`${course.ma_hoc_phan}-${course.ten_hoc_phan}.pdf`)}`
+    dchpHrefForCourseCode(course.ma_hoc_phan)
+      || [course.tai_lieu_tham_khao_url, course.de_cuong_hoc_phan_url]
+        .map((url) => url?.trim())
+        .find((url) => url && !url.startsWith('/dchp/'))
+      || null
   )
 
   const buildStudentExportHtml = (forPrint = false) => {
@@ -1098,8 +1194,10 @@ export default function StudentStudyPlanPage() {
 <html>
 <head>
   <meta charset="utf-8" />
+  ${printFaviconLink}
   <title>${escapeHtml(exportTitle)}</title>
   <style>
+    ${printBrandStyles}
     body { font-family: "Times New Roman", Arial, sans-serif; font-size: 12pt; color: #000; }
     .sheet { padding: ${forPrint ? '16px' : '0'}; }
     .top { width: 100%; border-collapse: collapse; margin-bottom: 26px; }
@@ -1121,7 +1219,7 @@ export default function StudentStudyPlanPage() {
   <div class="sheet">
     <table class="top">
       <tr>
-        <td style="width: 45%;">BỘ GIÁO DỤC VÀ ĐÀO TẠO<br />TRƯỜNG ĐẠI HỌC NHA TRANG</td>
+        <td style="width: 45%;">${printBrandHtml(MINISTRY_NAME)}</td>
         <td style="width: 55%;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br />Độc lập - Tự do - Hạnh phúc</td>
       </tr>
     </table>
@@ -1192,7 +1290,7 @@ export default function StudentStudyPlanPage() {
 
   const updatePlannedCourseTerm = (courseId: number, field: 'year' | 'semester', value: string) => {
     if (!studyPlanCanRegister) {
-      notifyStudyPlan('error', 'KhÃ´ng thá»ƒ Ä‘á»•i há»c ká»³', 'Hiá»‡n khÃ´ng trong thá»i gian Ä‘Äƒng kÃ½ káº¿ hoáº¡ch há»c táº­p.')
+      notifyStudyPlan('error', 'Không thể đổi học kỳ', 'Hiện không trong thời gian đăng ký kế hoạch học tập.')
       return
     }
 
@@ -1868,7 +1966,10 @@ export default function StudentStudyPlanPage() {
                       </thead>
                       <tbody>
                         {filteredStudentRows.length > 0 ? (
-                          filteredStudentRows.map((course) => (
+                          filteredStudentRows.map((course) => {
+                            const syllabusHref = courseSyllabusHref(course)
+
+                            return (
                             <tr key={`${course.id}-${course.studentRowNo}`}>
                               <td>{course.studentRowNo}</td>
                               <td>{course.ma_hoc_phan}</td>
@@ -1876,10 +1977,13 @@ export default function StudentStudyPlanPage() {
                               <td>{course.so_tin_chi}</td>
                               <td>
                                 <a
-                                  className="cp-reference-link"
-                                  href={courseSyllabusHref(course)}
+                                  className={`cp-reference-link${syllabusHref ? '' : ' cp-reference-link--disabled'}`}
+                                  href={syllabusHref ?? undefined}
                                   target="_blank"
                                   rel="noreferrer"
+                                  onClick={(event) => {
+                                    if (!syllabusHref) event.preventDefault()
+                                  }}
                                   title={`Xem đề cương học phần ${course.ma_hoc_phan}`}
                                   aria-label={`Xem đề cương học phần ${course.ma_hoc_phan}`}
                                 >
@@ -1901,7 +2005,8 @@ export default function StudentStudyPlanPage() {
                               <td>{course.hoc_ky_dat ?? ''}</td>
                               <td>{course.diem_dat ?? ''}</td>
                             </tr>
-                          ))
+                            )
+                          })
                         ) : (
                           <tr>
                             <td colSpan={14}>Không có học phần nào phù hợp với bộ lọc.</td>
@@ -1937,7 +2042,16 @@ export default function StudentStudyPlanPage() {
             ) : isStudentMode ? (
               <section className="cp-khht-panel">
                 <div className="cp-khht-student-line">
-                  <strong>Mã cố vấn học tập:</strong> 2001025. <strong>Họ tên:</strong> {displayName}.
+                  {advisor?.hasAdvisor ? (
+                    <>
+                      {advisor.code && <><strong>Mã cố vấn:</strong> {advisor.code}. </>}
+                      {advisor.name && <><strong>Họ tên:</strong> {advisor.name}. </>}
+                      {advisor.phone && <><strong>Điện thoại:</strong> {advisor.phone}. </>}
+                      {advisor.email && <><strong>Email:</strong> {advisor.email}</>}
+                    </>
+                  ) : (
+                    <strong>{advisorLine}</strong>
+                  )}
                 </div>
 
                 <div className="cp-khht-filter-area">
@@ -1988,7 +2102,7 @@ export default function StudentStudyPlanPage() {
                         aria-label="Tìm học phần"
                         options={[
                           { label: '---- Tất cả ----', value: '' },
-                          ...studentSearchOptions.map((option) => ({ label: option, value: option })),
+                          ...studyPlanSearchOptions.map((option) => ({ label: option, value: option })),
                         ]}
                       />
                     </div>
@@ -1997,7 +2111,7 @@ export default function StudentStudyPlanPage() {
                       selectSize="sm"
                       value={studyPlanPageSize}
                       onChange={(e) => setStudyPlanPageSize(e.target.value)}
-                      options={['1', '5', '10', '20', '50', '100', '500', '1000'].map((value) => ({ label: value, value }))}
+                      options={PAGE_SIZE_OPTIONS.map((value) => ({ label: getPageSizeLabel(value), value }))}
                     />
                   </div>
                 </div>
@@ -2098,7 +2212,7 @@ export default function StudentStudyPlanPage() {
                   {plannedConfirmedAt && (
                     <>
                       <br />
-                      <strong>Đã xác nhận:</strong> {new Date(plannedConfirmedAt).toLocaleString('vi-VN')}
+                      <strong>Đã xác nhận:</strong> {formatDisplayDateTime(plannedConfirmedAt)}
                     </>
                   )}
                   {!studyPlanCanRegister && (

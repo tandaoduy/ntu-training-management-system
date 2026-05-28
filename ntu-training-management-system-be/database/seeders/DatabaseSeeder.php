@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             DonViSeeder::class,
             NganhDaoTaoSeeder::class,
             CnttK65CurriculumSeeder::class,
+            HtttqlK65CurriculumSeeder::class,
             ProvinceDistrictSeeder::class,
         ]);
     }

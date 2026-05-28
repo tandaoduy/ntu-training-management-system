@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\HeThongCauHinh;
 use App\Models\HocKy;
+use App\Models\HocPhan;
 use App\Models\NamHoc;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,19 @@ class AcademicCatalogController extends Controller
             ->orderByDesc('nam_hoc_id')
             ->orderByRaw("CASE hoc_ky WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN 'Hè' THEN 3 ELSE 99 END")
             ->orderBy('id')
+            ->get());
+
+        return $this->jsonResponse([
+            'data' => $items,
+        ]);
+    }
+
+    public function hocPhans(): JsonResponse
+    {
+        $items = Cache::remember('academic_catalog:hoc_phans', now()->addMinutes(30), fn () => HocPhan::query()
+            ->select(['id', 'ma_hoc_phan', 'ten_hoc_phan', 'so_tin_chi'])
+            ->where('trang_thai', true)
+            ->orderBy('ma_hoc_phan')
             ->get());
 
         return $this->jsonResponse([

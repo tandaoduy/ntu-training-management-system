@@ -1,54 +1,87 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CalendarDaysIcon, ChartBarSquareIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import RoleLayout from '../../../layout/RoleLayout'
+import { apiGet } from '@/api/core/request'
+import { useAuth } from '@/api/query'
 import './LecturerDashboardPage.css'
 
-// ── Dữ liệu mẫu (thay bằng API thật sau) ─────────────────────────
-const stats = [
-  { icon: '📚', label: 'Lớp học trong học kỳ', value: '6', colorClass: 'blue' },
-  { icon: '📝', label: 'Bài tập chưa chấm', value: '24', colorClass: 'amber' },
-  { icon: '👥', label: 'Yêu cầu tư vấn', value: '8', colorClass: 'purple' },
-  { icon: '✅', label: 'Điểm danh hoàn thành', value: '95%', colorClass: 'green' },
-]
-
-const quickAccessLinks = [
-  { label: 'Lớp học của tôi', icon: '🏫', colorClass: 'blue', link: '/canbo/classes' },
-  { label: 'Chấm bài tập', icon: '📝', colorClass: 'amber', link: '/canbo/grading' },
-  { label: 'Danh sách sinh viên', icon: '👥', colorClass: 'cyan', link: '/canbo/students' },
-  { label: 'Điểm danh', icon: '✅', colorClass: 'green', link: '/canbo/attendance' },
-  { label: 'Tài liệu học tập', icon: '📄', colorClass: 'orange', link: '/canbo/materials' },
-  { label: 'Kế hoạch học tập', icon: '🗺️', colorClass: 'teal', link: '/canbo/studyplan' },
-  { label: 'Tin nhắn sinh viên', icon: '💬', colorClass: 'purple', link: '/canbo/messages' },
-  { label: 'Báo cáo tiến độ', icon: '📊', colorClass: 'indigo', link: '/canbo/reports' },
-]
-
-const pendingTasks = [
-  { id: 'TASK-001', title: 'Chấm bài kiểm tra Tuần 8', dueDate: '08/05/2025', priority: 'high' },
-  { id: 'TASK-002', title: 'Gửi bảng điểm học kỳ', dueDate: '15/05/2025', priority: 'high' },
-  { id: 'TASK-003', title: 'Trả lời tư vấn học tập', dueDate: '10/05/2025', priority: 'medium' },
-  { id: 'TASK-004', title: 'Cập nhật tài liệu bài giảng', dueDate: '12/05/2025', priority: 'low' },
-]
-
-const recentActivities = [
-  { action: 'Sinh viên Nguyễn Văn A nộp bài tập', time: '2 giờ trước', icon: '📥' },
-  { action: 'Cập nhật điểm danh buổi học chiều', time: '4 giờ trước', icon: '✅' },
-  { action: 'Phê duyệt yêu cầu tư vấn từ sinh viên', time: 'Hôm qua', icon: '💬' },
-  { action: 'Đăng tài liệu bài giảng mới', time: 'Hôm qua', icon: '📄' },
-]
-
-const classSummary = [
-  { className: 'Lập trình C++', students: '32', avgGrade: '7.8', attendance: '92%' },
-  { className: 'Cấu trúc dữ liệu', students: '28', avgGrade: '8.1', attendance: '95%' },
-  { className: 'Thuật toán', students: '30', avgGrade: '7.5', attendance: '88%' },
-  { className: 'Phát triển Web', students: '26', avgGrade: '8.3', attendance: '96%' },
-]
-
-const priorityLabel: Record<string, string> = {
-  high: 'Cao',
-  medium: 'Trung bình',
-  low: 'Thấp',
+type CurrentTermResponse = {
+  data: {
+    nam_hoc_id?: number | null
+    nam_hoc?: string | null
+    hoc_ky?: string | null
+  } | null
 }
 
+type AcademicYear = { id: number; nam_hoc: string }
+type AcademicTerm = { id: number; nam_hoc_id: number; hoc_ky: string }
+type CatalogResponse<T> = { data: T[] }
+
+const quickAccessLinks = [
+  { label: 'Quản lý điểm', icon: ChartBarSquareIcon, colorClass: 'amber', link: '/canbo/quanlydiem', permission: 'lecturer.grade-entry.manage' },
+  { label: 'Thời khóa biểu', icon: CalendarDaysIcon, colorClass: 'blue', link: '/canbo/thoikhoabieu', permission: 'lecturer.timetable.view' },
+  { label: 'Kế hoạch học tập', icon: ClipboardDocumentListIcon, colorClass: 'teal', link: '/canbo/studyplan', permission: 'lecturer.curriculum.view' },
+]
+
 export default function LecturerDashboardPage() {
+  const { user } = useAuth()
+  const [academicYear, setAcademicYear] = useState('')
+  const [semester, setSemester] = useState('')
+  const [years, setYears] = useState<AcademicYear[]>([])
+  const [terms, setTerms] = useState<AcademicTerm[]>([])
+  const [trainingSystem, setTrainingSystem] = useState('Đại học và Cao đẳng chính quy')
+  const enabledLinks = quickAccessLinks.filter((item) => user?.permissions?.includes(item.permission))
+
+  useEffect(() => {
+    let isMounted = true
+
+    Promise.all([
+      apiGet<CatalogResponse<AcademicYear>>('/academic-catalog/nam-hocs'),
+      apiGet<CurrentTermResponse>('/academic-catalog/current-term'),
+    ])
+      .then(([yearResponse, currentResponse]) => {
+        if (!isMounted) return
+        setYears(yearResponse.data ?? [])
+        setAcademicYear(String(currentResponse.data?.nam_hoc_id ?? yearResponse.data?.[0]?.id ?? ''))
+        setSemester(currentResponse.data?.hoc_ky ?? '')
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setYears([])
+        setAcademicYear('')
+        setSemester('')
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!academicYear) {
+      return
+    }
+
+    let isMounted = true
+    apiGet<CatalogResponse<AcademicTerm>>('/academic-catalog/hoc-kys', {
+      params: { nam_hoc_id: Number(academicYear) },
+    })
+      .then((response) => {
+        if (!isMounted) return
+        setTerms(response.data ?? [])
+        setSemester((current) => current || response.data?.[0]?.hoc_ky || '')
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setTerms([])
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [academicYear])
+
   return (
     <RoleLayout
       brandSubtitle="Hệ thống Đào tạo"
@@ -58,104 +91,54 @@ export default function LecturerDashboardPage() {
       roleTitle="Giảng viên"
     >
       <main className="ld-main">
-        {/* ── Quick Access ── */}
-        <div className="ld-quick-access-section">
-          <h2 className="ld-section-title">Truy cập nhanh</h2>
-          <div className="ld-qa-grid">
-            {quickAccessLinks.map((item) => (
-              <Link to={item.link} key={item.label} className="ld-qa-card">
-                <div className={`ld-qa-icon ${item.colorClass}`}>
-                  {item.icon}
-                </div>
-                <span className="ld-qa-label">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <div className="ld-content-container">
+          <section className="ld-filter-bar" aria-label="Thông tin học kỳ">
+            <label>
+              <span>Hệ đào tạo</span>
+              <select value={trainingSystem} onChange={(event) => setTrainingSystem(event.target.value)}>
+                <option value="Đại học và Cao đẳng chính quy">Đại học và Cao đẳng chính quy</option>
+                <option value="Vừa học vừa làm">Vừa học vừa làm</option>
+                <option value="Đào tạo từ xa">Đào tạo từ xa</option>
+              </select>
+            </label>
+            <label>
+              <span>Năm học</span>
+              <select value={academicYear} onChange={(event) => { setAcademicYear(event.target.value); setSemester('') }}>
+                <option value="">Chọn năm học</option>
+                {years.map((year) => <option key={year.id} value={year.id}>{year.nam_hoc}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Học kỳ</span>
+              <select value={semester} onChange={(event) => setSemester(event.target.value)}>
+                <option value="">Chọn học kỳ</option>
+                {terms.map((term) => <option key={term.id} value={term.hoc_ky}>{term.hoc_ky}</option>)}
+              </select>
+            </label>
+          </section>
 
-        {/* ── Stat Cards ── */}
-        <div className="ld-stats">
-          {stats.map((s) => (
-            <div key={s.label} className="ld-stat-card">
-              <div className={`ld-stat-icon ${s.colorClass}`}>{s.icon}</div>
-              <div className="ld-stat-value">{s.value}</div>
-              <div className="ld-stat-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
+          <section className="ld-quick-access-section">
+            <div className="ld-qa-grid">
+              {enabledLinks.map((item) => {
+                const Icon = item.icon
 
-        {/* ── Grid 2 cột ── */}
-        <div className="ld-grid">
-          {/* Công việc cần làm */}
-          <div className="ld-panel">
-            <div className="ld-panel-header">
-              <span className="ld-panel-title">⏳ Công việc cần làm</span>
-              <a href="#" className="ld-panel-link">Xem tất cả</a>
-            </div>
-            <div className="ld-panel-body">
-              <div className="ld-list">
-                {pendingTasks.map((t) => (
-                  <div key={t.id} className="ld-list-item">
-                    <div className="ld-list-content">
-                      <span className="ld-list-title">{t.title}</span>
-                      <span className="ld-list-desc">Hạn: {t.dueDate}</span>
+                return (
+                  <Link to={item.link} key={item.label} className="ld-qa-card">
+                    <div className="ld-qa-card-inner">
+                      <div className={`ld-qa-icon ${item.colorClass}`}><Icon aria-hidden="true" /></div>
+                      <span className="ld-qa-label">{item.label}</span>
+                      <span className="ld-qa-arrow" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="5" x2="19" y1="12" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                      </span>
                     </div>
-                    <span className={`ld-badge ${t.priority}`}>{priorityLabel[t.priority]}</span>
-                  </div>
-                ))}
-              </div>
+                  </Link>
+                )
+              })}
             </div>
-          </div>
-
-          {/* Hoạt động gần đây */}
-          <div className="ld-panel">
-            <div className="ld-panel-header">
-              <span className="ld-panel-title">📋 Hoạt động gần đây</span>
-            </div>
-            <div className="ld-panel-body">
-              <div className="ld-timeline">
-                {recentActivities.map((log, idx) => (
-                  <div key={idx} className="ld-timeline-item">
-                    <div className="ld-timeline-icon">{log.icon}</div>
-                    <div className="ld-timeline-content">
-                      <div className="ld-timeline-title">{log.action}</div>
-                      <div className="ld-timeline-time">{log.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Tóm tắt lớp học – full width */}
-          <div className="ld-panel" style={{ gridColumn: '1 / -1' }}>
-            <div className="ld-panel-header">
-              <span className="ld-panel-title">📚 Tóm tắt các lớp học</span>
-              <a href="/canbo/classes" className="ld-panel-link">Xem tất cả</a>
-            </div>
-            <div className="ld-panel-body">
-              <table className="ld-class-table">
-                <thead>
-                  <tr>
-                    <th>Tên lớp</th>
-                    <th>Sinh viên</th>
-                    <th>Điểm TB</th>
-                    <th>Điểm danh</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {classSummary.map((c, idx) => (
-                    <tr key={idx}>
-                      <td>{c.className}</td>
-                      <td>{c.students}</td>
-                      <td>{c.avgGrade}</td>
-                      <td>{c.attendance}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </section>
         </div>
       </main>
     </RoleLayout>

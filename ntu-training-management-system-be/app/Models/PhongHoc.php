@@ -16,11 +16,9 @@ class PhongHoc extends Model
     protected $fillable = [
         'giang_duong_id',
         'ma_phong',
-        'suc_chua',
     ];
 
     protected $casts = [
-        'suc_chua' => 'integer',
     ];
 
     public function giangDuong(): BelongsTo

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../api/query'
 import { Modal } from '@/components/modal'
+import { SCHOOL_NAME, SYSTEM_NAME } from '../../branding'
 import logoImage from '../../../assets/Logo_NTU.png'
 import './AdminLayout.css'
 
@@ -36,17 +37,17 @@ export default function AdminLayout() {
       {/* ── HEADER ── */}
       <header className="ad-header-modern">
         <div className="ad-topbar-main">
-          <div className="ad-brand-group">
+          <button type="button" className="ad-brand-group" onClick={goHome} title="Về dashboard quản trị" aria-label="Về dashboard quản trị">
             <img src={logoImage} alt="NTU Logo" className="ad-brand-logo" />
             <div className="ad-brand-text">
-              <h2 className="ad-brand-title">TRƯỜNG ĐẠI HỌC NHA TRANG</h2>
-              <span className="ad-brand-subtitle">Hệ thống Quản trị</span>
+              <h2 className="ad-brand-title">{SCHOOL_NAME}</h2>
+              <span className="ad-brand-subtitle">{SYSTEM_NAME}</span>
             </div>
-          </div>
+          </button>
 
           <div className="ad-user-group">
             <div className="ad-user-info">
-              <span className="ad-user-role">ADMINISTRATOR</span>
+              <span className="ad-user-role">QUẢN TRỊ VIÊN</span>
             </div>
           </div>
         </div>

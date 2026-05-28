@@ -132,6 +132,7 @@ class AccountProvisioningService
                 'gioi_tinh' => $payload['gioi_tinh'] ?? null,
                 'que_quan' => $payload['que_quan'] ?? null,
                 'chuc_vu' => $payload['chuc_vu'] ?? null,
+                'don_vi_id' => $payload['don_vi_id'],
             ]);
 
             $user->forceFill([

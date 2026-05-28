@@ -3,10 +3,12 @@ import type { CSSProperties, FormEvent, ReactNode } from 'react'
 
 import { apiDelete, apiGet, apiPost, apiPut } from '../../../../api/core/request'
 import { useAlert } from '@/components/alert'
+import { Breadcrumbs } from '@/components/breadcrumbs'
 import { Button } from '@/components/button'
 import { DatePicker } from '@/components/date-picker'
 import { Input } from '@/components/input'
 import { useModal } from '@/components/modal'
+import { Pagination, getPageSizeNumber } from '@/components/pagination'
 import { Select } from '@/components/select'
 import { isFourDigitYearDate } from '@/utils/dateInput'
 import './AdminAccountPage.css'
@@ -216,7 +218,7 @@ const ROLES: RoleCard[] = [
   },
   {
     id: 'training_officer',
-    title: 'Chuyên viên',
+    title: 'Chuyên viên phòng đào tạo',
     color: '#38b2ac',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 11h6"/><path d="M19 8v6"/></svg>
@@ -224,7 +226,7 @@ const ROLES: RoleCard[] = [
   },
   {
     id: 'manager',
-    title: 'Quản lý',
+    title: 'Quản lý đơn vị',
     color: '#dd6b20',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
@@ -252,7 +254,6 @@ const ADMISSION_YEAR_REGEX = /^\d{4}$/
 const MIN_ADMISSION_YEAR = 2023
 const PERSON_NAME_REGEX = /^[\p{L}\p{M}\s]+$/u
 const NTU_EMAIL_DOMAIN = '@ntu.edu.vn'
-
 const sanitizeStudentCode = (value: string): string => {
   return value.replace(/\D/g, '').slice(0, 8)
 }
@@ -343,6 +344,8 @@ const normalizeNtuEmail = (value: string): string => {
 
 const removeVietnameseMarks = (value: string): string => {
   return value
+    .replace(/\u0111/g, 'd')
+    .replace(/\u0110/g, 'D')
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D')
     .normalize('NFD')
@@ -369,8 +372,48 @@ const generateNtuEmailFromName = (value: string): string => {
   return localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : ''
 }
 
+const getClassBlockCode = (className: string): string => {
+  const normalizedClassName = removeVietnameseMarks(className).toLocaleLowerCase('vi-VN')
+  const match = normalizedClassName.match(/(\d+)\s*\.\s*([a-z0-9]+)/u)
+
+  if (match) {
+    return `${match[1]}${match[2]}`.replace(/[^a-z0-9]/g, '')
+  }
+
+  return normalizedClassName.split('-')[0]?.replace(/[^a-z0-9]/g, '') ?? ''
+}
+
+const buildStudentEmailLocalPart = (fullName: string, className: string, expandedLetters = 1): string => {
+  const words = normalizePersonName(fullName)
+    .split(/\s+/)
+    .filter(Boolean)
+  const classBlockCode = getClassBlockCode(className)
+
+  if (words.length === 0 || !classBlockCode) {
+    return ''
+  }
+
+  const asciiWords = words.map((word) => removeVietnameseMarks(word).toLocaleLowerCase('vi-VN'))
+  const givenName = asciiWords.at(-1) ?? ''
+  const prefixWords = asciiWords.slice(0, -1)
+  const lastMiddleIndex = Math.max(0, prefixWords.length - 1)
+  const nameInitials = prefixWords
+    .map((word, index) => {
+      const length = index === lastMiddleIndex ? expandedLetters : 1
+
+      return word.slice(0, Math.max(1, length))
+    })
+    .join('')
+  const localPart = [givenName, nameInitials, classBlockCode]
+    .filter(Boolean)
+    .join('.')
+    .replace(/[^a-z0-9.]/g, '')
+
+  return localPart
+}
+
 const shouldAutoGenerateEmail = (role: RoleId | null): boolean => {
-  return role === 'lecturer' || role === 'training_officer' || role === 'manager'
+  return role === 'lecturer' || role === 'training_officer'
 }
 
 export default function AdminAccountPage() {
@@ -387,6 +430,8 @@ export default function AdminAccountPage() {
   const [newAccount, setNewAccount] = useState<NewAccountState>(EMPTY_ACCOUNT)
   const [accountSearch, setAccountSearch] = useState('')
   const [unitFilter, setUnitFilter] = useState('')
+  const [accountPage, setAccountPage] = useState(1)
+  const [accountPageSize, setAccountPageSize] = useState('10')
   const [formErrors, setFormErrors] = useState<AccountFormErrors>({})
   const [donVis, setDonVis] = useState<DonViOption[]>([])
   const [danTocs, setDanTocs] = useState<DanTocOption[]>([])
@@ -421,6 +466,7 @@ export default function AdminAccountPage() {
   useEffect(() => {
     setAccountSearch('')
     setUnitFilter('')
+    setAccountPage(1)
   }, [selectedRole])
 
   const loadStudentCatalog = useCallback(async () => {
@@ -519,13 +565,13 @@ export default function AdminAccountPage() {
   }, [loadStudentCatalog, loadProvinces, showModal, selectedRole])
 
   useEffect(() => {
-    if (showModal && selectedRole === 'lecturer') {
+    if (showModal && selectedRole && selectedRole !== 'student') {
       void loadDonVis()
     }
   }, [loadDonVis, showModal, selectedRole])
 
   useEffect(() => {
-    if (selectedRole === 'lecturer') {
+    if (selectedRole) {
       void loadDonVis()
     }
   }, [loadDonVis, selectedRole])
@@ -543,42 +589,71 @@ export default function AdminAccountPage() {
   }, [accounts])
 
   const activeRole = ROLES.find((role) => role.id === selectedRole)
+  const getAccountUnit = useCallback(
+    (account: AdminAccount) => {
+      return donVis.find((donVi) => donVi.id === account.profile?.don_vi_id)
+    },
+    [donVis],
+  )
+
   const currentAccounts = useMemo(() => {
     if (!selectedRole) {
       return []
     }
 
     let roleAccounts = accounts.filter((account) => account.role === selectedRole)
+    const keyword = accountSearch.trim().toLowerCase()
 
-    if (selectedRole === 'lecturer') {
-      const keyword = accountSearch.trim().toLowerCase()
+    roleAccounts = roleAccounts
+      .filter((account) => {
+        const unitId = account.profile?.don_vi_id
+        const unit = getAccountUnit(account)
 
-      roleAccounts = roleAccounts
-        .filter((account) => {
-          const unitId = account.profile?.don_vi_id
-          const unit = donVis.find((donVi) => donVi.id === unitId)
+        if (unitFilter && String(unitId ?? '') !== unitFilter) {
+          return false
+        }
 
-          if (unitFilter && String(unitId ?? '') !== unitFilter) {
-            return false
-          }
+        if (!keyword) {
+          return true
+        }
 
-          if (!keyword) {
-            return true
-          }
-
-          return [
-            account.username,
-            account.display_name ?? '',
-            account.email ?? '',
-            unit?.ten_don_vi ?? '',
-            unit?.ma_don_vi ?? '',
-          ].some((value) => value.toLowerCase().includes(keyword))
-        })
-        .sort((a, b) => a.username.localeCompare(b.username, 'vi', { numeric: true }))
-    }
+        return [
+          account.username,
+          account.display_name ?? '',
+          account.email ?? '',
+          unit?.ten_don_vi ?? '',
+          unit?.ma_don_vi ?? '',
+        ].some((value) => value.toLowerCase().includes(keyword))
+      })
+      .sort((a, b) => a.username.localeCompare(b.username, 'vi', { numeric: true }))
 
     return roleAccounts
-  }, [accountSearch, accounts, donVis, selectedRole, unitFilter])
+  }, [accountSearch, accounts, getAccountUnit, selectedRole, unitFilter])
+
+  const accountPageSizeNumber = getPageSizeNumber(accountPageSize, currentAccounts.length)
+  const totalAccountPages = accountPageSize === 'all'
+    ? 1
+    : Math.max(1, Math.ceil(currentAccounts.length / accountPageSizeNumber))
+  const paginatedAccounts = useMemo(() => {
+    const safePage = Math.min(accountPage, totalAccountPages)
+    const startIndex = (safePage - 1) * accountPageSizeNumber
+
+    return accountPageSize === 'all'
+      ? currentAccounts
+      : currentAccounts.slice(startIndex, startIndex + accountPageSizeNumber)
+  }, [accountPage, accountPageSize, accountPageSizeNumber, currentAccounts, totalAccountPages])
+
+  useEffect(() => {
+    setAccountPage(1)
+  }, [accountPageSize, accountSearch, unitFilter])
+
+  useEffect(() => {
+    if (accountPage > totalAccountPages) {
+      setAccountPage(totalAccountPages)
+    }
+  }, [accountPage, totalAccountPages])
+
+  const tableColumnCount = selectedRole === 'lecturer' ? 6 : 5
   const selectedDonVi = donVis.find((donVi) => String(donVi.id) === newAccount.donViId)
   const selectedLop = selectedDonVi?.lops.find((lop) => String(lop.id) === newAccount.lopId)
   const selectedNganhDaoTao = selectedDonVi?.nganh_dao_taos.find(
@@ -606,6 +681,45 @@ export default function AdminAccountPage() {
     )
   }
 
+  const generateUniqueStudentEmail = (fullName: string, className: string, exceptId?: number): string => {
+    const words = normalizePersonName(fullName).split(/\s+/).filter(Boolean)
+    const lastMiddleNameLength = words.length > 1
+      ? removeVietnameseMarks(words.at(-2) ?? '').replace(/[^a-z0-9]/gi, '').length
+      : 1
+
+    for (let expandedLetters = 1; expandedLetters <= Math.max(1, lastMiddleNameLength); expandedLetters += 1) {
+      const localPart = buildStudentEmailLocalPart(fullName, className, expandedLetters)
+      const email = localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : ''
+
+      if (email && !findAccountByEmail(email, exceptId)) {
+        return email
+      }
+    }
+
+    const baseLocalPart = buildStudentEmailLocalPart(fullName, className, Math.max(1, lastMiddleNameLength))
+    if (!baseLocalPart) {
+      return ''
+    }
+
+    for (let suffix = 2; suffix < 1000; suffix += 1) {
+      const email = `${baseLocalPart}${suffix}${NTU_EMAIL_DOMAIN}`
+
+      if (!findAccountByEmail(email, exceptId)) {
+        return email
+      }
+    }
+
+    return `${baseLocalPart}${Date.now()}${NTU_EMAIL_DOMAIN}`
+  }
+
+  const generateAutoEmailForForm = (role: RoleId | null, fullName: string, className = '', exceptId?: number): string => {
+    if (role === 'student') {
+      return generateUniqueStudentEmail(fullName, className, exceptId)
+    }
+
+    return shouldAutoGenerateEmail(role) ? generateNtuEmailFromName(fullName) : ''
+  }
+
   const validateAccountForm = (account: NewAccountState): AccountFormErrors => {
     const errors: AccountFormErrors = {}
     const fullName = account.fullName.trim()
@@ -618,7 +732,7 @@ export default function AdminAccountPage() {
       errors.username = 'Mã giảng viên phải gồm đúng 7 chữ số.'
     }
 
-    if (selectedRole === 'lecturer' && !account.donViId) {
+    if (selectedRole && selectedRole !== 'student' && !account.donViId) {
       errors.donViId = 'Vui lòng chọn đơn vị.'
     }
 
@@ -626,7 +740,7 @@ export default function AdminAccountPage() {
       errors.username = 'Mã tài khoản này đã tồn tại ở một vai trò khác.'
     }
 
-    if (findAccountByEmail(account.email)) {
+    if (selectedRole !== 'manager' && findAccountByEmail(account.email)) {
       errors.email = 'Email này đã được sử dụng ở một tài khoản khác.'
     }
 
@@ -731,7 +845,13 @@ export default function AdminAccountPage() {
         ? getAcademicCohort(sanitizeAdmissionYear(newAccount.namNhapHoc), selectedTrainingDuration)
         : newAccount.khoaHoc.trim(),
       fullName: normalizePersonName(newAccount.fullName),
-      email: normalizeNtuEmail(newAccount.email),
+      email: selectedRole === 'manager'
+        ? ''
+        : normalizeNtuEmail(
+          selectedRole === 'student'
+            ? generateUniqueStudentEmail(newAccount.fullName, selectedLop?.lop_hoc_phan ?? newAccount.maLop) || newAccount.email
+            : newAccount.email,
+        ),
       phone: selectedRole === 'lecturer' ? sanitizePhoneNumber(newAccount.phone) : newAccount.phone.trim(),
     }
     const errors = validateAccountForm(normalizedAccount)
@@ -756,11 +876,11 @@ export default function AdminAccountPage() {
         username: normalizedAccount.username,
         password: normalizedAccount.password || '123456789',
         name: normalizedAccount.fullName,
-        email: normalizedAccount.email || null,
+        email: selectedRole === 'manager' ? undefined : normalizedAccount.email || null,
         phone: selectedRole === 'lecturer' ? normalizedAccount.phone || null : undefined,
         gioi_tinh: selectedRole === 'student' ? normalizedAccount.gioiTinh || null : undefined,
         ngay_sinh: selectedRole === 'student' ? normalizedAccount.ngaySinh || null : undefined,
-        don_vi_id: selectedRole === 'student' || selectedRole === 'lecturer'
+        don_vi_id: selectedRole === 'student' || selectedRole === 'lecturer' || selectedRole === 'training_officer' || selectedRole === 'manager'
           ? Number(normalizedAccount.donViId) || null
           : undefined,
         lop_id: selectedRole === 'student' ? Number(normalizedAccount.lopId) || null : undefined,
@@ -802,7 +922,7 @@ export default function AdminAccountPage() {
         role_name: activeRole?.title ?? null,
         status: true,
         display_name: normalizedAccount.fullName,
-        email: normalizedAccount.email.trim() || null,
+        email: selectedRole === 'manager' ? null : normalizedAccount.email.trim() || null,
       })
     } catch (error: unknown) {
       showAlert({
@@ -994,13 +1114,6 @@ export default function AdminAccountPage() {
 
   return (
     <div className="aa-root">
-      <div className="aa-header">
-        <div>
-          <h1 className="aa-title">Quản lý Tài khoản</h1>
-          <p className="aa-subtitle">Quản lý danh sách tài khoản và phân quyền người dùng trong hệ thống</p>
-        </div>
-      </div>
-
       {!selectedRole && (
         <div className="aa-card-grid">
           {ROLES.map((role) => (
@@ -1012,10 +1125,13 @@ export default function AdminAccountPage() {
               onClick={() => setSelectedRole(role.id)}
             >
               <div className="aa-role-icon">{role.icon}</div>
-              <h3 className="aa-role-title">{role.title}</h3>
-              <span className="aa-role-count">
-                {isLoading ? 'Đang tải...' : `${accountCounts[role.id]} tài khoản`}
-              </span>
+              <div className="aa-role-content">
+                <h3 className="aa-role-title">{role.title}</h3>
+                <span className="aa-role-count">
+                  {isLoading ? 'Đang tải...' : `${accountCounts[role.id]} tài khoản`}
+                </span>
+              </div>
+              <svg className="aa-role-arrow" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </button>
           ))}
         </div>
@@ -1024,23 +1140,32 @@ export default function AdminAccountPage() {
       {selectedRole && activeRole && (
         <div className="aa-list-view">
           <div className="aa-toolbar">
-            <Button className="aa-btn-back" variant="secondary" onClick={() => setSelectedRole(null)}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              Quay lại danh sách vai trò
-            </Button>
+            <Breadcrumbs
+              className="aa-breadcrumbs"
+              items={[
+                {
+                  label: (
+                    <button type="button" className="aa-breadcrumb-button" onClick={() => setSelectedRole(null)}>
+                      Danh sách vai trò
+                    </button>
+                  ),
+                },
+                { label: activeRole.title },
+              ]}
+            />
             <Button className="aa-btn-primary" onClick={openCreateModal}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
               Tạo tài khoản {activeRole.title.toLowerCase()}
             </Button>
           </div>
 
-          {selectedRole === 'lecturer' && (
+          {selectedRole && (
             <div className="aa-filter-bar">
               <Input
                 type="search"
                 className="aa-input"
                 containerClassName="aa-filter-field"
-                placeholder="Tìm mã, tên, email..."
+                placeholder={selectedRole === 'manager' ? 'Tìm mã, tên, đơn vị...' : 'Tìm mã, tên, email...'}
                 value={accountSearch}
                 onChange={(event) => setAccountSearch(event.target.value)}
               />
@@ -1078,26 +1203,26 @@ export default function AdminAccountPage() {
                   <th>Mã tài khoản</th>
                   <th>Họ và Tên</th>
                   {selectedRole === 'lecturer' && <th>Tên đơn vị</th>}
-                  <th>Email</th>
+                  <th>{selectedRole === 'manager' ? 'Đơn vị quản lý' : 'Email'}</th>
                   <th>Trạng thái</th>
-                  <th style={{ width: selectedRole === 'student' ? '80px' : selectedRole === 'lecturer' ? '150px' : '112px', textAlign: 'center' }}>Thao tác</th>
+                  <th style={{ width: selectedRole === 'student' ? '124px' : selectedRole === 'lecturer' ? '150px' : '112px', textAlign: 'center' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={selectedRole === 'lecturer' ? 6 : 5} style={{ textAlign: 'center', padding: '32px', color: '#718096' }}>
+                    <td colSpan={tableColumnCount} style={{ textAlign: 'center', padding: '32px', color: '#718096' }}>
                       Đang tải dữ liệu...
                     </td>
                   </tr>
                 ) : currentAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={selectedRole === 'lecturer' ? 6 : 5} style={{ textAlign: 'center', padding: '32px', color: '#718096' }}>
+                    <td colSpan={tableColumnCount} style={{ textAlign: 'center', padding: '32px', color: '#718096' }}>
                       Chưa có tài khoản nào
                     </td>
                   </tr>
                 ) : (
-                  currentAccounts.map((account) => (
+                  paginatedAccounts.map((account) => (
                     <tr key={account.id}>
                       <td style={{ fontWeight: 500 }}>{account.username}</td>
                       <td>{account.display_name || account.username}</td>
@@ -1106,7 +1231,11 @@ export default function AdminAccountPage() {
                           {donVis.find((donVi) => donVi.id === account.profile?.don_vi_id)?.ten_don_vi ?? 'Chưa có đơn vị'}
                         </td>
                       )}
-                      <td>{account.email || 'Chưa có email'}</td>
+                      <td>
+                        {selectedRole === 'manager'
+                          ? donVis.find((donVi) => donVi.id === account.profile?.don_vi_id)?.ten_don_vi ?? 'Chưa có đơn vị'
+                          : account.email || 'Chưa có email'}
+                      </td>
                       <td>
                         <span className={`aa-status ${account.status ? 'active' : 'inactive'}`}>
                           {account.status ? 'Hoạt động' : 'Đã khóa'}
@@ -1152,6 +1281,17 @@ export default function AdminAccountPage() {
               </tbody>
             </table>
           </div>
+          {currentAccounts.length > 0 && (
+            <div className="aa-pagination">
+              <Pagination
+                page={accountPage}
+                totalPages={totalAccountPages}
+                onPageChange={setAccountPage}
+                pageSize={accountPageSize}
+                onPageSizeChange={setAccountPageSize}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -1216,9 +1356,8 @@ export default function AdminAccountPage() {
                 error={formErrors.fullName}
                 onChange={(event) => {
                   const fullName = event.target.value
-                  const email = shouldAutoGenerateEmail(selectedRole)
-                    ? generateNtuEmailFromName(fullName)
-                    : newAccount.email
+                  const autoEmail = generateAutoEmailForForm(selectedRole, fullName, newAccount.maLop, editingAccount?.id)
+                  const email = selectedRole === 'manager' ? '' : autoEmail || newAccount.email
 
                   setNewAccount({
                     ...newAccount,
@@ -1228,16 +1367,15 @@ export default function AdminAccountPage() {
                   setFormErrors({
                     ...formErrors,
                     fullName: getPersonNameError(fullName),
-                    email: findAccountByEmail(email, editingAccount?.id)
+                    email: selectedRole !== 'manager' && findAccountByEmail(email, editingAccount?.id)
                       ? 'Email này đã được sử dụng ở một tài khoản khác.'
                       : undefined,
                   })
                 }}
                 onBlur={() => {
                   const fullName = normalizePersonName(newAccount.fullName)
-                  const email = shouldAutoGenerateEmail(selectedRole)
-                    ? generateNtuEmailFromName(fullName)
-                    : newAccount.email
+                  const autoEmail = generateAutoEmailForForm(selectedRole, fullName, newAccount.maLop, editingAccount?.id)
+                  const email = selectedRole === 'manager' ? '' : autoEmail || newAccount.email
 
                   setNewAccount({
                     ...newAccount,
@@ -1246,15 +1384,15 @@ export default function AdminAccountPage() {
                   })
                   setFormErrors({
                     ...formErrors,
-                    email: findAccountByEmail(email, editingAccount?.id)
+                    email: selectedRole !== 'manager' && findAccountByEmail(email, editingAccount?.id)
                       ? 'Email này đã được sử dụng ở một tài khoản khác.'
                       : undefined,
                   })
                 }}
               />
-              {selectedRole === 'lecturer' && (
+              {selectedRole && selectedRole !== 'student' && (
                 <Select
-                  label="Tên đơn vị *"
+                  label={selectedRole === 'manager' ? 'Đơn vị quản lý *' : 'Tên đơn vị *'}
                   className="aa-input"
                   containerClassName="aa-form-group"
                   required
@@ -1301,32 +1439,34 @@ export default function AdminAccountPage() {
                   }}
                 />
               )}
-              <div className="aa-form-group">
-                <label>Email liên hệ</label>
-                <div className={`aa-email-input ${formErrors.email ? 'aa-email-input-error' : ''}`}>
-                  <input
-                    type="text"
-                    className="aa-input aa-email-local"
-                    placeholder="Nhập email..."
-                    value={getEmailLocalPart(newAccount.email)}
-                    onChange={(event) => {
-                      const localPart = getEmailLocalPart(event.target.value)
-                      setNewAccount({
-                        ...newAccount,
-                        email: localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : '',
-                      })
-                      setFormErrors({
-                        ...formErrors,
-                        email: findAccountByEmail(localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : '', editingAccount?.id)
-                          ? 'Email này đã được sử dụng ở một tài khoản khác.'
-                          : undefined,
-                      })
-                    }}
-                  />
-                  <span>{NTU_EMAIL_DOMAIN}</span>
+              {selectedRole !== 'manager' && (
+                <div className="aa-form-group">
+                  <label>Email liên hệ</label>
+                  <div className={`aa-email-input ${formErrors.email ? 'aa-email-input-error' : ''}`}>
+                    <input
+                      type="text"
+                      className="aa-input aa-email-local"
+                      placeholder="Nhập email..."
+                      value={getEmailLocalPart(newAccount.email)}
+                      onChange={(event) => {
+                        const localPart = getEmailLocalPart(event.target.value)
+                        setNewAccount({
+                          ...newAccount,
+                          email: localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : '',
+                        })
+                        setFormErrors({
+                          ...formErrors,
+                          email: findAccountByEmail(localPart ? `${localPart}${NTU_EMAIL_DOMAIN}` : '', editingAccount?.id)
+                            ? 'Email này đã được sử dụng ở một tài khoản khác.'
+                            : undefined,
+                        })
+                      }}
+                    />
+                    <span>{NTU_EMAIL_DOMAIN}</span>
+                  </div>
+                  {formErrors.email && <span className="aa-field-error">{formErrors.email}</span>}
                 </div>
-                {formErrors.email && <span className="aa-field-error">{formErrors.email}</span>}
-              </div>
+              )}
               {selectedRole === 'student' && (
                 <>
                   <div className="aa-form-grid">
@@ -1363,6 +1503,7 @@ export default function AdminAccountPage() {
                             donViId: event.target.value,
                             lopId: '',
                             maLop: '',
+                            email: selectedRole === 'student' ? '' : newAccount.email,
                             tenDonVi: donVi?.ten_don_vi ?? '',
                             nganhDaoTaoId: '',
                             tenNganhHoc: '',
@@ -1386,10 +1527,13 @@ export default function AdminAccountPage() {
                         value={newAccount.lopId}
                         onChange={(event) => {
                           const lop = selectedDonVi?.lops.find((item) => String(item.id) === event.target.value)
+                          const maLop = lop?.lop_hoc_phan ?? ''
+                          const autoEmail = generateAutoEmailForForm(selectedRole, newAccount.fullName, maLop, editingAccount?.id)
                           setNewAccount({
                             ...newAccount,
                             lopId: event.target.value,
-                            maLop: lop?.lop_hoc_phan ?? '',
+                            maLop,
+                            email: autoEmail || newAccount.email,
                           })
                         }}
                         disabled={!newAccount.donViId || isCatalogLoading}

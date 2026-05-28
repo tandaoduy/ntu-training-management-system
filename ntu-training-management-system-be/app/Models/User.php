@@ -180,7 +180,10 @@ class User extends Authenticatable
             $role = $this->role()->first();
 
             if ($role?->code === 'admin') {
-                return Permission::query()->pluck('code')->toArray();
+                return Permission::query()
+                    ->where('module', 'admin')
+                    ->pluck('code')
+                    ->toArray();
             }
 
             return $role?->permissions()->pluck('code')->toArray() ?? [];

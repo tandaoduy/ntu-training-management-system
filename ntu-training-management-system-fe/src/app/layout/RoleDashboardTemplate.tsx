@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../api/query'
+import { SYSTEM_NAME } from '../branding'
 import logoImage from '../../assets/Logo_NTU.png'
 import './RoleDashboardTemplate.css'
 
@@ -47,7 +48,7 @@ export default function RoleDashboardTemplate({
     navigate('/login', { replace: true })
   }
 
-  const displayName = user?.username ?? roleTitle
+  const displayName = user?.name?.trim() || user?.username || roleTitle
   const avatarLetter = displayName.charAt(0).toUpperCase()
 
   return (
@@ -56,7 +57,7 @@ export default function RoleDashboardTemplate({
         <div className="rd-brand">
           <img src={logoImage} alt="NTU" className="rd-logo" />
           <div>
-            <p className="rd-brand-title">NTU Training Management</p>
+            <p className="rd-brand-title">{SYSTEM_NAME}</p>
             <p className="rd-brand-subtitle">{roleTitle} dashboard template</p>
           </div>
         </div>

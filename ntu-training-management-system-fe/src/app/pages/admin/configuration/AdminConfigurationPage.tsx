@@ -5,6 +5,7 @@ import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import { Select } from '@/components/select'
 import { isFourDigitYearDate, sanitizeDateInputValue } from '@/utils/dateInput'
+import { formatDisplayDate } from '@/utils/dateFormat'
 import { clampPositiveInteger } from '@/utils/numberInput'
 import './AdminConfigurationPage.css'
 
@@ -67,9 +68,7 @@ const toMessage = (error: unknown, fallback: string) => {
 }
 
 const formatDate = (value?: string | null) => {
-  if (!value) return '-'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+  return formatDisplayDate(value) || '-'
 }
 
 export default function AdminConfigurationPage() {

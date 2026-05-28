@@ -1,0 +1,1437 @@
+.student-registration-shell,
+.student-registration-page,
+.student-registration-page button,
+.student-registration-page input,
+.student-registration-page select,
+.student-registration-page table,
+.student-change-group-modal,
+.student-class-timetable-modal {
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+.student-registration-page {
+  color: #172033;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.student-registration-title {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.student-registration-meta,
+.student-registration-summary {
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.student-registration-table th,
+.student-schedule-table th {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+.student-registration-table td,
+.student-schedule-table td {
+  color: #172033;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.student-registration-table strong,
+.student-schedule-table strong {
+  font-weight: 700;
+}
+
+.student-schedule-table th {
+  font-size: 12.5px;
+}
+
+.student-schedule-table td {
+  font-size: 12.5px;
+}
+
+.to-registration-class-select.compact {
+  color: #172033;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.student-confirmed {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-icon-btn {
+  font-family: inherit;
+}
+
+.student-change-group-modal {
+  display: grid;
+  gap: 10px;
+  min-width: min(1120px, calc(100vw - 56px));
+}
+
+.student-change-group-title {
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.student-change-group-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #cbd8e6;
+  background: #fff;
+}
+
+.student-change-group-table {
+  width: 100%;
+  min-width: 940px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.student-change-group-table th {
+  background: #2f6fa5;
+  border: 1px solid #b9cfe2;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.student-change-group-table td {
+  border: 1px solid #dde7f0;
+  color: #10213d;
+  font-size: 14px;
+  font-weight: 500;
+  height: 30px;
+  padding: 5px 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.student-change-group-table tbody tr:nth-child(odd) {
+  background: #f8fbfe;
+}
+
+.student-change-group-table tbody tr.is-current {
+  background: #eef7ff;
+}
+
+.student-change-group-table th:nth-child(1),
+.student-change-group-table td:nth-child(1) {
+  width: 56px;
+}
+
+.student-change-group-table th:nth-child(2),
+.student-change-group-table td:nth-child(2) {
+  width: 150px;
+}
+
+.student-change-group-table th:nth-child(3),
+.student-change-group-table td:nth-child(3) {
+  width: 190px;
+  text-align: left;
+}
+
+.student-change-group-table th:nth-child(4),
+.student-change-group-table td:nth-child(4),
+.student-change-group-table th:nth-child(5),
+.student-change-group-table td:nth-child(5) {
+  width: 105px;
+}
+
+.student-change-group-table th:nth-child(6),
+.student-change-group-table td:nth-child(6),
+.student-change-group-table th:nth-child(7),
+.student-change-group-table td:nth-child(7),
+.student-change-group-table th:nth-child(8),
+.student-change-group-table td:nth-child(8) {
+  width: 112px;
+}
+
+.student-change-group-muted {
+  color: #94a3b8;
+}
+
+.student-change-group-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.student-change-group-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.student-change-group-icon.view svg {
+  color: #6bbf2a;
+  fill: #e8f8df;
+  stroke-width: 2.4;
+}
+
+.student-change-group-icon.choose svg {
+  color: #5fb323;
+  stroke-width: 2.4;
+}
+
+.student-change-group-icon:hover:not(:disabled) {
+  background: #ecfdf5;
+}
+
+.student-change-group-icon:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.student-change-group-current,
+.student-change-group-full {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.student-change-group-current {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.student-change-group-full {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+@media (max-width: 720px) {
+  .student-change-group-modal {
+    min-width: 0;
+  }
+
+  .student-change-group-title {
+    font-size: 14px;
+  }
+}
+
+.student-class-timetable-modal {
+  display: grid;
+  gap: 12px;
+  min-width: min(1120px, calc(100vw - 56px));
+}
+
+.student-class-timetable-title {
+  display: grid;
+  gap: 2px;
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.student-class-timetable-table-wrap {
+  overflow-x: auto;
+  border: 8px solid #2f8cca;
+  background: #fff;
+}
+
+.student-class-timetable-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.student-class-timetable-table th {
+  background: #2f8cca;
+  border: 1px solid #c4d7e8;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.15;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.student-class-timetable-table td {
+  border: 1px solid #e2e8f0;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px;
+  vertical-align: middle;
+}
+
+.student-class-timetable-table th:nth-child(1),
+.student-class-timetable-table td:nth-child(1) {
+  width: 56px;
+  text-align: center;
+}
+
+.student-class-timetable-table th:nth-child(2),
+.student-class-timetable-table td:nth-child(2) {
+  width: 120px;
+}
+
+.student-class-timetable-table th:nth-child(3),
+.student-class-timetable-table td:nth-child(3) {
+  width: 135px;
+  text-align: center;
+}
+
+.student-class-timetable-table th:nth-child(4),
+.student-class-timetable-table td:nth-child(4) {
+  width: 170px;
+}
+
+.student-class-timetable-table th:nth-child(5),
+.student-class-timetable-table td:nth-child(5) {
+  width: 160px;
+}
+
+.student-class-timetable-table th:nth-child(6),
+.student-class-timetable-table td:nth-child(6) {
+  width: 170px;
+}
+
+.student-class-timetable-table th:nth-child(7),
+.student-class-timetable-table td:nth-child(7) {
+  width: 110px;
+  text-align: center;
+}
+
+.student-class-timetable-pattern {
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.student-class-timetable-empty {
+  color: #64748b;
+  font-family: inherit;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+/* Legacy Modals */
+.system-old-window-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.system-old-window {
+  background-color: #eaedf1;
+  border: 1px solid #337ab7;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: auto;
+  min-width: 800px;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.system-old-window-header {
+  background-color: #337ab7;
+  color: white;
+  padding: 6px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.system-old-window-close {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.system-old-window-close:hover {
+  color: #e0e0e0;
+}
+
+.system-old-window-body {
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.system-old-window-info {
+  text-align: center;
+  color: #333;
+  font-size: 14px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.system-old-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+.system-old-table th,
+.system-old-table td {
+  border: 1px solid #ddd;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: #333;
+}
+
+.system-old-table th {
+  background-color: #337ab7;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+}
+
+.system-old-table td {
+  text-align: center;
+}
+
+.system-old-table td.left-align {
+  text-align: left;
+}
+
+.system-old-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.system-old-table-pattern {
+  font-family: monospace;
+  letter-spacing: 1px;
+  white-space: pre;
+}
+
+.student-conflict-mark {
+  color: #dc2626;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.system-old-window {
+  min-width: min(980px, calc(100vw - 32px));
+  border: 1px solid #b9d3ea;
+  border-radius: 8px;
+  background: #f8fbff;
+  box-shadow: 0 24px 60px rgb(15 23 42 / 28%);
+}
+
+.system-old-window-header {
+  min-height: 44px;
+  background: #256fa7;
+  padding: 0 16px;
+  font-size: 15px;
+}
+
+.system-old-window-body {
+  padding: 16px;
+}
+
+.system-old-table th {
+  background: #2f7db8;
+  padding: 10px 8px;
+}
+
+.system-old-table td {
+  height: 44px;
+  padding: 8px;
+}
+
+/* Inline student timetable */
+.student-schedule-panel {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: #eef2f6;
+  box-shadow: none;
+}
+
+.student-schedule-titlebar {
+  background: #2f6fa5;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 6px 12px;
+  text-align: center;
+}
+
+.student-schedule-controls {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  background: #eef2f6;
+  padding: 20px 16px 8px;
+}
+
+.student-schedule-control-grid {
+  display: grid;
+  grid-template-columns: 270px 270px;
+  gap: 6px;
+  align-items: center;
+}
+
+.student-schedule-controls select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #9aa6b2;
+  border-radius: 0;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  font-size: 15px;
+  opacity: 1;
+  padding: 0 8px;
+}
+
+.student-schedule-option-label {
+  justify-self: end;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  padding-right: 8px;
+}
+
+.student-schedule-search-btn,
+.student-schedule-print-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  border: 1px solid #c3ccd6;
+  border-radius: 0;
+  background: #fff;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 400;
+  opacity: 1;
+  padding: 0 8px;
+}
+
+.student-schedule-search-btn {
+  justify-self: end;
+  margin-right: max(16px, calc((100vw - 1180px) / 2));
+  box-shadow: 0 2px 5px rgb(15 23 42 / 18%);
+}
+
+.student-schedule-search-btn svg,
+.student-schedule-print-actions svg {
+  width: 18px;
+  height: 18px;
+  color: #8ccf9e;
+}
+
+.student-schedule-table-wrap {
+  overflow-x: auto;
+  background: #fff;
+  box-shadow: 0 18px 26px rgb(15 23 42 / 14%);
+}
+
+.student-schedule-table {
+  width: 100%;
+  min-width: 1320px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #fff;
+}
+
+.student-schedule-table th {
+  border: 1px solid #d8e3f0;
+  background: #2f6fa5;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.15;
+  padding: 7px 4px;
+  text-align: center;
+  text-transform: none;
+}
+
+.student-schedule-table td {
+  border: 1px solid #f1f5f9;
+  color: #000;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.2;
+  padding: 7px 4px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.student-schedule-table tbody tr:nth-child(odd) {
+  background: #ececec;
+}
+
+.student-schedule-table tbody tr:nth-child(even) {
+  background: #fff;
+}
+
+.student-schedule-table td:nth-child(1) {
+  font-weight: 700;
+}
+
+.student-schedule-table td:nth-child(3),
+.student-schedule-table td:nth-child(9) {
+  text-align: left;
+}
+
+.student-schedule-table th:nth-child(1),
+.student-schedule-table td:nth-child(1) {
+  width: 150px;
+}
+
+.student-schedule-table th:nth-child(2),
+.student-schedule-table td:nth-child(2) {
+  width: 110px;
+}
+
+.student-schedule-table th:nth-child(3),
+.student-schedule-table td:nth-child(3) {
+  width: 190px;
+}
+
+.student-schedule-table th:nth-child(4),
+.student-schedule-table td:nth-child(4) {
+  width: 100px;
+}
+
+.student-schedule-table th:nth-child(5),
+.student-schedule-table td:nth-child(5) {
+  width: 120px;
+}
+
+.student-schedule-table th:nth-child(6),
+.student-schedule-table td:nth-child(6) {
+  width: 105px;
+}
+
+.student-schedule-table th:nth-child(7),
+.student-schedule-table td:nth-child(7) {
+  width: 40px;
+}
+
+.student-schedule-table th:nth-child(8),
+.student-schedule-table td:nth-child(8) {
+  width: 130px;
+}
+
+.student-schedule-table th:nth-child(9),
+.student-schedule-table td:nth-child(9) {
+  width: 140px;
+}
+
+.student-schedule-table th:nth-child(10),
+.student-schedule-table td:nth-child(10) {
+  width: 85px;
+}
+
+.student-schedule-table th:nth-child(11),
+.student-schedule-table td:nth-child(11) {
+  width: 95px;
+}
+
+.student-schedule-table th:nth-child(12),
+.student-schedule-table td:nth-child(12) {
+  width: 170px;
+}
+
+.student-schedule-pattern {
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+  white-space: pre-wrap;
+}
+
+.student-schedule-empty {
+  color: #64748b;
+  font-family: inherit;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.student-schedule-print-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  background: #fff;
+  padding: 30px 0 4px;
+}
+
+@media (max-width: 720px) {
+  .student-schedule-control-grid {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .student-schedule-option-label,
+  .student-schedule-search-btn {
+    justify-self: stretch;
+    margin-right: 0;
+  }
+}
+
+/* Modern course registration */
+.student-registration-panel {
+  overflow: hidden;
+  border: 1px solid #d9e6f3;
+  border-radius: 8px;
+  background: #f8fbff;
+  box-shadow: 0 18px 38px rgb(15 23 42 / 10%);
+}
+
+.student-registration-panel::before {
+  display: block;
+  height: 4px;
+  background: linear-gradient(90deg, #1d6fa5, #0ea5e9, #16a34a);
+  content: "";
+}
+
+.student-registration-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  margin: 0;
+  background:
+    radial-gradient(circle at 18% 20%, rgb(255 255 255 / 28%), transparent 28%),
+    linear-gradient(135deg, #1d5f93, #2f87c5);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.student-registration-title::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+  font-size: 19px;
+  content: "✓";
+}
+
+.student-registration-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin: 14px 18px 12px;
+  border: 1px solid #cfe0ef;
+  border-radius: 999px;
+  background: #fff;
+  color: #24425f;
+  font-size: 14px;
+  font-weight: 750;
+  padding: 0 16px;
+  box-shadow: 0 8px 18px rgb(15 23 42 / 7%);
+}
+
+.student-registration-meta::before {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 5px rgb(34 197 94 / 14%);
+  content: "";
+}
+
+.student-registration-table-wrap {
+  margin: 0 18px;
+  overflow-x: auto;
+  border: 1px solid #dbe8f4;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 8%);
+}
+
+.student-registration-table {
+  min-width: 1120px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  background: #fff;
+}
+
+.student-registration-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border: 0;
+  border-bottom: 1px solid #1d5f93;
+  background: #246fa5;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 14px 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.student-registration-table td {
+  border: 0;
+  border-bottom: 1px solid #e7eef6;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 550;
+  padding: 13px 12px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.student-registration-table tbody tr {
+  background: #fff;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.student-registration-table tbody tr:nth-child(odd) {
+  background: #f4f8fc;
+}
+
+.student-registration-table tbody tr:hover {
+  background: #eaf5ff;
+  box-shadow: inset 4px 0 0 #0ea5e9;
+}
+
+.student-registration-table th:nth-child(1),
+.student-registration-table td:nth-child(1) {
+  width: 58px;
+}
+
+.student-registration-table th:nth-child(2),
+.student-registration-table td:nth-child(2) {
+  width: 130px;
+}
+
+.student-registration-table th:nth-child(3),
+.student-registration-table td:nth-child(3) {
+  width: 300px;
+  text-align: left;
+}
+
+.student-registration-table th:nth-child(4),
+.student-registration-table td:nth-child(4) {
+  width: 84px;
+}
+
+.student-registration-table th:nth-child(5),
+.student-registration-table td:nth-child(5) {
+  width: 250px;
+}
+
+.student-registration-table th:nth-child(6),
+.student-registration-table td:nth-child(6),
+.student-registration-table th:nth-child(9),
+.student-registration-table td:nth-child(9),
+.student-registration-table th:nth-child(10),
+.student-registration-table td:nth-child(10),
+.student-registration-table th:nth-child(11),
+.student-registration-table td:nth-child(11) {
+  width: 112px;
+}
+
+.student-registration-table th:nth-child(7),
+.student-registration-table td:nth-child(7),
+.student-registration-table th:nth-child(8),
+.student-registration-table td:nth-child(8) {
+  display: none;
+}
+
+.student-registration-table td:nth-child(1) strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #e8f2fb;
+  color: #246fa5;
+  font-size: 13px;
+}
+
+.student-registration-table td:nth-child(2) {
+  color: #123c5e;
+  font-weight: 800;
+}
+
+.to-registration-class-select.compact {
+  width: min(100%, 270px);
+  min-height: 42px;
+  border: 1px solid #b8d2ee;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 650;
+  outline: none;
+  padding: 0 38px 0 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.to-registration-class-select.compact:hover,
+.to-registration-class-select.compact:focus {
+  border-color: #2f87c5;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(14 165 233 / 14%);
+}
+
+.student-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 5px 12px rgb(15 23 42 / 10%);
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.student-icon-btn svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.4;
+}
+
+.student-icon-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 18px rgb(15 23 42 / 15%);
+}
+
+.student-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.student-icon-btn.register {
+  border-color: #b9e6c9;
+  background: #ecfdf3;
+  color: #15803d;
+}
+
+.student-icon-btn.register:hover:not(:disabled) {
+  background: #dcfce7;
+}
+
+.student-icon-btn.cancel {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #dc2626;
+}
+
+.student-icon-btn.cancel:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.student-icon-btn.swap {
+  border-color: #bae6fd;
+  background: #eef8ff;
+  color: #0284c7;
+}
+
+.student-icon-btn.swap:hover:not(:disabled) {
+  background: #e0f2fe;
+}
+
+.student-confirmed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.student-registration-table .to-timetable-icon-btn {
+  min-height: 34px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 12px;
+  box-shadow: 0 5px 12px rgb(15 23 42 / 10%);
+}
+
+.student-registration-summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 54px;
+  margin: 0 18px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.student-registration-summary::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #0ea5e9;
+  content: "";
+}
+
+@media (max-width: 720px) {
+  .student-registration-title {
+    min-height: 58px;
+    font-size: 20px;
+  }
+
+  .student-registration-meta,
+  .student-registration-table-wrap,
+  .student-registration-summary {
+    margin-right: 12px;
+    margin-left: 12px;
+  }
+
+  .student-registration-summary {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 10px 0;
+  }
+}
+
+/* Compact registration overrides */
+.student-registration-panel {
+  box-shadow: 0 10px 22px rgb(15 23 42 / 8%);
+}
+
+.student-registration-panel::before {
+  height: 3px;
+}
+
+.student-registration-title {
+  gap: 8px;
+  min-height: 46px;
+  font-size: 20px;
+}
+
+.student-registration-title::before {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 16px;
+}
+
+.student-registration-meta {
+  min-height: 34px;
+  margin: 10px 16px;
+  font-size: 13px;
+  padding: 0 13px;
+  box-shadow: 0 5px 12px rgb(15 23 42 / 6%);
+}
+
+.student-registration-meta::before {
+  width: 9px;
+  height: 9px;
+  box-shadow: 0 0 0 4px rgb(34 197 94 / 14%);
+}
+
+.student-registration-table-wrap {
+  margin: 0 16px;
+  box-shadow: 0 7px 16px rgb(15 23 42 / 7%);
+}
+
+.student-registration-table {
+  min-width: 1060px;
+}
+
+.student-registration-table th {
+  font-size: 12px;
+  padding: 10px 10px;
+}
+
+.student-registration-table td {
+  font-size: 13px;
+  padding: 9px 10px;
+}
+
+.student-registration-table th:nth-child(1),
+.student-registration-table td:nth-child(1) {
+  width: 52px;
+}
+
+.student-registration-table th:nth-child(2),
+.student-registration-table td:nth-child(2) {
+  width: 118px;
+}
+
+.student-registration-table th:nth-child(3),
+.student-registration-table td:nth-child(3) {
+  width: 280px;
+}
+
+.student-registration-table th:nth-child(4),
+.student-registration-table td:nth-child(4) {
+  width: 74px;
+}
+
+.student-registration-table th:nth-child(5),
+.student-registration-table td:nth-child(5) {
+  width: 230px;
+}
+
+.student-registration-table th:nth-child(6),
+.student-registration-table td:nth-child(6),
+.student-registration-table th:nth-child(9),
+.student-registration-table td:nth-child(9),
+.student-registration-table th:nth-child(10),
+.student-registration-table td:nth-child(10),
+.student-registration-table th:nth-child(11),
+.student-registration-table td:nth-child(11) {
+  width: 104px;
+}
+
+.student-registration-table td:nth-child(1) strong {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.to-registration-class-select.compact {
+  width: min(100%, 250px);
+  min-height: 36px;
+  border-radius: 7px;
+  font-size: 13px;
+  padding: 0 34px 0 12px;
+}
+
+.student-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  box-shadow: 0 4px 9px rgb(15 23 42 / 9%);
+}
+
+.student-icon-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.student-icon-btn:hover:not(:disabled) {
+  box-shadow: 0 7px 14px rgb(15 23 42 / 13%);
+}
+
+.student-confirmed {
+  min-height: 26px;
+  font-size: 11.5px;
+  padding: 0 10px;
+}
+
+.student-registration-table .to-timetable-icon-btn {
+  min-height: 30px;
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 0 10px;
+  box-shadow: 0 4px 9px rgb(15 23 42 / 9%);
+}
+
+.student-registration-summary {
+  min-height: 42px;
+  margin: 0 16px;
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .student-registration-title {
+    min-height: 44px;
+    font-size: 18px;
+  }
+}
+
+/* Simple timetable below course registration */
+.student-schedule-panel {
+  position: relative;
+  margin-top: 34px;
+  border: 1px solid #c9c9c9;
+  border-radius: 3px;
+  background: #fff;
+  padding: 32px 14px 36px;
+  box-shadow: none;
+}
+
+.student-schedule-titlebar {
+  position: absolute;
+  top: -21px;
+  left: 32px;
+  min-height: 38px;
+  border-radius: 2px;
+  background: #2f6fa5;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 38px;
+  padding: 0 14px;
+  text-align: left;
+  box-shadow: 0 4px 14px rgb(15 23 42 / 24%);
+}
+
+.student-schedule-table-wrap {
+  overflow-x: auto;
+  background: transparent;
+  box-shadow: 0 16px 24px -20px rgb(15 23 42 / 45%);
+}
+
+.student-schedule-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #fff;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.student-schedule-table th {
+  border: 1px solid #e4edf6;
+  background: #2f6fa5;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 750;
+  line-height: 1.15;
+  padding: 9px 6px;
+  text-align: center;
+}
+
+.student-schedule-table td {
+  border: 1px solid #fff;
+  color: #071326;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.28;
+  padding: 6px 4px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.student-schedule-table tbody tr:nth-child(odd) {
+  background: #e9e9e9;
+}
+
+.student-schedule-table tbody tr:nth-child(even) {
+  background: #fff;
+}
+
+.student-schedule-table td:nth-child(1),
+.student-schedule-table td:nth-child(4),
+.student-schedule-table td:nth-child(6),
+.student-schedule-table td:nth-child(9),
+.student-schedule-table td:nth-child(10) {
+  text-align: center;
+}
+
+.student-schedule-table td:nth-child(1) {
+  color: #001f3f;
+  font-weight: 800;
+}
+
+.student-schedule-table th:nth-child(1),
+.student-schedule-table td:nth-child(1) {
+  width: 125px;
+}
+
+.student-schedule-table th:nth-child(2),
+.student-schedule-table td:nth-child(2) {
+  width: 92px;
+}
+
+.student-schedule-table th:nth-child(3),
+.student-schedule-table td:nth-child(3) {
+  width: 190px;
+}
+
+.student-schedule-table th:nth-child(4),
+.student-schedule-table td:nth-child(4) {
+  width: 72px;
+}
+
+.student-schedule-table th:nth-child(5),
+.student-schedule-table td:nth-child(5) {
+  width: 105px;
+}
+
+.student-schedule-table th:nth-child(6),
+.student-schedule-table td:nth-child(6) {
+  width: 42px;
+}
+
+.student-schedule-table th:nth-child(7),
+.student-schedule-table td:nth-child(7) {
+  width: 142px;
+}
+
+.student-schedule-table th:nth-child(8),
+.student-schedule-table td:nth-child(8) {
+  width: 140px;
+}
+
+.student-schedule-table th:nth-child(9),
+.student-schedule-table td:nth-child(9) {
+  width: 80px;
+}
+
+.student-schedule-table th:nth-child(10),
+.student-schedule-table td:nth-child(10) {
+  width: 120px;
+}
+
+.student-schedule-table th:nth-child(11),
+.student-schedule-table td:nth-child(11) {
+  width: 175px;
+}
+
+.student-schedule-pattern {
+  font-family: "Cascadia Mono", "Courier New", monospace;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.student-schedule-print-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  background: transparent;
+  padding: 32px 0 0;
+}
+
+.student-schedule-print-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  border: 1px solid #c7c7c7;
+  border-radius: 0;
+  background: #fff;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 1;
+  padding: 0 8px;
+  box-shadow: 0 2px 5px rgb(15 23 42 / 25%);
+}
+
+.student-schedule-print-actions svg {
+  width: 16px;
+  height: 16px;
+  color: #2f6fa5;
+}
+
+@media (max-width: 720px) {
+  .student-schedule-panel {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .student-schedule-titlebar {
+    left: 18px;
+  }
+}
+
+/* Student registration refinements */
+.student-registration-title::before,
+.student-registration-meta::before {
+  display: none;
+}
+
+.student-registration-title {
+  gap: 0;
+}
+
+.student-registration-meta {
+  display: flex;
+  justify-content: center;
+  width: calc(100% - 32px);
+  min-height: 42px;
+  margin: 12px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #123c5e;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: none;
+}
+
+.student-schedule-table th {
+  font-size: 15px;
+}
+
+.student-schedule-table td {
+  font-size: 14.5px;
+  vertical-align: middle;
+}
+
+.student-schedule-table th:nth-child(7),
+.student-schedule-table td:nth-child(7),
+.student-schedule-table th:nth-child(11),
+.student-schedule-table td:nth-child(11) {
+  text-align: center;
+}
+
+.student-schedule-pattern {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  white-space: nowrap;
+  word-break: normal;
+}

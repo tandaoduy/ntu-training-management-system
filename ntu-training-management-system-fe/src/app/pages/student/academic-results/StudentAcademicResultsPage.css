@@ -1,0 +1,258 @@
+.sar-shell {
+  min-height: 100vh;
+  background: #eef4f8;
+  color: #000;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.sar-page {
+  padding: 0 8px 36px;
+}
+
+.sar-panel {
+  border: 1px solid #c9d8e8;
+  background: #fff;
+}
+
+.sar-title {
+  background: #2f6fa5;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 32px;
+  text-align: center;
+}
+
+.sar-filters {
+  display: grid;
+  grid-template-columns: 210px 270px 150px;
+  gap: 6px 14px;
+  justify-content: center;
+  align-items: center;
+  background: #e7ebef;
+  padding: 7px 16px 8px;
+  font-size: 17px;
+}
+
+.sar-filters select {
+  height: 36px;
+  border: 1px solid #9ca3af;
+  background: #fff;
+  font-size: 16px;
+  padding: 0 8px;
+}
+
+.sar-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sar-actions button,
+.sar-detail-btn {
+  border: 1px solid #bdbdbd;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.25);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 11px;
+}
+
+.sar-term {
+  position: relative;
+  margin: 26px 0 0;
+  border: 1px solid #c7c7c7;
+  padding: 32px 14px 16px;
+}
+
+.sar-term-label {
+  position: absolute;
+  top: -18px;
+  left: 34px;
+  background: #2f6fa5;
+  box-shadow: 0 4px 9px rgba(15, 23, 42, 0.28);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  padding: 6px 14px;
+}
+
+.sar-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.sar-table th {
+  border: 1px solid #fff;
+  background: #2f6fa5;
+  color: #fff;
+  font-size: 15px;
+  padding: 5px;
+}
+
+.sar-table td {
+  border: 1px solid #fff;
+  font-size: 15px;
+  padding: 4px 5px;
+  text-align: center;
+  vertical-align: top;
+}
+
+.sar-table td:nth-child(3) {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sar-table tbody tr:nth-child(odd) {
+  background: #e9e9e9;
+}
+
+.sar-table tbody tr:nth-child(even) {
+  background: #fff;
+}
+
+.sar-col-stt { width: 5%; }
+.sar-col-code { width: 10%; }
+.sar-col-name { width: 35%; }
+.sar-col-group { width: 7%; }
+.sar-col-credit { width: 7%; }
+.sar-col-score { width: 9%; }
+.sar-col-n { width: 5%; }
+.sar-col-detail { width: 7%; }
+
+.sar-detail-btn {
+  border-radius: 999px;
+  color: #378400;
+  font-weight: 900;
+  line-height: 1;
+  min-width: 24px;
+  padding: 2px 0;
+}
+
+.sar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 18px;
+}
+
+.sar-modal {
+  position: relative;
+  width: min(760px, 100%);
+  border: 8px solid #2f6fa5;
+  background: #2f6fa5;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.35);
+}
+
+.sar-modal-title {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  padding: 0 8px 7px;
+}
+
+.sar-modal-close {
+  position: absolute;
+  top: -2px;
+  right: 2px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.sar-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #e7ebef;
+}
+
+.sar-detail-table th,
+.sar-detail-table td {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: #000;
+  font-size: 17px;
+  padding: 6px 12px;
+}
+
+.sar-detail-table th {
+  width: 42%;
+  font-weight: 600;
+  text-align: left;
+}
+
+.sar-detail-table td {
+  width: 58%;
+  text-align: left;
+}
+
+.sar-detail-table tr:nth-child(n + 4) th,
+.sar-detail-table tr:nth-child(n + 4) td {
+  font-weight: 800;
+}
+
+.sar-detail-box {
+  border: 1px solid #cfd6dd;
+  background: #e7ebef;
+  display: grid;
+  gap: 1px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.sar-detail-box div,
+.sar-detail-box strong {
+  border-bottom: 1px solid #fff;
+  font-size: 17px;
+  padding: 5px 10px;
+}
+
+.sar-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 160px;
+  padding: 20px 6px 0;
+  font-size: 16px;
+}
+
+.sar-summary span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sar-empty {
+  padding: 32px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .sar-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .sar-summary {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .sar-table {
+    min-width: 980px;
+  }
+
+  .sar-term {
+    overflow-x: auto;
+  }
+}

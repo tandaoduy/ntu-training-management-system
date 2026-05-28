@@ -24,7 +24,20 @@ const mapCurrentUser = (input: CurrentUserResponse): AuthUser | null => {
     username: input.username,
     name: input.name ?? null,
     role: input.role,
+    permissions: input.permissions ?? [],
     educationSystem: input.education_system ?? null,
+    donViId: input.don_vi_id ?? null,
+    tenDonVi: input.ten_don_vi ?? null,
+    advisor: input.advisor
+      ? {
+          hasAdvisor: input.advisor.has_advisor ?? false,
+          code: input.advisor.code ?? null,
+          name: input.advisor.name ?? null,
+          phone: input.advisor.phone ?? null,
+          email: input.advisor.email ?? null,
+          message: input.advisor.message ?? null,
+        }
+      : null,
   };
 };
 
@@ -67,9 +80,14 @@ const getCurrentUserForToken = (token: string): Promise<CurrentUserResponse> => 
 };
 
 export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [userToken, setUserToken] = useState<string | null>(null);
   const [token, setToken] = useState(() => authStorage.getToken());
+  const [user, setUser] = useState<AuthUser | null>(() => (
+    authStorage.getToken() ? authStorage.getUser() : null
+  ));
+  const [userToken, setUserToken] = useState<string | null>(() => (
+    authStorage.getUser() && authStorage.getToken() ? authStorage.getToken() : null
+  ));
+  const [validatedToken, setValidatedToken] = useState<string | null>(null);
   const hasToken = Boolean(token);
   const effectiveUser = userToken === token ? user : null;
 
@@ -81,7 +99,13 @@ export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
       if (!nextToken) {
         setUser(null);
         setUserToken(null);
+        setValidatedToken(null);
+        return;
       }
+
+      const cachedUser = authStorage.getUser();
+      setUser(cachedUser);
+      setUserToken(cachedUser ? nextToken : null);
     };
 
     window.addEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChanged);
@@ -92,7 +116,7 @@ export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
   }, []);
 
   useEffect(() => {
-    if (!token || effectiveUser !== null) {
+    if (!token || validatedToken === token) {
       return;
     }
 
@@ -113,12 +137,14 @@ export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
           authMutations.clearSession();
           setUser(null);
           setUserToken(null);
+          setValidatedToken(null);
           return;
         }
 
         setUser(mappedUser);
         authStorage.setUser(mappedUser);
         setUserToken(requestToken);
+        setValidatedToken(requestToken);
       } catch {
         if (!isMounted) {
           return;
@@ -127,6 +153,7 @@ export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
         authMutations.clearSession();
         setUser(null);
         setUserToken(null);
+        setValidatedToken(null);
       }
     };
 
@@ -135,10 +162,10 @@ export const useAuthSession = (routeKey: string): UseAuthSessionResult => {
     return () => {
       isMounted = false;
     };
-  }, [effectiveUser, routeKey, token]);
+  }, [routeKey, token, validatedToken]);
 
   const isAuthenticated = hasToken && effectiveUser !== null;
-  const isCheckingAuth = hasToken && effectiveUser === null;
+  const isCheckingAuth = false;
   const redirectForAuthenticatedUser = useMemo(
     () => resolveDashboardPath(effectiveUser?.role),
     [effectiveUser?.role],

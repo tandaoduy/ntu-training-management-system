@@ -29,7 +29,6 @@ type StudyPlanPeriod = {
   id: number
   starts_at: string
   ends_at: string
-  status: string
   target_term?: {
     nam_hoc?: string
     hoc_ky?: string
@@ -46,13 +45,6 @@ function parseLocalDateTime(date: string, time: string) {
   return Number.isNaN(value.getTime()) ? null : value
 }
 
-function termOrderValue(year?: string, semester?: string) {
-  const startYear = Number(year?.slice(0, 4)) || 0
-  const semesterOrder = semester === '1' ? 1 : semester === '2' ? 2 : semester === 'Hè' ? 3 : 9
-
-  return startYear * 10 + semesterOrder
-}
-
 export default function AdminStudyPlanPage() {
   const { showAlert } = useAlert()
   const [isLoading, setIsLoading] = useState(true)
@@ -64,7 +56,6 @@ export default function AdminStudyPlanPage() {
   const [studyPlanStartTime, setStudyPlanStartTime] = useState('')
   const [studyPlanEndDate, setStudyPlanEndDate] = useState('')
   const [studyPlanEndTime, setStudyPlanEndTime] = useState('')
-  const [currentAcademicTerm, setCurrentAcademicTerm] = useState<AcademicTerm | null>(null)
   const [studyPlanFormFeedback, setStudyPlanFormFeedback] = useState<{ variant: 'error' | 'success' | 'info', title: string, message: string } | null>(null)
   const [isSavingStudyPlanPeriod, setIsSavingStudyPlanPeriod] = useState(false)
 
@@ -88,7 +79,6 @@ export default function AdminStudyPlanPage() {
         const firstTargetSemester = currentTerm?.hoc_ky ?? years.find((year) => year.nam_hoc === firstTargetYear)?.hoc_kys?.[0]?.hoc_ky ?? '1'
 
         setAcademicYearsList(years)
-        setCurrentAcademicTerm(currentTerm)
         setTargetStudyPlanYear(firstTargetYear)
         setTargetStudyPlanSemester(firstTargetSemester)
 
@@ -183,20 +173,6 @@ export default function AdminStudyPlanPage() {
       return
     }
 
-    if (
-      currentAcademicTerm
-      && termOrderValue(targetStudyPlanYear, targetStudyPlanSemester) <= termOrderValue(currentAcademicTerm.nam_hoc, currentAcademicTerm.hoc_ky)
-    ) {
-      const message = 'Chỉ được mở đăng ký KHHT cho học kỳ tiếp theo hoặc tương lai, không được chọn học kỳ hiện tại.'
-      showStudyPlanFormFeedback('error', 'Học kỳ đăng ký chưa hợp lệ', message)
-      showAlert({
-        title: 'Học kỳ đăng ký chưa hợp lệ',
-        message,
-        variant: 'error',
-      })
-      return
-    }
-
     setIsSavingStudyPlanPeriod(true)
     showStudyPlanFormFeedback('info', 'Đang lưu', 'Đang gửi thiết lập thời gian đăng ký KHHT...')
     try {
@@ -232,7 +208,7 @@ export default function AdminStudyPlanPage() {
       <section className="ac-section">
         <div className="ac-section-header">
           <h2 className="ac-section-title">Kế hoạch học tập</h2>
-          <p className="ac-section-desc">Thiết lập thời gian để sinh viên đăng ký kế hoạch học tập cho học kỳ tiếp theo hoặc tương lai.</p>
+          <p className="ac-section-desc">Thiết lập thời gian để sinh viên đăng ký kế hoạch học tập theo năm học và học kỳ cần mở.</p>
         </div>
 
         <div className="ac-card">
@@ -316,7 +292,6 @@ export default function AdminStudyPlanPage() {
                   <th style={{ borderBottom: '1px solid #e2e8f0', padding: 10, textAlign: 'left' }}>Học kỳ</th>
                   <th style={{ borderBottom: '1px solid #e2e8f0', padding: 10, textAlign: 'left' }}>Bắt đầu</th>
                   <th style={{ borderBottom: '1px solid #e2e8f0', padding: 10, textAlign: 'left' }}>Kết thúc</th>
-                  <th style={{ borderBottom: '1px solid #e2e8f0', padding: 10, textAlign: 'left' }}>Trạng thái</th>
                 </tr>
               </thead>
               <tbody>
@@ -327,12 +302,11 @@ export default function AdminStudyPlanPage() {
                     </td>
                     <td style={{ borderBottom: '1px solid #edf2f7', padding: 10 }}>{period.starts_at}</td>
                     <td style={{ borderBottom: '1px solid #edf2f7', padding: 10 }}>{period.ends_at}</td>
-                    <td style={{ borderBottom: '1px solid #edf2f7', padding: 10 }}>{period.status}</td>
                   </tr>
                 ))}
                 {studyPlanPeriods.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: 12, color: '#64748b' }}>Chưa có đợt đăng ký KHHT.</td>
+                    <td colSpan={3} style={{ padding: 12, color: '#64748b' }}>Chưa có đợt đăng ký KHHT.</td>
                   </tr>
                 )}
               </tbody>

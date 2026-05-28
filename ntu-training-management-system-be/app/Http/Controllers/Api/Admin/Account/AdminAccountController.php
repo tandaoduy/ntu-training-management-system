@@ -383,7 +383,7 @@ class AdminAccountController extends Controller
     {
         $user->loadMissing('role');
 
-        if (! in_array($user->role?->code, ['lecturer', 'training_officer', 'manager'], true)) {
+        if (! in_array($user->role?->code, ['student', 'lecturer', 'training_officer', 'manager'], true)) {
             return $this->jsonResponse([
                 'message' => 'Chỉ được xóa tài khoản giảng viên, chuyên viên hoặc quản lý.',
             ], 422);
@@ -433,7 +433,7 @@ class AdminAccountController extends Controller
                 'data' => [
                     'id' => $user->id,
                     'anh' => $path,
-                    'anh_url' => Storage::url($path),
+                    'anh_url' => '/api/student-images/' . ltrim($path, '/'),
                 ],
             ]);
         } catch (\Exception $e) {
@@ -442,6 +442,47 @@ class AdminAccountController extends Controller
                 'error' => 'UPLOAD_ERROR',
             ], 500);
         }
+    }
+
+    public function updateStudentAcademicInfo(Request $request, User $user): JsonResponse
+    {
+        $actorRole = $request->user()?->role?->code;
+        if ($actorRole !== 'training_officer') {
+            return $this->jsonResponse(['message' => 'Chỉ chuyên viên được cập nhật lớp hoặc ngành học của sinh viên.'], 403);
+        }
+
+        $user->loadMissing(['role', 'profile']);
+        if ($user->role?->code !== 'student' || ! $user->profile instanceof SinhVien) {
+            return $this->jsonResponse(['message' => 'Tài khoản không phải sinh viên.'], 422);
+        }
+
+        $payload = $request->validate([
+            'lop_id' => ['nullable', 'integer', 'exists:lops,id'],
+            'nganh_dao_tao_id' => ['nullable', 'integer', 'exists:nganh_dao_taos,id'],
+        ]);
+
+        $updates = [];
+        if (array_key_exists('lop_id', $payload)) {
+            $lop = $payload['lop_id'] ? Lop::query()->find((int) $payload['lop_id']) : null;
+            $updates['lop_id'] = $lop?->id;
+            $updates['ma_lop'] = $lop?->lop_hoc_phan;
+        }
+
+        if (array_key_exists('nganh_dao_tao_id', $payload)) {
+            $nganh = $payload['nganh_dao_tao_id'] ? NganhDaoTao::query()->with('donVi:id,ten_don_vi')->find((int) $payload['nganh_dao_tao_id']) : null;
+            $updates['nganh_dao_tao_id'] = $nganh?->id;
+            $updates['ten_nganh_hoc'] = $nganh?->ten_nganh;
+            $updates['ten_don_vi'] = $nganh?->donVi?->ten_don_vi ?? $user->profile->ten_don_vi;
+        }
+
+        if ($updates !== []) {
+            $user->profile->update($updates);
+        }
+
+        return $this->jsonResponse([
+            'message' => 'Đã cập nhật thông tin lớp/ngành của sinh viên.',
+            'data' => $this->toAccountPayload($user->fresh(['role', 'profile'])),
+        ]);
     }
 
     private function createdResponse(User $user): JsonResponse
@@ -624,6 +665,7 @@ class AdminAccountController extends Controller
         return [
             ...$this->baseCreateRules(),
             'ten_nguoi_quan_ly' => ['required', 'string', 'max:255'],
+            'don_vi_id' => ['required', 'integer', 'exists:don_vis,id'],
             'chuc_vu' => ['nullable', 'string', 'max:255'],
         ];
     }

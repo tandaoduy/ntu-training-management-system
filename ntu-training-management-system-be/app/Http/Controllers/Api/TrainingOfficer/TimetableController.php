@@ -6,15 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\CanBo;
 use App\Models\CauHinhTuanHoc;
 use App\Models\GiangDuong;
+use App\Models\HeThongCauHinh;
 use App\Models\HocKy;
 use App\Models\HocPhan;
 use App\Models\Lop;
 use App\Models\LopHocPhan;
+use App\Models\LopHocPhanDangKy;
 use App\Models\PhongHoc;
 use App\Models\ThoiKhoaBieu;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class TimetableController extends Controller
@@ -34,14 +37,20 @@ class TimetableController extends Controller
             'phong_hoc_id' => ['nullable', 'integer', 'exists:phong_hocs,id'],
         ]);
 
+        $currentTermId = $this->currentTermId();
+        $termId = (int) ($payload['hoc_ky_id'] ?? 0);
+        if ($termId <= 0) {
+            $termId = $currentTermId;
+        }
+
         $items = ThoiKhoaBieu::query()
             ->with([
-                'lopHocPhan:id,hoc_phan_id,hoc_ky_id,lop_hanh_chinh_id,giang_vien_id,ma_hoc_phan,lop_hoc_phan,nhom_hoc_phan,ten_hoc_phan,ten_giang_vien,si_so',
+                'lopHocPhan:id,hoc_phan_id,hoc_ky_id,lop_hanh_chinh_id,giang_vien_id,ma_hoc_phan,lop_hoc_phan,nhom_hoc_phan,ten_hoc_phan,ten_giang_vien,si_so,updated_at',
                 'lopHocPhan.lopHanhChinh:id,lop_hoc_phan,ma_khoi,ten_khoi',
                 'phongHoc.giangDuong:id,ma_giang_duong,ten_giang_duong',
                 'hocKy.namHoc:id,nam_hoc',
             ])
-            ->when(isset($payload['hoc_ky_id']), fn ($query) => $query->where('hoc_ky_id', $payload['hoc_ky_id']))
+            ->when($termId > 0, fn ($query) => $query->where('hoc_ky_id', $termId))
             ->when(isset($payload['phong_hoc_id']), fn ($query) => $query->where('phong_hoc_id', $payload['phong_hoc_id']))
             ->when(isset($payload['giang_duong_id']), fn ($query) => $query->whereHas('phongHoc', fn ($roomQuery) => $roomQuery->where('giang_duong_id', $payload['giang_duong_id'])))
             ->orderBy('hoc_ky_id')
@@ -64,9 +73,10 @@ class TimetableController extends Controller
                     ->orderBy('ma_phong')
                     ->get(),
                 'hoc_phans' => HocPhan::query()
+                    ->with('donVi:id,ma_don_vi,ten_don_vi')
                     ->where('trang_thai', true)
                     ->orderBy('ma_hoc_phan')
-                    ->get(['id', 'ma_hoc_phan', 'ten_hoc_phan', 'so_tin_chi']),
+                    ->get(['id', 'don_vi_id', 'ma_hoc_phan', 'ten_hoc_phan', 'so_tin_chi']),
                 'lop_hanh_chinhs' => Lop::query()
                     ->where('trang_thai', true)
                     ->orderBy('lop_hoc_phan')
@@ -90,6 +100,16 @@ class TimetableController extends Controller
         ]);
     }
 
+    private function currentTermId(): int
+    {
+        $termId = (int) (HeThongCauHinh::query()->find('current_hoc_ky_id')?->value ?? 0);
+        if ($termId <= 0) {
+            $termId = (int) (HeThongCauHinh::query()->find('current_academic_term_id')?->value ?? 0);
+        }
+
+        return $termId;
+    }
+
     public function storeClassSection(Request $request): JsonResponse
     {
         $payload = $request->validate([
@@ -111,28 +131,145 @@ class TimetableController extends Controller
         $lecturer = isset($payload['giang_vien_id'])
             ? CanBo::query()->find($payload['giang_vien_id'])
             : null;
-        $sectionCode = trim($payload['lop_hoc_phan']);
+
+        if ($course->don_vi_id && $lecturer && (int) $lecturer->don_vi_id !== (int) $course->don_vi_id) {
+            abort(response()->json([
+                'message' => 'Giảng viên được chọn không thuộc đơn vị quản lý học phần này.',
+            ], 422, [], JSON_UNESCAPED_UNICODE));
+        }
+
+        $sectionCode = Str::upper(trim($payload['lop_hoc_phan']));
+        $classGroup = $this->normalizeClassGroup((string) $payload['nhom_hoc_phan']);
+
+        if ($sectionCode === '' || $classGroup === '') {
+            abort(response()->json([
+                'message' => 'Vui lòng nhập lớp học phần và nhóm học phần.',
+            ], 422, [], JSON_UNESCAPED_UNICODE));
+        }
+
+        $hasDuplicateGroup = LopHocPhan::query()
+            ->where('hoc_ky_id', (int) $payload['hoc_ky_id'])
+            ->where('hoc_phan_id', $course->id)
+            ->whereRaw('LOWER(nhom_hoc_phan) = ?', [Str::lower($classGroup)])
+            ->whereRaw('LOWER(lop_hoc_phan) <> ?', [Str::lower($sectionCode)])
+            ->exists();
+
+        if ($hasDuplicateGroup) {
+            abort(response()->json([
+                'message' => "Mã học phần {$course->ma_hoc_phan} đã có nhóm học phần {$classGroup}. Vui lòng nhập nhóm khác.",
+            ], 422, [], JSON_UNESCAPED_UNICODE));
+        }
+
+        $hasDuplicateSection = LopHocPhan::query()
+            ->where('hoc_ky_id', (int) $payload['hoc_ky_id'])
+            ->where('hoc_phan_id', $course->id)
+            ->whereRaw('LOWER(lop_hoc_phan) = ?', [Str::lower($sectionCode)])
+            ->whereRaw('LOWER(nhom_hoc_phan) <> ?', [Str::lower($classGroup)])
+            ->exists();
+
+        if ($hasDuplicateSection) {
+            abort(response()->json([
+                'message' => "Mã học phần {$course->ma_hoc_phan} đã có lớp học phần \"{$sectionCode}\". Một môn học không thể có 2 lớp học phần cùng tên. Vui lòng nhập tên lớp khác.",
+            ], 422, [], JSON_UNESCAPED_UNICODE));
+        }
+
+        $newLecturerId = $lecturer?->id;
+        $newLecturerName = $lecturer?->ten_giang_vien ?: (trim((string) ($payload['ten_giang_vien'] ?? '')) ?: null);
+
+        $existingSection = LopHocPhan::query()
+            ->where('hoc_ky_id', (int) $payload['hoc_ky_id'])
+            ->where('hoc_phan_id', $course->id)
+            ->whereRaw('LOWER(nhom_hoc_phan) = ?', [Str::lower($classGroup)])
+            ->whereRaw('LOWER(lop_hoc_phan) = ?', [Str::lower($sectionCode)])
+            ->first();
+
+        if ($existingSection && ($newLecturerId || $newLecturerName)) {
+            $lecturerChanged = ($existingSection->giang_vien_id !== $newLecturerId) || ($existingSection->ten_giang_vien !== $newLecturerName);
+            if ($lecturerChanged) {
+                $slots = ThoiKhoaBieu::query()->where('lop_hoc_phan_id', $existingSection->id)->get();
+                foreach ($slots as $slot) {
+                    $conflict = ThoiKhoaBieu::query()
+                        ->with(['lopHocPhan:id,lop_hoc_phan,ten_hoc_phan,ten_giang_vien,giang_vien_id', 'phongHoc:id,ma_phong'])
+                        ->whereKeyNot($slot->id)
+                        ->where('hoc_ky_id', $slot->hoc_ky_id)
+                        ->where('thu', $slot->thu)
+                        ->where('tiet_bat_dau', '<=', $slot->tiet_ket_thuc)
+                        ->where('tiet_ket_thuc', '>=', $slot->tiet_bat_dau)
+                        ->where('tuan_bat_dau', '<=', $slot->tuan_ket_thuc)
+                        ->where('tuan_ket_thuc', '>=', $slot->tuan_bat_dau)
+                        ->where(function ($query) use ($newLecturerId, $newLecturerName) {
+                            if ($newLecturerId) {
+                                $query->where('giang_vien_id_snapshot', $newLecturerId)
+                                    ->orWhereHas('lopHocPhan', fn ($classQuery) => $classQuery->where('giang_vien_id', $newLecturerId));
+                            }
+
+                            if ($newLecturerName) {
+                                    $query->when($newLecturerId, fn ($nameQuery) => $nameQuery->orWhere(function ($nested) use ($newLecturerName) {
+                                        $nested->where('ten_giang_vien_snapshot', $newLecturerName)
+                                            ->orWhereHas('lopHocPhan', fn ($classQuery) => $classQuery->where('ten_giang_vien', $newLecturerName));
+                                    }), fn ($nameQuery) => $nameQuery
+                                        ->where('ten_giang_vien_snapshot', $newLecturerName)
+                                        ->orWhereHas('lopHocPhan', fn ($classQuery) => $classQuery->where('ten_giang_vien', $newLecturerName)));
+                            }
+                        })
+                        ->first();
+
+                    if ($conflict) {
+                        $teacher = $newLecturerName ?: 'này';
+                        abort(response()->json([
+                            'message' => "Không thể đổi giảng viên. Giảng viên {$teacher} đã có lịch dạy lớp {$conflict->lopHocPhan?->lop_hoc_phan} trong thời gian trùng khớp (Thứ {$slot->thu}, tiết {$slot->tiet_bat_dau}-{$slot->tiet_ket_thuc}, tuần {$slot->tuan_bat_dau}-{$slot->tuan_ket_thuc}).",
+                        ], 422, [], JSON_UNESCAPED_UNICODE));
+                    }
+                }
+            }
+        }
 
         $section = LopHocPhan::query()->updateOrCreate([
             'hoc_ky_id' => (int) $payload['hoc_ky_id'],
             'hoc_phan_id' => $course->id,
-            'nhom_hoc_phan' => trim($payload['nhom_hoc_phan']),
+            'nhom_hoc_phan' => $classGroup,
             'lop_hoc_phan' => $sectionCode,
         ], [
             'lop_hanh_chinh_id' => isset($payload['lop_hanh_chinh_id']) ? (int) $payload['lop_hanh_chinh_id'] : null,
-            'giang_vien_id' => $lecturer?->id,
+            'giang_vien_id' => $newLecturerId,
             'ma_hoc_phan' => $course->ma_hoc_phan,
             'ten_hoc_phan' => $course->ten_hoc_phan,
-            'nhom_hoc_phan' => trim($payload['nhom_hoc_phan']),
-            'ten_giang_vien' => $lecturer?->ten_giang_vien ?: (trim((string) ($payload['ten_giang_vien'] ?? '')) ?: null),
+            'nhom_hoc_phan' => $classGroup,
+            'ten_giang_vien' => $newLecturerName,
             'si_so' => (int) $payload['si_so'],
             'trang_thai' => true,
+        ]);
+
+        ThoiKhoaBieu::query()
+            ->where('lop_hoc_phan_id', $section->id)
+            ->update([
+                'giang_vien_id_snapshot' => $section->giang_vien_id,
+                'ten_giang_vien_snapshot' => $section->ten_giang_vien,
+            ]);
+
+        LopHocPhanDangKy::query()->updateOrCreate([
+            'hoc_ky_id' => (int) $payload['hoc_ky_id'],
+            'lop_hoc_phan_id' => $section->id,
+        ], [
+            'si_so_toi_da' => max(0, (int) $payload['si_so']),
+            'status' => 'open',
         ]);
 
         return $this->jsonResponse([
             'message' => 'Đã tạo lớp học phần.',
             'data' => $section,
         ], 201);
+    }
+
+    private function normalizeClassGroup(string $value): string
+    {
+        $trimmed = trim($value);
+
+        if (preg_match('/^\d+$/', $trimmed) === 1) {
+            return str_pad($trimmed, 2, '0', STR_PAD_LEFT);
+        }
+
+        return Str::upper($trimmed);
     }
 
     public function storeBuilding(Request $request): JsonResponse
@@ -181,13 +318,11 @@ class TimetableController extends Controller
         $payload = $request->validate([
             'giang_duong_id' => ['required', 'integer', 'exists:giang_duongs,id'],
             'ma_phong' => ['required', 'string', 'max:50', 'unique:phong_hocs,ma_phong'],
-            'suc_chua' => ['required', 'integer', 'min:1', 'max:1000'],
         ]);
 
         $room = PhongHoc::query()->create([
             'giang_duong_id' => (int) $payload['giang_duong_id'],
             'ma_phong' => trim($payload['ma_phong']),
-            'suc_chua' => (int) $payload['suc_chua'],
         ])->load('giangDuong:id,ma_giang_duong,ten_giang_duong');
 
         return $this->jsonResponse(['message' => 'Đã tạo phòng học.', 'data' => $room], 201);
@@ -198,13 +333,11 @@ class TimetableController extends Controller
         $payload = $request->validate([
             'giang_duong_id' => ['required', 'integer', 'exists:giang_duongs,id'],
             'ma_phong' => ['required', 'string', 'max:50', Rule::unique('phong_hocs', 'ma_phong')->ignore($phongHoc->id)],
-            'suc_chua' => ['required', 'integer', 'min:1', 'max:1000'],
         ]);
 
         $phongHoc->fill([
             'giang_duong_id' => (int) $payload['giang_duong_id'],
             'ma_phong' => trim($payload['ma_phong']),
-            'suc_chua' => (int) $payload['suc_chua'],
         ])->save();
 
         return $this->jsonResponse(['message' => 'Đã cập nhật phòng học.', 'data' => $phongHoc->fresh('giangDuong:id,ma_giang_duong,ten_giang_duong')]);
@@ -289,7 +422,7 @@ class TimetableController extends Controller
         $this->assertClassSectionMatchesTerm($payload);
         $computed = $this->computeTimetableFields($payload);
         $this->assertNoRoomConflict($payload, $computed);
-        $this->assertCapacity($payload);
+        $this->assertNoLecturerConflict($payload, $computed);
         $snapshot = $this->timetableSnapshot($payload);
 
         $item = ThoiKhoaBieu::query()->create([
@@ -305,13 +438,19 @@ class TimetableController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, ThoiKhoaBieu $thoiKhoaBieu): JsonResponse
+    public function update(Request $request, int|string $thoiKhoaBieu): JsonResponse
     {
+        $thoiKhoaBieu = ThoiKhoaBieu::query()->find($thoiKhoaBieu);
+
+        if (! $thoiKhoaBieu) {
+            return $this->jsonResponse(['message' => 'Lịch học này không còn tồn tại. Vui lòng tải lại danh sách.'], 404);
+        }
+
         $payload = $this->validateTimetable($request);
         $this->assertClassSectionMatchesTerm($payload);
         $computed = $this->computeTimetableFields($payload);
         $this->assertNoRoomConflict($payload, $computed, $thoiKhoaBieu->id);
-        $this->assertCapacity($payload);
+        $this->assertNoLecturerConflict($payload, $computed, $thoiKhoaBieu->id);
         $snapshot = $this->timetableSnapshot($payload);
 
         $thoiKhoaBieu->fill([...$payload, ...$computed, ...$snapshot])->save();
@@ -322,8 +461,14 @@ class TimetableController extends Controller
         ]);
     }
 
-    public function destroy(ThoiKhoaBieu $thoiKhoaBieu): JsonResponse
+    public function destroy(int|string $thoiKhoaBieu): JsonResponse
     {
+        $thoiKhoaBieu = ThoiKhoaBieu::query()->find($thoiKhoaBieu);
+
+        if (! $thoiKhoaBieu) {
+            return $this->jsonResponse(['message' => 'Lịch học này đã được xóa hoặc không còn tồn tại.'], 404);
+        }
+
         $thoiKhoaBieu->delete();
 
         return $this->jsonResponse(['message' => 'Đã xóa lịch học.']);
@@ -387,14 +532,47 @@ class TimetableController extends Controller
         }
     }
 
-    private function assertCapacity(array $payload): void
+    private function assertNoLecturerConflict(array $payload, array $computed, ?int $ignoreId = null): void
     {
         $class = LopHocPhan::query()->find($payload['lop_hoc_phan_id']);
-        $room = PhongHoc::query()->find($payload['phong_hoc_id']);
+        $lecturerId = $class?->giang_vien_id;
+        $lecturerName = trim((string) ($class?->ten_giang_vien ?? ''));
 
-        if ($class && $room && $class->si_so > 0 && $room->suc_chua < $class->si_so) {
+        if (! $lecturerId && $lecturerName === '') {
+            return;
+        }
+
+        $conflict = ThoiKhoaBieu::query()
+            ->with(['lopHocPhan:id,lop_hoc_phan,ten_hoc_phan,ten_giang_vien,giang_vien_id', 'phongHoc:id,ma_phong'])
+            ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
+            ->where('hoc_ky_id', $payload['hoc_ky_id'])
+            ->where('thu', $payload['thu'])
+            ->where('tiet_bat_dau', '<=', $computed['tiet_ket_thuc'])
+            ->where('tiet_ket_thuc', '>=', $payload['tiet_bat_dau'])
+            ->where('tuan_bat_dau', '<=', $computed['tuan_ket_thuc'])
+            ->where('tuan_ket_thuc', '>=', $payload['tuan_bat_dau'])
+            ->where(function ($query) use ($lecturerId, $lecturerName) {
+                if ($lecturerId) {
+                    $query->where('giang_vien_id_snapshot', $lecturerId)
+                        ->orWhereHas('lopHocPhan', fn ($classQuery) => $classQuery->where('giang_vien_id', $lecturerId));
+                }
+
+                if ($lecturerName !== '') {
+                    $query->when($lecturerId, fn ($nameQuery) => $nameQuery->orWhere(function ($nested) use ($lecturerName) {
+                        $nested->where('ten_giang_vien_snapshot', $lecturerName)
+                            ->orWhereHas('lopHocPhan', fn ($classQuery) => $classQuery->where('ten_giang_vien', $lecturerName));
+                    }), fn ($nameQuery) => $nameQuery
+                        ->where('ten_giang_vien_snapshot', $lecturerName)
+                        ->orWhereHas('lopHocPhan', fn ($classQuery) => $classQuery->where('ten_giang_vien', $lecturerName)));
+                }
+            })
+            ->first();
+
+        if ($conflict) {
+            $teacher = $class?->ten_giang_vien ?: $conflict->ten_giang_vien_snapshot ?: $conflict->lopHocPhan?->ten_giang_vien;
+
             abort(response()->json([
-                'message' => "Phòng {$room->ma_phong} không đủ sức chứa cho lớp {$class->lop_hoc_phan}.",
+                'message' => "Giảng viên {$teacher} đã có lịch dạy lớp {$conflict->lopHocPhan?->lop_hoc_phan} trong khoảng thứ, tiết và tuần này.",
             ], 422, [], JSON_UNESCAPED_UNICODE));
         }
     }
@@ -431,6 +609,24 @@ class TimetableController extends Controller
     {
         $item->loadMissing(['lopHocPhan.lopHanhChinh', 'phongHoc.giangDuong', 'hocKy.namHoc']);
         $dates = $this->computedDates($item);
+        $classRegistration = LopHocPhanDangKy::query()
+            ->withCount(['dangKys as so_sv_da_dk' => fn ($query) => $query->where('status', 'registered')])
+            ->where('hoc_ky_id', $item->hoc_ky_id)
+            ->where('lop_hoc_phan_id', $item->lop_hoc_phan_id)
+            ->first();
+
+        if (
+            $classRegistration
+            && $item->lopHocPhan
+            && $item->lopHocPhan->updated_at
+            && $classRegistration->updated_at
+            && $classRegistration->updated_at->lt($item->lopHocPhan->updated_at)
+        ) {
+            $classRegistration->fill([
+                'si_so_toi_da' => max(0, (int) $item->lopHocPhan->si_so),
+            ])->save();
+        }
+
         $classPayload = $item->lopHocPhan ?: [
             'id' => $item->lop_hoc_phan_id,
             'hoc_phan_id' => null,
@@ -449,7 +645,6 @@ class TimetableController extends Controller
             'id' => $item->phong_hoc_id,
             'giang_duong_id' => null,
             'ma_phong' => $item->ma_phong_snapshot,
-            'suc_chua' => null,
             'da_xoa_phong_hoc' => true,
         ];
 
@@ -467,6 +662,8 @@ class TimetableController extends Controller
             'tuan_ket_thuc' => $item->tuan_ket_thuc,
             'ngay_bat_dau' => $dates['ngay_bat_dau'],
             'ngay_ket_thuc' => $dates['ngay_ket_thuc'],
+            'si_so_toi_da' => $classRegistration?->si_so_toi_da,
+            'so_sv_da_dk' => (int) ($classRegistration?->so_sv_da_dk ?? 0),
             'lop_hoc_phan' => $classPayload,
             'phong_hoc' => $roomPayload,
             'hoc_ky' => $item->hocKy ? [

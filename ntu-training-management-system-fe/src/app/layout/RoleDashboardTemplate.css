@@ -19,10 +19,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 22px;
-  border-bottom: 1px solid #d9e5f4;
-  background: rgba(252, 254, 255, 0.92);
-  backdrop-filter: blur(8px);
+  padding: 16px 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #091a3c 0%, #0c3e72 50%, #0369a1 100%);
+  box-shadow: 0 10px 30px -10px rgba(10, 42, 94, 0.2);
 }
 
 .rd-brand {
@@ -32,22 +32,26 @@
 }
 
 .rd-logo {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.15));
 }
 
 .rd-brand-title {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: 0.03em;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .rd-brand-subtitle {
   margin: 0;
-  font-size: 0.78rem;
-  color: #5f7088;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
 }
 
 .rd-user-wrap {
@@ -57,13 +61,15 @@
 }
 
 .rd-role-chip {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.74rem;
-  font-weight: 700;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border: 1px solid transparent;
+  letter-spacing: 0.7px;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
 }
 
 .rd-avatar {
@@ -81,6 +87,7 @@
 .rd-username {
   font-size: 0.82rem;
   font-weight: 700;
+  color: #ffffff;
 }
 
 .rd-logout {
@@ -207,27 +214,32 @@
 }
 
 .rd-role-chip.blue,
+.rd-role-chip.teal,
+.rd-role-chip.orange,
+.rd-role-chip.red {
+  background: transparent;
+  border-color: transparent;
+  color: #fff;
+}
+
 .rd-avatar.blue {
   background: #1f62d7;
   border-color: #1f62d7;
   color: #fff;
 }
 
-.rd-role-chip.teal,
 .rd-avatar.teal {
   background: #058185;
   border-color: #058185;
   color: #fff;
 }
 
-.rd-role-chip.orange,
 .rd-avatar.orange {
   background: #d27006;
   border-color: #d27006;
   color: #fff;
 }
 
-.rd-role-chip.red,
 .rd-avatar.red {
   background: #c23a3a;
   border-color: #c23a3a;
