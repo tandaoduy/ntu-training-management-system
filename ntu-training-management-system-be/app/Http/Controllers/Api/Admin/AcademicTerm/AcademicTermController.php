@@ -17,6 +17,7 @@ class AcademicTermController extends Controller
     private const CURRENT_HOC_KY_ID_KEY = 'current_hoc_ky_id';
     private const CURRENT_ACADEMIC_TERM_KEY = 'current_academic_term_id';
     private const CURRENT_ACADEMIC_TERM_ARRAY_KEY = 'current_academic_term';
+    private const STUDENT_PROFILE_EDIT_WINDOW_KEY = 'student_profile_edit_window';
     private const HOC_KY_OPTIONS = ['1', '2', 'Hè'];
 
     private function jsonResponse(array $payload, int $status = 200): JsonResponse
@@ -74,6 +75,39 @@ class AcademicTermController extends Controller
         return $this->jsonResponse([
             'data' => $currentAcademicTerm ? $this->toAcademicTermPayload($currentAcademicTerm) : null,
             'is_configured' => $currentAcademicTerm !== null,
+        ]);
+    }
+
+    public function profileEditWindow(): JsonResponse
+    {
+        return $this->jsonResponse([
+            'data' => $this->profileEditWindowPayload(),
+        ]);
+    }
+
+    public function saveProfileEditWindow(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after:starts_at'],
+            'enabled' => ['sometimes', 'boolean'],
+        ]);
+
+        HeThongCauHinh::query()->updateOrCreate(
+            ['key' => self::STUDENT_PROFILE_EDIT_WINDOW_KEY],
+            [
+                'value' => json_encode([
+                    'starts_at' => $payload['starts_at'] ?? null,
+                    'ends_at' => $payload['ends_at'] ?? null,
+                    'enabled' => (bool) ($payload['enabled'] ?? true),
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'updated_by' => (string) ($request->user()?->username ?? ''),
+            ],
+        );
+
+        return $this->jsonResponse([
+            'message' => 'Đã lưu thời gian cho phép sinh viên chỉnh sửa thông tin.',
+            'data' => $this->profileEditWindowPayload(),
         ]);
     }
 
@@ -256,6 +290,30 @@ class AcademicTermController extends Controller
             'nam_hoc_id' => $hocKy->nam_hoc_id,
             'nam_hoc' => (string) ($hocKy->namHoc?->nam_hoc ?? ''),
             'hoc_ky' => (string) $hocKy->hoc_ky,
+        ];
+    }
+
+    private function profileEditWindowPayload(): array
+    {
+        $value = HeThongCauHinh::query()->find(self::STUDENT_PROFILE_EDIT_WINDOW_KEY)?->value;
+        $config = json_decode((string) $value, true);
+        $config = is_array($config) ? $config : [];
+        $startsAt = $config['starts_at'] ?? null;
+        $endsAt = $config['ends_at'] ?? null;
+        $enabled = (bool) ($config['enabled'] ?? false);
+        $isOpen = false;
+
+        if ($enabled && $startsAt && $endsAt) {
+            $now = now();
+            $isOpen = $now->greaterThanOrEqualTo(\Carbon\Carbon::parse($startsAt))
+                && $now->lessThanOrEqualTo(\Carbon\Carbon::parse($endsAt));
+        }
+
+        return [
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'enabled' => $enabled,
+            'is_open' => $isOpen,
         ];
     }
 }

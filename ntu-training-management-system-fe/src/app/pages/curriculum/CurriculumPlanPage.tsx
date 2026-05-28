@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 
 import { apiGet } from '../../../api/core/request'
 import { useAuth } from '../../../api/query'
@@ -80,6 +80,8 @@ interface CurriculumPlanPageProps {
   title: string
   description: string
   staffEndpointPrefix?: string
+  hideToolbar?: boolean
+  hideHeading?: boolean
 }
 
 const defaultProps: CurriculumPlanPageProps = {
@@ -88,6 +90,8 @@ const defaultProps: CurriculumPlanPageProps = {
   backLink: '/',
   title: 'Chương trình đào tạo',
   description: 'Theo dõi chương trình đào tạo và danh mục học phần đã công bố.',
+  hideToolbar: false,
+  hideHeading: false,
 }
 
 function programLabel(program: CurriculumProgram) {
@@ -141,6 +145,191 @@ function isSpecializationGroup(code: string) {
 
 function subsectionCredits(items: CurriculumCourse[], fallback: number) {
   return items.length > 0 ? items.reduce((sum, item) => sum + item.so_tin_chi, 0) : fallback
+}
+
+interface ProgramComboboxProps {
+  programs: CurriculumProgram[]
+  selectedId: number | null
+  onSelect: (id: number) => void
+  variant?: 'default' | 'compact'
+}
+
+function ProgramCombobox({ programs, selectedId, onSelect, variant = 'default' }: ProgramComboboxProps) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [highlight, setHighlight] = useState(0)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  const selectedProgram = programs.find((program) => program.id === selectedId) ?? null
+  const selectedLabel = selectedProgram ? programLabel(selectedProgram) : 'Chọn chương trình đào tạo'
+
+  const filtered = useMemo(() => {
+    const keyword = query.trim().toLowerCase()
+    if (!keyword) return programs
+    return programs.filter((program) => programLabel(program).toLowerCase().includes(keyword))
+  }, [programs, query])
+
+  useEffect(() => {
+    if (!open) return
+    const handleClick = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+        setQuery('')
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => {
+        setHighlight(0)
+        inputRef.current?.focus()
+      })
+    }
+  }, [open])
+
+  const commit = (id: number) => {
+    onSelect(id)
+    setOpen(false)
+    setQuery('')
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setHighlight((prev) => Math.min(prev + 1, filtered.length - 1))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setHighlight((prev) => Math.max(prev - 1, 0))
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      const target = filtered[highlight]
+      if (target) commit(target.id)
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      setOpen(false)
+      setQuery('')
+    }
+  }
+
+  return (
+    <div className={`cp-combobox cp-combobox--${variant}`} ref={containerRef}>
+      {variant !== 'compact' && (
+        <span className="cp-combobox-label">Chương trình đào tạo</span>
+      )}
+
+      <button
+        type="button"
+        className={`cp-combobox-trigger${open ? ' is-open' : ''}`}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        {variant === 'compact' && (
+          <svg
+            className="cp-combobox-leading"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.9}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+        )}
+        <span className={`cp-combobox-value${selectedProgram ? '' : ' is-placeholder'}`}>
+          {selectedLabel}
+        </span>
+        <svg
+          className="cp-combobox-caret"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="cp-combobox-popover" role="listbox">
+          <div className="cp-combobox-search">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value)
+                setHighlight(0)
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Tìm theo tên hoặc mã CTĐT..."
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="cp-combobox-list">
+            {filtered.length === 0 ? (
+              <div className="cp-combobox-empty">Không tìm thấy chương trình phù hợp.</div>
+            ) : (
+              filtered.map((program, index) => {
+                const active = program.id === selectedId
+                const highlighted = index === highlight
+                return (
+                  <button
+                    type="button"
+                    key={program.id}
+                    role="option"
+                    aria-selected={active}
+                    className={`cp-combobox-option${active ? ' is-active' : ''}${highlighted ? ' is-highlight' : ''}`}
+                    onMouseEnter={() => setHighlight(index)}
+                    onClick={() => commit(program.id)}
+                  >
+                    <span className="cp-combobox-option-label">{programLabel(program)}</span>
+                    {active && (
+                      <svg
+                        className="cp-combobox-check"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function CurriculumPlanPage(props: Partial<CurriculumPlanPageProps> = {}) {
@@ -312,6 +501,16 @@ export default function CurriculumPlanPage(props: Partial<CurriculumPlanPageProp
   ))
   const graduationRows = professionalRows.filter(({ group }) => group.ma_nhom.startsWith('GDCN_TOTNGHIEP'))
   const sumCredits = (rows: typeof curriculumRows) => rows.reduce((sum, row) => sum + row.group.min_tin_chi, 0)
+  const sectionCredits = (rows: typeof curriculumRows) => {
+    const requiredRows = rows.filter(({ requiredItems }) => requiredItems.length > 0)
+    const optionalRows = rows.filter(({ optionalItems }) => optionalItems.length > 0)
+    const required = requiredRows.reduce((sum, row) => sum + subsectionCredits(row.requiredItems, 0), 0)
+    const optional = optionalRows.reduce((sum, row) => sum + row.group.optional_min_tin_chi, 0)
+
+    return { total: required + optional, required, optional }
+  }
+  const industryCredits = sectionCredits(industryRows)
+  const graduationCredits = sectionCredits(graduationRows)
 
   const renderCourse = (groupId: string, course: CurriculumCourse & { rowNo: number }) => (
     <tr key={`${groupId}-${course.id}-${course.rowNo}`} className="cp-course-row">
@@ -419,29 +618,22 @@ export default function CurriculumPlanPage(props: Partial<CurriculumPlanPageProp
 
   return (
     <main className={`cp-page ${config.mode}`}>
-      <div className="cp-toolbar">
-        <span className="cp-role">{config.roleLabel}</span>
-      </div>
 
-      <section className="cp-header">
-        <div>
-          <p className="cp-eyebrow">Chương trình đào tạo</p>
-          <h1>{config.title}</h1>
-          <p>{config.description}</p>
-        </div>
-        <label className="cp-version-select">
-          <span>Chương trình đào tạo</span>
-          <select
-            value={selectedProgramId ?? ''}
-            onChange={(event) => setSelectedProgramId(Number(event.target.value) || null)}
-          >
-            {programs.map((program) => (
-              <option key={program.id} value={program.id}>
-                {programLabel(program)}
-              </option>
-            ))}
-          </select>
-        </label>
+
+      <section className={`cp-header${config.hideHeading ? ' cp-header--compact' : ''}`}>
+        {!config.hideHeading && (
+          <div>
+            <p className="cp-eyebrow">Chương trình đào tạo</p>
+            <h1>{config.title}</h1>
+            <p>{config.description}</p>
+          </div>
+        )}
+        <ProgramCombobox
+          programs={programs}
+          selectedId={selectedProgramId}
+          onSelect={(id) => setSelectedProgramId(id)}
+          variant={config.hideHeading ? 'compact' : 'default'}
+        />
       </section>
 
       {error && <div className="cp-alert">{error}</div>}
@@ -499,10 +691,9 @@ export default function CurriculumPlanPage(props: Partial<CurriculumPlanPageProp
                     <td colSpan={8}></td>
                   </tr>
                   {renderSimpleSection(foundationRows)}
-                  {renderComplexSection('II.2', 'Ngành', industryRows, { total: 43, required: 34, optional: 9 })}
+                  {renderComplexSection('II.2', 'Ngành', industryRows, industryCredits)}
                   {renderComplexSection('II.3', 'Tốt nghiệp', graduationRows, {
-                    total: 10,
-                    optional: 10,
+                    ...graduationCredits,
                     optionalLabel: 'Đồ án/Khóa luận tốt nghiệp hoặc Học phần thay thế',
                   })}
                 </tbody>

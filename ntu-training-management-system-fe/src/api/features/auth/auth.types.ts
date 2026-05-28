@@ -3,7 +3,18 @@ export interface AuthUser {
   username: string;
   name?: string | null;
   role: string | null;
+  permissions?: string[];
   educationSystem?: string | null;
+  donViId?: number | null;
+  tenDonVi?: string | null;
+  advisor?: {
+    hasAdvisor?: boolean;
+    code?: string | null;
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    message?: string | null;
+  } | null;
 }
 
 export interface LoginRequest {
@@ -17,12 +28,30 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export interface ExtendSessionResponse {
+  access_token: string;
+  token_type: 'Bearer' | string;
+  expires_in: number;
+  message: string;
+}
+
 export interface CurrentUserResponse {
   id: number | null;
   username: string | null;
   name?: string | null;
   role: string | null;
+  permissions?: string[];
   education_system?: string | null;
+  don_vi_id?: number | null;
+  ten_don_vi?: string | null;
+  advisor?: {
+    has_advisor?: boolean;
+    code?: string | null;
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    message?: string | null;
+  } | null;
 }
 
 export interface ChangePasswordRequest {

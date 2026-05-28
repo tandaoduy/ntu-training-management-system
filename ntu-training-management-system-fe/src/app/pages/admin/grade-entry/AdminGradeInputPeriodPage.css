@@ -1,0 +1,39 @@
+.agp-period-table-wrap {
+  margin-top: 18px;
+  overflow-x: auto;
+}
+
+.agp-period-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.agp-period-table th,
+.agp-period-table td {
+  border-bottom: 1px solid #e2e8f0;
+  color: #625a75;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.agp-period-table th {
+  color: #625a75;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.agp-period-edit {
+  border: 0;
+  border-radius: 8px;
+  background: #eef2f7;
+  color: #334155;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.agp-period-empty {
+  color: #64748b;
+  padding: 14px;
+}

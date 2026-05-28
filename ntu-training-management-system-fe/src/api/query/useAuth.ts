@@ -27,7 +27,20 @@ const mapCurrentUser = (input: CurrentUserResponse): AuthUser | null => {
     username: input.username,
     name: input.name ?? null,
     role: input.role,
+    permissions: input.permissions ?? [],
     educationSystem: input.education_system ?? null,
+    donViId: input.don_vi_id ?? null,
+    tenDonVi: input.ten_don_vi ?? null,
+    advisor: input.advisor
+      ? {
+          hasAdvisor: input.advisor.has_advisor ?? false,
+          code: input.advisor.code ?? null,
+          name: input.advisor.name ?? null,
+          phone: input.advisor.phone ?? null,
+          email: input.advisor.email ?? null,
+          message: input.advisor.message ?? null,
+        }
+      : null,
   };
 };
 

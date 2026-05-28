@@ -63,6 +63,7 @@ type StudentProfile = {
 
 type StudentDashboardResponse = {
   student?: StudentProfile | null
+  freshStudent?: StudentProfile | null
   profile_edit_window?: {
     starts_at?: string | null
     ends_at?: string | null
@@ -91,12 +92,10 @@ type EditableProfileForm = {
   ho_ten_cha: string
   ngay_sinh_cha: string
   que_quan_cha_tinh_thanh_pho: string
-  que_quan_cha_quan_huyen: string
   nghe_nghiep_cha: string
   ho_ten_me: string
   ngay_sinh_me: string
   que_quan_me_tinh_thanh_pho: string
-  que_quan_me_quan_huyen: string
   nghe_nghiep_me: string
 }
 
@@ -104,6 +103,10 @@ type Province = {
   id: number
   name: string
   code: string | null
+}
+
+type ProvinceWithDistricts = Province & {
+  districts?: District[]
 }
 
 type District = {
@@ -114,11 +117,7 @@ type District = {
 }
 
 type ProvinceResponse = {
-  data: Province[]
-}
-
-type DistrictResponse = {
-  data: District[]
+  data: ProvinceWithDistricts[]
 }
 
 type StudentCatalogResponse = {
@@ -135,6 +134,7 @@ type FormFieldProps = {
   placeholder?: string
   inputMode?: 'numeric'
   maxLength?: number
+  className?: string
 }
 
 type SelectFieldProps = {
@@ -142,6 +142,7 @@ type SelectFieldProps = {
   value: string
   options: string[]
   onChange: (value: string) => void
+  className?: string
 }
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>
@@ -149,26 +150,19 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>
 const blank = ''
 
 const GENDER_OPTIONS = ['Nam', 'Nữ', 'Khác']
-const ETHNIC_OPTIONS: string[] = []
-const RELIGION_OPTIONS: string[] = []
-const PROVINCE_OPTIONS: string[] = []
 
 const withCurrentOption = (options: string[], value: string) => {
   const normalized = value.trim()
   return normalized && !options.includes(normalized) ? [normalized, ...options] : options
 }
 
-const splitPlace = (value?: string | null) => {
-  const parts = String(value ?? '').split(',').map((part) => part.trim()).filter(Boolean)
-  if (parts.length >= 2) {
-    return {
-      ward: parts.slice(0, -1).join(', '),
-      province: parts[parts.length - 1],
-    }
-  }
-
-  return { ward: '', province: parts[0] ?? '' }
-}
+const normalizePlaceName = (value: string) => (
+  value
+    .toLowerCase()
+    .replace(/\b(thành phố|tỉnh)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+)
 
 const formatProvinceOption = (province: Province) => (
   province.code ? `${province.code} - ${province.name}` : province.name
@@ -224,9 +218,6 @@ const combinePlace = (...parts: Array<string | null | undefined>) => {
 }
 
 const formFromStudent = (student?: StudentProfile | null): EditableProfileForm => {
-  const fatherPlace = splitPlace(student?.que_quan_cha)
-  const motherPlace = splitPlace(student?.que_quan_me)
-
   return {
     ngay_sinh: toFormDate(student?.ngay_sinh),
     noi_sinh: student?.noi_sinh ?? '',
@@ -242,19 +233,17 @@ const formFromStudent = (student?: StudentProfile | null): EditableProfileForm =
     so_dien_thoai_gia_dinh: student?.so_dien_thoai_gia_dinh ?? '',
     ho_ten_cha: student?.ho_ten_cha ?? '',
     ngay_sinh_cha: toFormDate(student?.ngay_sinh_cha),
-    que_quan_cha_tinh_thanh_pho: fatherPlace.province,
-    que_quan_cha_quan_huyen: fatherPlace.ward,
+    que_quan_cha_tinh_thanh_pho: student?.que_quan_cha ?? '',
     nghe_nghiep_cha: student?.nghe_nghiep_cha ?? '',
     ho_ten_me: student?.ho_ten_me ?? '',
     ngay_sinh_me: toFormDate(student?.ngay_sinh_me),
-    que_quan_me_tinh_thanh_pho: motherPlace.province,
-    que_quan_me_quan_huyen: motherPlace.ward,
+    que_quan_me_tinh_thanh_pho: student?.que_quan_me ?? '',
     nghe_nghiep_me: student?.nghe_nghiep_me ?? '',
   }
 }
 
-const Field = ({ label, value, onChange, placeholder, inputMode, maxLength }: FormFieldProps) => (
-  <label>
+const Field = ({ label, value, onChange, placeholder, inputMode, maxLength, className }: FormFieldProps) => (
+  <label className={className}>
     {label}
     <input
       value={value}
@@ -266,8 +255,8 @@ const Field = ({ label, value, onChange, placeholder, inputMode, maxLength }: Fo
   </label>
 )
 
-const SelectField = ({ label, value, options, onChange }: SelectFieldProps) => (
-  <label>
+const SelectField = ({ label, value, options, onChange, className }: SelectFieldProps) => (
+  <label className={className}>
     {label}
     <select value={value} onChange={(event) => onChange(event.target.value)}>
       <option value="">Chọn thông tin</option>
@@ -278,13 +267,14 @@ const SelectField = ({ label, value, options, onChange }: SelectFieldProps) => (
   </label>
 )
 
-const ProvinceField = ({ label, value, provinces, onChange }: {
+const ProvinceField = ({ label, value, provinces, onChange, className }: {
   label: string
   value: string
   provinces: Province[]
   onChange: (provinceName: string) => void
+  className?: string
 }) => (
-  <label>
+  <label className={className}>
     {label}
     <select value={value} onChange={(event) => onChange(event.target.value)}>
       <option value="">Chọn tỉnh/thành phố</option>
@@ -298,13 +288,14 @@ const ProvinceField = ({ label, value, provinces, onChange }: {
   </label>
 )
 
-const WardField = ({ label, value, districts, onChange }: {
+const WardField = ({ label, value, districts, onChange, className }: {
   label: string
   value: string
   districts: District[]
   onChange: (districtName: string) => void
+  className?: string
 }) => (
-  <label>
+  <label className={className}>
     {label}
     <select value={value} onChange={(event) => onChange(event.target.value)}>
       <option value="">Chọn xã/phường</option>
@@ -337,14 +328,13 @@ const sectionIcons = {
   family: UsersIcon,
 }
 
-const wardOptions = (_provinceCode?: string, _currentWard?: string): string[] => []
-
 export default function StudentProfilePage() {
   const navigate = useNavigate()
   const { user, me, logout } = useAuth()
   const [student, setStudent] = useState<StudentProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [catalogError, setCatalogError] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [editing, setEditing] = useState(false)
   const [profileEditOpen, setProfileEditOpen] = useState(false)
@@ -352,12 +342,45 @@ export default function StudentProfilePage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [academicYear, setAcademicYear] = useState('2024-2025')
   const [semester, setSemester] = useState('1')
+  const [provinces, setProvinces] = useState<ProvinceWithDistricts[]>([])
+  const [ethnicOptions, setEthnicOptions] = useState<string[]>([])
+  const [religionOptions, setReligionOptions] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState<'personal' | 'address' | 'contact' | 'family'>('personal')
 
   useEffect(() => {
     if (!user) {
       void me()
     }
   }, [me, user])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadCatalogs = async () => {
+      try {
+        const [provinceResponse, catalogResponse] = await Promise.all([
+          apiGet<ProvinceResponse>('/provinces/with-districts'),
+          apiGet<StudentCatalogResponse>('/admin/accounts/student-catalog'),
+        ])
+
+        if (!isMounted) return
+
+        setProvinces(provinceResponse.data ?? [])
+        setEthnicOptions((catalogResponse.data?.dan_tocs ?? []).map((item) => item.ten_dan_toc))
+        setReligionOptions((catalogResponse.data?.ton_giaos ?? []).map((item) => item.ten_ton_giao))
+        setCatalogError('')
+      } catch (err) {
+        if (!isMounted) return
+        setCatalogError(err instanceof Error ? err.message : 'Không tải được danh mục tỉnh/thành phố, dân tộc, tôn giáo.')
+      }
+    }
+
+    void loadCatalogs()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -394,7 +417,16 @@ export default function StudentProfilePage() {
     }))
   }
 
+  const districtsForProvince = (provinceName: string) => {
+    const normalized = normalizePlaceName(provinceName)
+    if (!normalized) return []
+    const matchedProvince = provinces.find((province) => normalizePlaceName(province.name) === normalized)
+    return matchedProvince?.districts ?? []
+  }
+
   const handleSaveProfile = async () => {
+    const queQuanCha = profileForm.que_quan_cha_tinh_thanh_pho.trim()
+    const queQuanMe = profileForm.que_quan_me_tinh_thanh_pho.trim()
     const phone = sanitizePhone(profileForm.so_dien_thoai)
     const familyPhone = sanitizePhone(profileForm.so_dien_thoai_gia_dinh)
 
@@ -430,16 +462,16 @@ export default function StudentProfilePage() {
         so_dien_thoai_gia_dinh: familyPhone || null,
         ho_ten_cha: profileForm.ho_ten_cha.trim() || null,
         ngay_sinh_cha: ngaySinhCha,
-        que_quan_cha: profileForm.que_quan_cha.trim() || null,
+        que_quan_cha: queQuanCha || null,
         nghe_nghiep_cha: profileForm.nghe_nghiep_cha.trim() || null,
         ho_ten_me: profileForm.ho_ten_me.trim() || null,
         ngay_sinh_me: ngaySinhMe,
-        que_quan_me: profileForm.que_quan_me.trim() || null,
+        que_quan_me: queQuanMe || null,
         nghe_nghiep_me: profileForm.nghe_nghiep_me.trim() || null,
       })
-      setStudent(response.student ?? null)
+      setStudent(response.freshStudent ?? response.student ?? null)
       setProfileEditOpen(Boolean(response.profile_edit_window?.is_open))
-      setProfileForm(formFromStudent(response.student))
+      setProfileForm(formFromStudent(response.freshStudent ?? response.student))
       setEditing(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không lưu được thông tin sinh viên.')
@@ -536,6 +568,9 @@ export default function StudentProfilePage() {
   const cachedUserName = authStorage.getUser()?.name?.trim() || null
   const displayName = user?.name?.trim() || cachedUserName || student?.ten_sinh_vien || ''
   const resolvedAvatarUrl = resolveImageUrl(student?.anh_url || student?.anh)
+  const chips = [student?.user_id, student?.he_dao_tao, student?.khoa_hoc]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)
 
   return (
     <div className="student-profile-shell">
@@ -573,9 +608,9 @@ export default function StudentProfilePage() {
             <p className="student-profile-eyebrow">Hồ sơ sinh viên</p>
             <h1>{display(student?.ten_sinh_vien)}</h1>
             <div className="student-profile-chips">
-              <span>{display(student?.user_id)}</span>
-              <span>{display(student?.he_dao_tao)}</span>
-              <span>{display(student?.khoa_hoc)}</span>
+              {chips.map((chip, index) => (
+                <span key={`${chip}-${index}`}>{chip}</span>
+              ))}
             </div>
           </div>
           <HomeModernIcon className="student-profile-hero-icon" aria-hidden="true" />
@@ -592,59 +627,146 @@ export default function StudentProfilePage() {
                 <div>
                   <h2>Chỉnh sửa thông tin được phép</h2>
                   <p>Thông tin học vụ, CCCD, email và ảnh hồ sơ do nhà trường quản lý, sinh viên không được chỉnh sửa.</p>
+                  {catalogError && <p className="student-profile-edit-warning">{catalogError}</p>}
                 </div>
-                {!editing ? (
-                  <button type="button" onClick={() => setEditing(true)}>Sửa thông tin</button>
-                ) : (
-                  <div className="student-profile-edit-actions">
-                    <button type="button" className="secondary" onClick={() => {
-                      setEditing(false)
-                      setProfileForm(formFromStudent(student))
-                    }}>
-                      Hủy
-                    </button>
-                    <button type="button" disabled={savingProfile} onClick={() => void handleSaveProfile()}>
-                      {savingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
-                    </button>
-                  </div>
-                )}
+                <button type="button" onClick={() => {
+                  setProfileForm(formFromStudent(student))
+                  setError('')
+                  setActiveTab('personal')
+                  setEditing(true)
+                }}>
+                  Sửa thông tin
+                </button>
               </section>
             )}
 
             {profileEditOpen && editing && (
-              <div className="student-profile-edit-sections">
-                <EditSection title="Thông tin cá nhân" icon={UserCircleIcon}>
-                  <Field label="Ngày sinh" value={profileForm.ngay_sinh} placeholder="ngày-tháng-năm" onChange={(value) => updateForm('ngay_sinh', value)} />
-                  <SelectField label="Nơi sinh" value={profileForm.noi_sinh} options={PROVINCE_OPTIONS} onChange={(value) => updateForm('noi_sinh', value)} />
-                  <SelectField label="Giới tính" value={profileForm.gioi_tinh} options={GENDER_OPTIONS} onChange={(value) => updateForm('gioi_tinh', value)} />
-                  <SelectField label="Dân tộc" value={profileForm.dan_toc} options={ETHNIC_OPTIONS} onChange={(value) => updateForm('dan_toc', value)} />
-                  <SelectField label="Tôn giáo" value={profileForm.ton_giao} options={RELIGION_OPTIONS} onChange={(value) => updateForm('ton_giao', value)} />
-                </EditSection>
+              <Modal
+                modal={{
+                  id: 'student-profile-edit-modal',
+                  title: 'Chỉnh sửa thông tin hồ sơ',
+                  size: 'xl',
+                  dismissible: true,
+                  closeOnOverlayClick: false,
+                  content: (
+                    <div className="student-profile-edit-modal-layout-wrapper">
+                      {error && (
+                        <div className="student-profile-state error" style={{ marginTop: 0, marginBottom: 16 }}>
+                          {error}
+                        </div>
+                      )}
+                      <div className="student-profile-edit-modal-layout">
+                        {/* Left Sidebar Tabs */}
+                        <aside className="student-profile-edit-sidebar">
+                          <button
+                            type="button"
+                            className={`student-profile-edit-tab ${activeTab === 'personal' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('personal')}
+                          >
+                            <UserCircleIcon aria-hidden="true" />
+                            <span>Thông tin cá nhân</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`student-profile-edit-tab ${activeTab === 'address' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('address')}
+                          >
+                            <MapPinIcon aria-hidden="true" />
+                            <span>Hộ khẩu & Quê quán</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`student-profile-edit-tab ${activeTab === 'contact' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('contact')}
+                          >
+                            <PhoneIcon aria-hidden="true" />
+                            <span>Liên hệ</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`student-profile-edit-tab ${activeTab === 'family' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('family')}
+                          >
+                            <UsersIcon aria-hidden="true" />
+                            <span>Thông tin gia đình</span>
+                          </button>
+                        </aside>
 
-                <EditSection title="Hộ khẩu và quê quán" icon={MapPinIcon}>
-                  <SelectField label="Hộ khẩu tỉnh/thành phố" value={profileForm.ho_khau_tinh_thanh_pho} options={PROVINCE_OPTIONS} onChange={(value) => updateForm('ho_khau_tinh_thanh_pho', value)} />
-                  <SelectField label="Hộ khẩu xã/phường" value={profileForm.ho_khau_quan_huyen} options={wardOptions(profileForm.ho_khau_tinh_thanh_pho, profileForm.ho_khau_quan_huyen)} onChange={(value) => updateForm('ho_khau_quan_huyen', value)} />
-                  <SelectField label="Quê quán tỉnh/thành phố" value={profileForm.que_quan_tinh_thanh_pho} options={PROVINCE_OPTIONS} onChange={(value) => updateForm('que_quan_tinh_thanh_pho', value)} />
-                  <SelectField label="Quê quán xã/phường" value={profileForm.que_quan_quan_huyen} options={wardOptions(profileForm.que_quan_tinh_thanh_pho, profileForm.que_quan_quan_huyen)} onChange={(value) => updateForm('que_quan_quan_huyen', value)} />
-                </EditSection>
+                        {/* Right Content Area */}
+                        <div className="student-profile-edit-main">
+                          {activeTab === 'personal' && (
+                            <EditSection title="Thông tin cá nhân" icon={UserCircleIcon}>
+                              <Field label="Ngày sinh" value={profileForm.ngay_sinh} placeholder="ngày-tháng-năm" onChange={(value) => updateForm('ngay_sinh', value)} />
+                              <ProvinceField label="Nơi sinh" value={profileForm.noi_sinh} provinces={provinces} onChange={(value) => updateForm('noi_sinh', value)} />
+                              <SelectField label="Giới tính" value={profileForm.gioi_tinh} options={GENDER_OPTIONS} onChange={(value) => updateForm('gioi_tinh', value)} />
+                              <SelectField label="Dân tộc" value={profileForm.dan_toc} options={ethnicOptions} onChange={(value) => updateForm('dan_toc', value)} />
+                              <SelectField label="Tôn giáo" value={profileForm.ton_giao} options={religionOptions} onChange={(value) => updateForm('ton_giao', value)} />
+                            </EditSection>
+                          )}
 
-                <EditSection title="Liên hệ" icon={PhoneIcon}>
-                  <Field label="Địa chỉ liên lạc" value={profileForm.dia_chi_lien_lac} onChange={(value) => updateForm('dia_chi_lien_lac', value)} />
-                  <Field label="Số điện thoại liên lạc" value={profileForm.so_dien_thoai} inputMode="numeric" maxLength={10} onChange={(value) => updateForm('so_dien_thoai', value)} />
-                  <Field label="Số điện thoại gia đình" value={profileForm.so_dien_thoai_gia_dinh} inputMode="numeric" maxLength={10} onChange={(value) => updateForm('so_dien_thoai_gia_dinh', value)} />
-                </EditSection>
+                          {activeTab === 'address' && (
+                            <EditSection title="Hộ khẩu và quê quán" icon={MapPinIcon}>
+                              <ProvinceField label="Hộ khẩu tỉnh/thành phố" value={profileForm.ho_khau_tinh_thanh_pho} provinces={provinces} onChange={(value) => updateForm('ho_khau_tinh_thanh_pho', value)} />
+                              <WardField label="Hộ khẩu xã/phường" value={profileForm.ho_khau_quan_huyen} districts={districtsForProvince(profileForm.ho_khau_tinh_thanh_pho)} onChange={(value) => updateForm('ho_khau_quan_huyen', value)} />
+                              <ProvinceField label="Quê quán tỉnh/thành phố" value={profileForm.que_quan_tinh_thanh_pho} provinces={provinces} onChange={(value) => updateForm('que_quan_tinh_thanh_pho', value)} />
+                              <WardField label="Quê quán xã/phường" value={profileForm.que_quan_quan_huyen} districts={districtsForProvince(profileForm.que_quan_tinh_thanh_pho)} onChange={(value) => updateForm('que_quan_quan_huyen', value)} />
+                            </EditSection>
+                          )}
 
-                <EditSection title="Thông tin gia đình" icon={UsersIcon}>
-                  <Field label="Họ tên cha" value={profileForm.ho_ten_cha} onChange={(value) => updateForm('ho_ten_cha', value)} />
-                  <Field label="Ngày sinh cha" value={profileForm.ngay_sinh_cha} placeholder="ngày-tháng-năm" onChange={(value) => updateForm('ngay_sinh_cha', value)} />
-                  <Field label="Quê quán cha" value={profileForm.que_quan_cha} onChange={(value) => updateForm('que_quan_cha', value)} />
-                  <Field label="Nghề nghiệp cha" value={profileForm.nghe_nghiep_cha} onChange={(value) => updateForm('nghe_nghiep_cha', value)} />
-                  <Field label="Họ tên mẹ" value={profileForm.ho_ten_me} onChange={(value) => updateForm('ho_ten_me', value)} />
-                  <Field label="Ngày sinh mẹ" value={profileForm.ngay_sinh_me} placeholder="ngày-tháng-năm" onChange={(value) => updateForm('ngay_sinh_me', value)} />
-                  <Field label="Quê quán mẹ" value={profileForm.que_quan_me} onChange={(value) => updateForm('que_quan_me', value)} />
-                  <Field label="Nghề nghiệp mẹ" value={profileForm.nghe_nghiep_me} onChange={(value) => updateForm('nghe_nghiep_me', value)} />
-                </EditSection>
-              </div>
+                          {activeTab === 'contact' && (
+                            <EditSection title="Liên hệ" icon={PhoneIcon}>
+                              <Field label="Địa chỉ liên lạc" className="span-2" value={profileForm.dia_chi_lien_lac} onChange={(value) => updateForm('dia_chi_lien_lac', value)} />
+                              <Field label="Số điện thoại liên lạc" value={profileForm.so_dien_thoai} inputMode="numeric" maxLength={10} onChange={(value) => updateForm('so_dien_thoai', value)} />
+                              <Field label="Số điện thoại gia đình" value={profileForm.so_dien_thoai_gia_dinh} inputMode="numeric" maxLength={10} onChange={(value) => updateForm('so_dien_thoai_gia_dinh', value)} />
+                            </EditSection>
+                          )}
+
+                          {activeTab === 'family' && (
+                            <EditSection title="Thông tin gia đình" icon={UsersIcon}>
+                              <div className="span-2 student-profile-edit-sub-header">Thông tin về Cha</div>
+                              <Field label="Họ tên cha" value={profileForm.ho_ten_cha} onChange={(value) => updateForm('ho_ten_cha', value)} />
+                              <Field label="Ngày sinh cha" value={profileForm.ngay_sinh_cha} placeholder="ngày-tháng-năm" onChange={(value) => updateForm('ngay_sinh_cha', value)} />
+                              <ProvinceField label="Quê quán cha" value={profileForm.que_quan_cha_tinh_thanh_pho} provinces={provinces} onChange={(value) => updateForm('que_quan_cha_tinh_thanh_pho', value)} />
+                              <Field label="Nghề nghiệp cha" value={profileForm.nghe_nghiep_cha} onChange={(value) => updateForm('nghe_nghiep_cha', value)} />
+
+                              <div className="span-2 student-profile-edit-sub-header" style={{ marginTop: '16px' }}>Thông tin về Mẹ</div>
+                              <Field label="Họ tên mẹ" value={profileForm.ho_ten_me} onChange={(value) => updateForm('ho_ten_me', value)} />
+                              <Field label="Ngày sinh mẹ" value={profileForm.ngay_sinh_me} placeholder="ngày-tháng-năm" onChange={(value) => updateForm('ngay_sinh_me', value)} />
+                              <ProvinceField label="Quê quán mẹ" value={profileForm.que_quan_me_tinh_thanh_pho} provinces={provinces} onChange={(value) => updateForm('que_quan_me_tinh_thanh_pho', value)} />
+                              <Field label="Nghề nghiệp mẹ" value={profileForm.nghe_nghiep_me} onChange={(value) => updateForm('nghe_nghiep_me', value)} />
+                            </EditSection>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                  actions: [
+                    {
+                      label: 'Hủy',
+                      variant: 'secondary',
+                      autoClose: false,
+                      onClick: () => {
+                        setEditing(false)
+                        setError('')
+                        setProfileForm(formFromStudent(student))
+                      }
+                    },
+                    {
+                      label: savingProfile ? 'Đang lưu...' : 'Lưu thay đổi',
+                      variant: 'primary',
+                      autoClose: false,
+                      onClick: () => {
+                        void handleSaveProfile()
+                      }
+                    }
+                  ]
+                }}
+                onClose={() => {
+                  setEditing(false)
+                  setError('')
+                  setProfileForm(formFromStudent(student))
+                }}
+              />
             )}
 
             <div className="student-profile-grid">

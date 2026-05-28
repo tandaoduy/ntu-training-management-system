@@ -1,3 +1,4 @@
+import { SCHOOL_NAME, SYSTEM_NAME } from '@/app/branding'
 import logoImage from '../../../../assets/Logo_NTU.png'
 import './StudentHeader.css'
 
@@ -5,6 +6,7 @@ interface StudentHeaderProps {
   displayName: string
   academicYear: string
   semester: string
+  overlay?: boolean
   onHomeClick: () => void
   onLogoutClick: () => void
 }
@@ -13,19 +15,20 @@ export function StudentHeader({
   displayName,
   academicYear,
   semester,
+  overlay = false,
   onHomeClick,
   onLogoutClick,
 }: StudentHeaderProps) {
   return (
-    <header className="student-shared-header">
+    <header className={`student-shared-header${overlay ? ' student-shared-header-overlay' : ''}`}>
       <div className="student-shared-topbar">
-        <div className="student-shared-brand-group">
+        <button type="button" className="student-shared-brand-group" onClick={onHomeClick} title="Về dashboard sinh viên" aria-label="Về dashboard sinh viên">
           <img src={logoImage} alt="NTU" className="student-shared-brand-logo" />
           <div className="student-shared-brand-text">
-            <h1>TRƯỜNG ĐẠI HỌC NHA TRANG</h1>
-            <span>Hệ thống Tích hợp Thông tin</span>
+            <h1>{SCHOOL_NAME}</h1>
+            <span>{SYSTEM_NAME}</span>
           </div>
-        </div>
+        </button>
         <span className="student-shared-role-badge">SINH VIÊN</span>
       </div>
 
@@ -35,12 +38,10 @@ export function StudentHeader({
             <span>Hệ đào tạo:</span>
             <strong>Đại học Chính quy</strong>
           </div>
-          <div className="student-shared-academic-dot"></div>
           <div className="student-shared-academic-badge">
             <span>Năm học:</span>
             <strong>{academicYear}</strong>
           </div>
-          <div className="student-shared-academic-dot"></div>
           <div className="student-shared-academic-badge">
             <span>Học kỳ:</span>
             <strong>{semester}</strong>

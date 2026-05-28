@@ -30,10 +30,34 @@
   font-size: 20px;
 }
 
+.to-registration-add-student-open {
+  min-height: 42px;
+  border: 0;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  white-space: nowrap;
+  padding: 0 16px;
+}
+
+.to-registration-add-student-open:hover {
+  background: #1d4ed8;
+}
+
 .to-timetable-panel-head p {
   margin: 6px 0 0;
   color: #64748b;
   font-size: 14px;
+}
+
+.to-registration-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .to-timetable-form,
@@ -62,6 +86,10 @@
 
 .to-timetable-form-horizontal .span-6 {
   grid-column: span 6;
+}
+
+.to-timetable-form-horizontal .span-12 {
+  grid-column: span 12;
 }
 
 .to-timetable-form-horizontal .top-term-row {
@@ -102,6 +130,13 @@
   font-weight: 800;
 }
 
+.to-timetable-field-hint {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .to-timetable-form input,
 .to-timetable-form select,
 .to-timetable-mini-form input,
@@ -114,6 +149,20 @@
   color: #10213d;
   font: inherit;
   padding: 0 12px;
+}
+
+.to-timetable-form input.is-invalid {
+  border-color: #dc2626;
+  background: #fff1f2;
+  color: #991b1b;
+  box-shadow: 0 0 0 3px rgb(220 38 38 / 12%);
+}
+
+.to-timetable-field-error {
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .to-timetable-two {
@@ -137,8 +186,188 @@
   font-weight: 900;
 }
 
+.to-timetable-session-box {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d8e3f0;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 14px;
+}
+
+.to-timetable-session-head,
+.to-timetable-session-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.to-timetable-session-head {
+  justify-content: space-between;
+}
+
+.to-timetable-session-head strong {
+  color: #10213d;
+  font-size: 15px;
+}
+
+.to-timetable-session-head span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.to-timetable-week-picker {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8e3f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.to-timetable-week-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.to-timetable-week-picker-head strong {
+  color: #10213d;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.to-timetable-week-picker-head span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.to-timetable-week-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.to-timetable-form .to-timetable-week-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border: 1px solid #c7d6e7;
+  border-radius: 6px;
+  background: #f8fbff;
+  color: #10213d;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 8px;
+}
+
+.to-timetable-week-check input {
+  width: 15px;
+  height: 15px;
+  accent-color: #2f6fa5;
+}
+
+.to-timetable-week-check:has(input:checked) {
+  border-color: #2f6fa5;
+  background: #e8f1fb;
+  color: #1f5f99;
+}
+
+.to-timetable-day-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.to-timetable-form .to-timetable-day-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  border: 1px solid #c7d6e7;
+  border-radius: 6px;
+  background: #fff;
+  color: #10213d;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 10px;
+}
+
+.to-timetable-day-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2f6fa5;
+}
+
+.to-timetable-day-check:has(input:checked) {
+  border-color: #2f6fa5;
+  background: #e8f1fb;
+  color: #1f5f99;
+}
+
+.to-timetable-session-list {
+  display: grid;
+  gap: 10px;
+}
+
+.to-timetable-session-item {
+  display: grid;
+  grid-template-columns: 32px 70px minmax(120px, 1fr) minmax(150px, 1.2fr) repeat(2, minmax(96px, 0.7fr)) auto;
+  align-items: end;
+  gap: 10px;
+  border: 1px solid #e2ebf5;
+  border-radius: 6px;
+  background: #fff;
+  color: #10213d;
+  font-size: 13px;
+  padding: 10px;
+}
+
+.to-timetable-session-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e8f1fb;
+  color: #1f5f99;
+  font-weight: 900;
+}
+
+.to-timetable-session-item label {
+  display: grid;
+  gap: 4px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.to-timetable-session-item select,
+.to-timetable-session-item input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid #c7d6e7;
+  border-radius: 6px;
+  background: #fff;
+  color: #10213d;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 8px;
+}
+
 .to-timetable-btn {
   min-height: 42px;
+  padding: 0 32px;
   border: 1px solid #2f6fa5;
   border-radius: 8px;
   background: #2f6fa5;
@@ -146,6 +375,16 @@
   cursor: pointer;
   font: inherit;
   font-weight: 800;
+  width: auto;
+  min-width: 140px;
+  transition: all 0.2s ease;
+}
+
+.to-timetable-btn:hover {
+  background: #245680;
+  border-color: #245680;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(47, 111, 165, 0.2);
 }
 
 .to-timetable-btn.secondary {
@@ -154,15 +393,24 @@
   color: #18324f;
 }
 
-.to-timetable-form-actions {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+.to-timetable-btn.secondary:hover {
+  background: #f1f5f9;
+  border-color: #b1c5db;
+  color: #0f2135;
+  box-shadow: none;
+  transform: none;
 }
 
-.to-timetable-form-actions:has(.secondary) {
-  grid-template-columns: 1fr 1fr;
+.to-timetable-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
+
+.to-timetable-form-horizontal .to-timetable-form-actions.span-4 {
+  grid-column: 9 / span 4;
+}
+
 
 .to-break-week-box {
   display: grid;
@@ -203,19 +451,48 @@
 }
 
 .to-timetable-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: 14px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
   background: #eef6ff;
   color: #1d4e89;
   font-weight: 800;
-  padding: 12px 14px;
+  line-height: 1.45;
+  padding: 14px 16px;
+  white-space: pre-line;
 }
 
 .to-timetable-alert.error {
-  border-color: #fed7aa;
-  background: #fff7ed;
-  color: #9a3412;
+  border-color: #fca5a5;
+  background: #fee2e2;
+  color: #b91c1c;
+  box-shadow: 0 10px 24px rgb(185 28 28 / 8%);
+}
+
+.to-timetable-alert.error::before {
+  content: '×';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.student-registration-page .to-timetable-alert {
+  min-height: 0;
+  margin-bottom: 22px;
+  padding: 16px 18px;
 }
 
 .to-timetable-list {
@@ -223,6 +500,183 @@
   gap: 10px;
   padding: 18px 20px;
 }
+
+.to-timetable-list-panel {
+  display: grid;
+  gap: 0;
+}
+
+.to-timetable-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.to-timetable-list-head>div {
+  display: grid;
+  gap: 4px;
+}
+
+.to-timetable-list-head span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.to-timetable-list-head strong {
+  border: 1px solid #c7d6e7;
+  border-radius: 999px;
+  background: #f8fbff;
+  color: #1f3454;
+  font-size: 14px;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.to-timetable-list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.to-timetable-list-search {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.to-timetable-list-search > span {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1f3454;
+  white-space: nowrap;
+}
+
+.to-timetable-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 600px;
+}
+
+.to-timetable-search-box svg {
+  position: absolute;
+  left: 14px;
+  width: 20px;
+  height: 20px;
+  color: #64748b;
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.to-timetable-search-box button {
+  position: absolute;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.to-timetable-search-box button:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+.to-timetable-list-search input {
+  width: 100%;
+  min-height: 42px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 9999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 44px 0 46px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.to-timetable-list-search input::placeholder {
+  color: #94a3b8;
+}
+
+.to-timetable-list-search input:focus {
+  border-color: #3b82f6;
+  background: #ffffff;
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(59, 130, 246, 0.05);
+}
+
+.to-timetable-list-search input:focus + svg {
+  color: #3b82f6;
+}
+
+.to-timetable-week-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.to-timetable-week-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2f6fa5;
+  background: #f0f6fc;
+  border: 1px solid #c8e1f5;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.to-timetable-week-action-btn:hover {
+  background: #2f6fa5;
+  color: #fff;
+  border-color: #2f6fa5;
+}
+
+.to-timetable-keep-weeks-lbl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+  margin-left: 16px;
+}
+
+.to-timetable-keep-weeks-lbl input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2f6fa5;
+  cursor: pointer;
+}
+
 
 .to-timetable-item {
   display: grid;
@@ -299,7 +753,23 @@
 .to-timetable-total {
   color: #162033;
   font-size: 14px;
-  padding: 10px 12px 6px;
+  padding: 12px 12px 8px;
+}
+
+.to-timetable-total span {
+  color: #4b647f;
+  font-weight: 700;
+}
+
+.to-timetable-list-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 20px 18px;
+}
+
+.to-timetable-pagination-control {
+  box-shadow: 0 8px 20px rgb(15 23 42 / 8%);
+  border-radius: 10px;
 }
 
 .to-timetable-breadcrumb {
@@ -393,7 +863,7 @@
   height: 20px;
 }
 
-.to-timetable-detail-row > td {
+.to-timetable-detail-row>td {
   background: #fff !important;
   padding: 10px 12px 16px;
 }
@@ -448,6 +918,782 @@
   text-align: center !important;
 }
 
+.to-registration-quota-input {
+  width: 110px;
+  min-height: 34px;
+  border: 1px solid #c7d6e7;
+  border-radius: 8px;
+  color: #10213d;
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.to-registration-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #c7d6e7;
+  border-radius: 10px;
+  background: #fff;
+  color: #2f6fa5;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+  padding: 0;
+}
+
+.to-registration-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.to-registration-icon-btn:hover {
+  border-color: #8bb0d7;
+  box-shadow: 0 6px 14px rgb(47 111 165 / 18%);
+  transform: translateY(-1px);
+}
+
+.to-registration-icon-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.to-registration-action-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.to-registration-icon-btn.action-visibility.is-visible {
+  border-color: #7ddf9d;
+  background: #e6f9ed;
+  color: #166534;
+}
+
+.to-registration-icon-btn.action-visibility.is-hidden {
+  border-color: #fda4af;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.to-registration-icon-btn.action-detail {
+  border-color: #bfdbfe;
+  background: #f0f7ff;
+  color: #1d4ed8;
+}
+
+.to-registration-icon-btn.action-save {
+  border-color: #c7d2fe;
+  background: #f2f4ff;
+  color: #4338ca;
+}
+
+.to-registration-icon-btn.action-delete {
+  border-color: #fecaca;
+  background: #fff1f1;
+  color: #991b1b;
+}
+
+.to-registration-delete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(15 23 42 / 38%);
+  padding: 24px;
+}
+
+.to-registration-delete-modal {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  width: min(520px, 100%);
+  border: 1px solid #ffd0d0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgb(15 23 42 / 24%);
+  padding: 22px;
+}
+
+.to-registration-delete-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.to-registration-delete-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.to-registration-delete-content {
+  display: grid;
+  gap: 6px;
+}
+
+.to-registration-delete-content h3 {
+  margin: 0;
+  color: #10213d;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.to-registration-delete-content p {
+  margin: 0;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.to-registration-delete-content span {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.to-registration-delete-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.to-registration-delete-actions button {
+  min-width: 100px;
+  min-height: 40px;
+  border: 1px solid #c7d6e7;
+  border-radius: 10px;
+  background: #fff;
+  color: #10213d;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  padding: 0 16px;
+}
+
+.to-registration-delete-actions button.danger {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+
+.to-registration-delete-actions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.to-registration-management-table .to-registration-lecturer-cell {
+  text-align: left;
+}
+
+.to-registration-page {
+  display: grid;
+  gap: 18px;
+}
+
+.to-registration-page-panel {
+  border-color: #cfdced;
+  border-radius: 14px;
+  box-shadow: 0 14px 30px rgb(15 23 42 / 6%);
+}
+
+.to-registration-page-head {
+  background: linear-gradient(180deg, #f8fbff 0%, #f2f7fd 100%);
+  padding: 24px 26px;
+}
+
+.to-registration-page-head h2 {
+  color: #0f2d56;
+  font-size: clamp(24px, 1.8vw, 30px);
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.to-registration-page-head p {
+  margin-top: 8px;
+  color: #4a6487;
+  font-size: clamp(16px, 1.25vw, 20px);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.to-registration-toolbar {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+  border-top: 1px solid #d7e4f2;
+  border-bottom: 1px solid #d7e4f2;
+  background: #fbfdff;
+  padding: 18px 26px;
+}
+
+.to-registration-toolbar .to-registration-term-field {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #122749;
+}
+
+.to-registration-toolbar .to-registration-term-field select,
+.to-registration-toolbar .to-registration-term-field input {
+  min-height: 52px;
+  border-color: #b8cbe2;
+  border-radius: 12px;
+  border-width: 1px;
+  background: #fff;
+  color: #10213d;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 18px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
+}
+
+.to-registration-toolbar .to-registration-term-field select:focus,
+.to-registration-toolbar .to-registration-term-field input:focus {
+  border-color: #3b82f6;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+}
+
+.to-registration-toolbar .to-registration-term-field input::placeholder {
+  color: #7f8ca1;
+}
+
+.to-registration-filter-summary {
+  color: #2e4463;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 26px 2px;
+}
+
+.to-registration-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 26px 18px;
+}
+
+.to-registration-pagination-control {
+  box-shadow: 0 8px 20px rgb(15 23 42 / 8%);
+  border-radius: 10px;
+}
+
+.to-registration-table-wrap {
+  padding: 0 0 6px;
+}
+
+.to-registration-table {
+  min-width: 1380px;
+}
+
+.to-registration-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #2f6fa5;
+  border-right: 1px solid rgb(255 255 255 / 18%);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.to-registration-table td {
+  font-size: 15px;
+  padding: 10px 8px;
+}
+
+.to-registration-table tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+.to-registration-table tbody tr:hover td {
+  background: #e9f2fc;
+}
+
+.to-registration-class-select {
+  width: 124px;
+  min-height: 38px;
+  border: 1px solid #aac0d9;
+  border-radius: 10px;
+  color: #10213d;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+
+.to-registration-quota-input:focus {
+  border-color: #3b82f6;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 14%);
+}
+.to-registration-class-select.compact {
+  min-width: 180px;
+  min-height: 30px;
+  border-radius: 2px;
+  font-size: 13px;
+  width: 40px;
+  height: 36px;
+  border: 1px solid #bfd0e3;
+  border-radius: 10px;
+  display: grid;
+  gap: 18px;
+}
+
+.student-registration-shell {
+  min-height: 100vh;
+  background: #f4f7fb;
+}
+
+.to-registration-icon-btn:hover {
+  border-color: #8bb0d7;
+  box-shadow: 0 6px 14px rgb(47 111 165 / 18%);
+  transform: translateY(-1px);
+}
+
+.to-registration-icon-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.student-registration-panel,
+.student-schedule-panel {
+  border-radius: 3px;
+}
+
+.student-registration-title {
+  background: #2f6fa5;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 5px 12px;
+  text-align: center;
+}
+
+.student-registration-meta {
+  color: #10213d;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.student-registration-table {
+  min-width: 1320px;
+}
+
+.student-registration-table th {
+  border: 1px solid #e8f0f8;
+  font-size: 13px;
+  padding: 6px 8px;
+}
+
+.student-registration-table td {
+  font-size: 13px;
+  padding: 5px 8px;
+}
+
+.student-registration-table td:nth-child(3),
+.student-registration-table td:nth-child(5) {
+  text-align: left;
+}
+
+.student-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.student-icon-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+.student-icon-btn.swap {
+  color: #0ea5e9;
+}
+
+.student-icon-btn.register {
+  color: #4d9f16;
+}
+
+.student-icon-btn.cancel {
+  color: #ef4444;
+}
+
+.student-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.student-confirmed {
+  color: #166534;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.student-registration-summary {
+  color: #10213d;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 12px 12px;
+}
+
+.student-schedule-panel {
+  position: relative;
+  margin-top: 38px;
+  border-radius: 4px;
+  border-top-left-radius: 0;
+}
+
+.student-schedule-tab {
+  position: absolute;
+  top: -36px;
+  left: -1px;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  background: #2f6fa5;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 16px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+.student-schedule-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.student-schedule-panel .to-timetable-table-wrap {
+  overflow-x: hidden;
+}
+
+.student-schedule-table th {
+  border: 1px solid #e8f0f8;
+  font-size: 12px;
+  padding: 6px;
+  white-space: normal;
+}
+
+.student-schedule-table td {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  padding: 7px 6px;
+}
+
+.student-schedule-table td:nth-child(3),
+.student-schedule-table td:nth-child(8) {
+  text-align: left;
+}
+
+.student-schedule-table th:nth-child(1),
+.student-schedule-table td:nth-child(1) {
+  width: 9%;
+}
+
+.student-schedule-table th:nth-child(2),
+.student-schedule-table td:nth-child(2) {
+  width: 8%;
+}
+
+.student-schedule-table th:nth-child(4),
+.student-schedule-table td:nth-child(4),
+.student-schedule-table th:nth-child(6),
+.student-schedule-table td:nth-child(6) {
+  width: 6%;
+}
+
+.student-schedule-table th:nth-child(7),
+.student-schedule-table td:nth-child(7),
+.student-schedule-table th:nth-child(9),
+.student-schedule-table td:nth-child(9) {
+  width: 8%;
+}
+
+.student-schedule-table th:nth-child(10),
+.student-schedule-table td:nth-child(10) {
+  width: 10%;
+}
+
+.student-change-group-modal {
+  display: grid;
+  gap: 12px;
+}
+
+.student-change-group-title {
+  color: #10213d;
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.student-change-group-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.student-change-group-table th {
+  background: #2f6fa5;
+  color: #fff;
+  padding: 8px;
+  text-align: center;
+}
+
+.student-change-group-table td {
+  border-bottom: 1px solid #e5edf6;
+  color: #10213d;
+  padding: 8px;
+  text-align: center;
+}
+
+.to-registration-detail-modal {
+  display: grid;
+  gap: 14px;
+  overflow-x: auto;
+}
+
+.to-registration-detail-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.to-registration-detail-table th {
+  background: #2f6fa5;
+  border: 1px solid #e8f0f8;
+  color: #fff;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.to-registration-detail-table td {
+  border-bottom: 1px solid #e5edf6;
+  color: #10213d;
+  padding: 7px 8px;
+}
+
+.to-registration-detail-total {
+  color: #10213d;
+  font-weight: 900;
+}
+
+.to-registration-add-student-card {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(960px, calc(100% - 24px));
+  margin: 14px auto 16px;
+  border: 1px solid #cfe0f3;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 14px 16px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.to-registration-add-student-card strong {
+  display: block;
+  color: #10213d;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.to-registration-add-student-card span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.to-registration-add-student-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min(420px, 100%);
+}
+
+.to-registration-add-student-form input {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid #a8b3c3;
+  border-radius: 6px;
+  background: #fff;
+  color: #10213d;
+  font: inherit;
+  padding: 0 10px;
+}
+
+.to-registration-add-student-form button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0 14px;
+}
+
+.to-registration-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.42);
+  padding: 20px;
+}
+
+.to-registration-add-student-modal {
+  width: min(540px, 100%);
+  border: 1px solid #d8e3f0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+  padding: 22px;
+}
+
+.to-registration-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.to-registration-modal-head h3 {
+  margin: 0;
+  color: #10213d;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.to-registration-modal-head p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.to-registration-modal-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: #eef4fb;
+  color: #475569;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.to-registration-modal-field {
+  display: grid;
+  gap: 8px;
+  color: #10213d;
+  font-weight: 900;
+}
+
+.to-registration-modal-field input {
+  min-height: 48px;
+  border: 1px solid #a8b3c3;
+  border-radius: 6px;
+  background: #fff;
+  color: #10213d;
+  font: inherit;
+  font-size: 20px;
+  padding: 0 12px;
+}
+
+.to-registration-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.to-registration-modal-actions button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  padding: 0 16px;
+}
+
+.to-registration-modal-actions button.secondary {
+  background: #eef4fb;
+  color: #334155;
+}
+
+.to-registration-detail-filter {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  width: min(760px, 100%);
+  margin: 14px auto 10px;
+}
+
+.to-registration-detail-filter label,
+.to-registration-detail-filter-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  grid-column: 1 / -1;
+  gap: 6px;
+  align-items: center;
+}
+
+.to-registration-detail-filter-row {
+  grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.to-registration-detail-filter span,
+.to-registration-detail-filter strong {
+  color: #10213d;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.to-registration-detail-filter input,
+.to-registration-detail-filter select {
+  min-height: 36px;
+  border: 1px solid #a8b3c3;
+  background: #fff;
+  color: #10213d;
+  font: inherit;
+  font-size: 14px;
+  padding: 0 8px;
+}
+
 @media (max-width: 1100px) {
   .to-timetable-form-horizontal {
     grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -461,6 +1707,56 @@
 
   .to-timetable-form-horizontal .span-6 {
     grid-column: span 6;
+  }
+
+  .to-timetable-form-horizontal .span-12 {
+    grid-column: span 6;
+  }
+
+  .to-timetable-form-horizontal .to-timetable-form-actions.span-4 {
+    grid-column: 4 / span 3;
+  }
+
+  .to-timetable-session-item {
+    grid-template-columns: 32px 64px repeat(2, minmax(140px, 1fr));
+  }
+
+  .to-timetable-list-toolbar {
+    grid-template-columns: minmax(240px, 1fr) minmax(160px, 210px);
+  }
+
+  .to-registration-page-head h2 {
+    font-size: 24px;
+  }
+
+  .to-registration-page-head p {
+    font-size: 17px;
+  }
+
+  .to-registration-toolbar {
+    padding: 16px 18px;
+  }
+
+  .to-registration-toolbar .to-registration-term-field select {
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  .to-registration-toolbar .to-registration-term-field input {
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  .to-registration-toolbar .span-2 {
+    grid-column: span 3;
+  }
+
+  .to-registration-table th {
+    font-size: 15px;
+  }
+
+  .to-registration-table td {
+    font-size: 14px;
   }
 }
 
@@ -484,12 +1780,81 @@
     grid-column: span 1;
   }
 
+  .to-timetable-form-horizontal .span-12 {
+    grid-column: span 1;
+  }
+
+  .to-timetable-session-item {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
   .to-timetable-form-actions,
   .to-timetable-form-actions:has(.secondary) {
     grid-template-columns: 1fr;
   }
 
+  .to-timetable-form-horizontal .to-timetable-form-actions.span-4 {
+    grid-column: span 1;
+  }
+
   .to-break-week-save {
     justify-self: stretch;
+  }
+
+  .to-timetable-list-toolbar {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .to-timetable-list-pagination {
+    justify-content: center;
+    padding: 10px 14px 14px;
+  }
+
+  .to-registration-page-panel {
+    border-radius: 10px;
+  }
+
+  .to-registration-page-head {
+    padding: 18px 14px;
+  }
+
+  .to-registration-page-head h2 {
+    font-size: 23px;
+  }
+
+  .to-registration-page-head p {
+    font-size: 15px;
+  }
+
+  .to-registration-toolbar {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .to-registration-toolbar .span-3 {
+    grid-column: span 12;
+  }
+
+  .to-registration-toolbar .span-4,
+  .to-registration-toolbar .span-2 {
+    grid-column: span 12;
+  }
+
+  .to-registration-toolbar .to-registration-term-field select,
+  .to-registration-toolbar .to-registration-term-field input {
+    min-height: 42px;
+    font-size: 14px;
+    padding: 0 12px;
+  }
+
+  .to-registration-filter-summary {
+    padding: 8px 14px 0;
+  }
+
+  .to-registration-pagination {
+    justify-content: center;
+    padding: 10px 14px 14px;
   }
 }

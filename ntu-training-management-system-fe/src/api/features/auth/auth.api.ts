@@ -4,6 +4,7 @@ import type {
   CheckEmailResponse,
   ChangePasswordRequest,
   CurrentUserResponse,
+  ExtendSessionResponse,
   ForgotPasswordCaptchaResponse,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
@@ -30,6 +31,10 @@ export const authApi = {
 
   changePassword(payload: ChangePasswordRequest): Promise<MessageResponse> {
     return apiPost<MessageResponse, ChangePasswordRequest>(`${AUTH_BASE_PATH}/change-password`, payload);
+  },
+
+  extendSession(): Promise<ExtendSessionResponse> {
+    return apiPost<ExtendSessionResponse>(`${AUTH_BASE_PATH}/extend-session`);
   },
 
   logout(token?: string | null): Promise<MessageResponse> {

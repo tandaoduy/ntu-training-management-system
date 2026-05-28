@@ -1,126 +1,197 @@
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import RoleLayout from '../../../layout/RoleLayout'
+import { apiGet } from '@/api/core/request'
+import { useAuth } from '../../../../api/query'
 import './TrainingOfficerDashboardPage.css'
 
-type IconTone =
-  | 'orange'
-  | 'amber'
-  | 'blue'
-  | 'green'
-  | 'purple'
-  | 'teal'
-  | 'cyan'
-  | 'indigo'
-
-type DashboardIconProps = {
-  code: string
-  tone?: IconTone
-  className?: string
-  variant?: 'square' | 'circle' | 'plain'
+type ModuleTone = 'orange' | 'blue' | 'purple' | 'teal'
+type AcademicYear = { id: number; nam_hoc: string }
+type AcademicTerm = { id: number; nam_hoc_id: number; hoc_ky: string }
+type CatalogResponse<T> = { data: T[] }
+type CurrentTermResponse = {
+  data: {
+    nam_hoc_id?: number | null
+    hoc_ky?: string | null
+  } | null
 }
 
-const toneColors: Record<IconTone, { bg: string; fg: string }> = {
-  orange: { bg: '#fffaf0', fg: '#dd6b20' },
-  amber: { bg: '#fffff0', fg: '#d69e2e' },
-  blue: { bg: '#ebf8ff', fg: '#3182ce' },
-  green: { bg: '#f0fff4', fg: '#38a169' },
-  purple: { bg: '#faf5ff', fg: '#805ad5' },
-  teal: { bg: '#e6fffa', fg: '#319795' },
-  cyan: { bg: '#e0f2fe', fg: '#0284c7' },
-  indigo: { bg: '#ebf4ff', fg: '#4c51bf' },
+type TrainingOfficerModule = {
+  title: string
+  href: string
+  permission: string
+  tone: ModuleTone
+  icon: ReactNode
 }
 
-function DashboardIcon({ code, tone = 'orange', className = '', variant = 'square' }: DashboardIconProps) {
-  const colors = toneColors[tone]
-  const radius = variant === 'circle' ? 32 : variant === 'plain' ? 0 : 14
-  const textSize = code.length > 3 ? 16 : code.length > 2 ? 20 : 24
+/* ──────────────────────────────────────────────────────────────────── */
+/* Icons                                                               */
+/* ──────────────────────────────────────────────────────────────────── */
 
-  return (
-    <svg className={className} viewBox="0 0 64 64" role="img" aria-label={code} focusable="false">
-      {variant !== 'plain' && <rect width="64" height="64" rx={radius} fill={colors.bg} />}
-      <text
-        x="32"
-        y="34"
-        fill={colors.fg}
-        fontSize={textSize}
-        fontFamily="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-        fontWeight="500"
-        textAnchor="middle"
-        dominantBaseline="middle"
-      >
-        {code}
-      </text>
-    </svg>
-  )
+const CurriculumIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19a1 1 0 0 1 1 1v14.5" />
+    <path d="M4 5.5V19a2 2 0 0 0 2 2h13" />
+    <path d="M8 7h8M8 11h8M8 15h5" />
+  </svg>
+)
+
+const StatisticsIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+    <rect x="7" y="12" width="3" height="6" rx="1" />
+    <rect x="12" y="8" width="3" height="10" rx="1" />
+    <rect x="17" y="5" width="3" height="13" rx="1" />
+  </svg>
+)
+
+const TimetableIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="5" width="18" height="16" rx="2.5" />
+    <path d="M3 10h18" />
+    <path d="M8 3v4M16 3v4" />
+    <path d="M8 14h2M8 17h2M14 14h2M14 17h2" />
+  </svg>
+)
+
+const RegistrationIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H15l5 5v11a2 2 0 0 1-2 2H6.5A1.5 1.5 0 0 1 5 19.5z" />
+    <path d="M14 3v5h5" />
+    <path d="m9 14 2 2 4-4" />
+  </svg>
+)
+
+const StudentInfoIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-8 0v2" />
+    <circle cx="12" cy="8" r="4" />
+    <path d="M3 4h4M17 4h4M3 20h4M17 20h4" />
+  </svg>
+)
+
+const GradeIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4h16v16H4z" />
+    <path d="M8 9h8M8 13h4M15 13l1.5 1.5L19 12" />
+  </svg>
+)
+
+const RoomIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+)
+
+const ClassIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+)
+
+const modules: TrainingOfficerModule[] = [
+  { title: 'Quản lí điểm', href: '/chuyenvien/diem', permission: 'training_officer.grades.view', tone: 'orange', icon: GradeIcon },
+  { title: 'Chương trình đào tạo', href: '/chuyenvien/curriculum', permission: 'training_officer.curriculum.view', tone: 'orange', icon: CurriculumIcon },
+  { title: 'Thống kê kế hoạch học tập', href: '/chuyenvien/study-plan-statistics', permission: 'training_officer.study-plan-statistics.view', tone: 'blue', icon: StatisticsIcon },
+  { title: 'Xếp thời khóa biểu', href: '/chuyenvien/timetable', permission: 'training_officer.timetable.manage', tone: 'purple', icon: TimetableIcon },
+  { title: 'Đăng ký học phần', href: '/chuyenvien/registrations', permission: 'training_officer.course-registration.manage', tone: 'teal', icon: RegistrationIcon },
+  { title: 'Thông tin sinh viên', href: '/chuyenvien/thongtinsinhvien', permission: 'training_officer.student-info.manage', tone: 'blue', icon: StudentInfoIcon },
+  { title: 'Quản lí phòng học', href: '/chuyenvien/phonghoc', permission: 'admin.room.manage', tone: 'purple', icon: RoomIcon },
+  { title: 'Quản lí lớp học', href: '/chuyenvien/lophoc', permission: 'admin.class.manage', tone: 'teal', icon: ClassIcon },
+]
+
+/* ──────────────────────────────────────────────────────────────────── */
+
+function formatToday(): string {
+  const today = new Date()
+  const weekday = today.toLocaleDateString('vi-VN', { weekday: 'long' })
+  const date = today.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${date}`
 }
 
-const stats = [
-  { icon: 'CT', label: 'Cập nhật CTĐT', value: '5', colorClass: 'orange' },
-  { icon: 'TKB', label: 'Xung đột lịch học', value: '2', colorClass: 'amber' },
-  { icon: 'DK', label: 'Phiếu đăng ký chờ', value: '18', colorClass: 'blue' },
-  { icon: 'DB', label: 'Dữ liệu đã đồng bộ', value: '97%', colorClass: 'green' },
-]
-
-const quickAccessLinks = [
-  { label: 'Chương trình đào tạo', icon: 'CT', colorClass: 'orange', link: '/chuyenvien/curriculum' },
-  { label: 'Thống kê KHHT', icon: 'KHHT', colorClass: 'blue', link: '/chuyenvien/study-plan-statistics' },
-  { label: 'Xếp thời khóa biểu', icon: 'TKB', colorClass: 'purple', link: '/chuyenvien/timetable' },
-  { label: 'Kiểm tra tốt nghiệp', icon: 'TN', colorClass: 'green', link: '/chuyenvien/graduation' },
-  { label: 'Xung đột lịch học', icon: 'XD', colorClass: 'amber', link: '/chuyenvien/conflicts' },
-  { label: 'Phiếu đăng ký', icon: 'DK', colorClass: 'teal', link: '/chuyenvien/registrations' },
-  { label: 'Đồng bộ dữ liệu', icon: 'DB', colorClass: 'cyan', link: '/chuyenvien/sync' },
-  { label: 'Báo cáo học kỳ', icon: 'BC', colorClass: 'indigo', link: '/chuyenvien/reports' },
-  { label: 'Cấu hình học kỳ', icon: 'CH', colorClass: 'purple', link: '/chuyenvien/config' },
-]
-
-const pendingItems = [
-  { id: 'CV-001', title: 'Xác nhận CTĐT ngành CNTT 2025', dept: 'Khoa CNTT', status: 'warning' },
-  { id: 'CV-002', title: 'Giải quyết xung đột lịch TKB tuần 20', dept: 'Phòng Đào tạo', status: 'error' },
-  { id: 'CV-003', title: 'Kiểm tra yêu cầu tốt nghiệp K2021', dept: 'Khoa Kinh tế', status: 'warning' },
-  { id: 'CV-004', title: 'Đồng bộ dữ liệu học phần mới', dept: 'Hệ thống', status: 'info' },
-]
-
-const recentActivities = [
-  { action: 'Cập nhật CTĐT ngành Kế toán 2025', time: '30 phút trước', icon: 'CT' },
-  { action: 'Phê duyệt đăng ký học phần tự chọn', time: '2 giờ trước', icon: 'DK' },
-  { action: 'Xuất báo cáo thống kê đăng ký KHHT', time: 'Hôm qua', icon: 'BC' },
-  { action: 'Giải quyết xung đột lịch học tuần 18', time: 'Hôm qua', icon: 'TKB' },
-]
-
-const quickTasks = [
-  {
-    icon: 'CT',
-    title: 'Theo dõi chương trình đào tạo',
-    note: 'Xem CTĐT theo ngành và phiên bản đã công bố.',
-    link: '/chuyenvien/curriculum',
-  },
-  {
-    icon: 'KHHT',
-    title: 'Thống kê đăng ký KHHT',
-    note: 'Xem số lượng sinh viên đăng ký theo từng học phần.',
-    link: '/chuyenvien/study-plan-statistics',
-  },
-  {
-    icon: 'TKB',
-    title: 'Xếp thời khóa biểu',
-    note: 'Quản lý giảng đường, phòng học và xếp lịch không trùng phòng.',
-    link: '/chuyenvien/timetable',
-  },
-  {
-    icon: 'TN',
-    title: 'Kiểm tra điều kiện tốt nghiệp',
-    note: 'Rà soát sinh viên đủ điều kiện tốt nghiệp đợt gần nhất.',
-  },
-]
-
-const statusLabel: Record<string, string> = {
-  warning: 'Đang xử lý',
-  error: 'Khẩn cấp',
-  info: 'Thông tin',
-  success: 'Hoàn thành',
+function getGreeting(hour: number): string {
+  if (hour >= 5 && hour < 11) return 'Chào buổi sáng'
+  if (hour >= 11 && hour < 13) return 'Chào buổi trưa'
+  if (hour >= 13 && hour < 18) return 'Chào buổi chiều'
+  return 'Chào buổi tối'
 }
 
 export default function TrainingOfficerDashboardPage() {
+  const { user, me } = useAuth()
+  const displayName = user?.name?.trim() || user?.username || 'chuyên viên'
+
+  const [now, setNow] = useState<Date>(() => new Date())
+  const [trainingSystem, setTrainingSystem] = useState('Đại học và Cao đẳng chính quy')
+  const [academicYear, setAcademicYear] = useState('')
+  const [semester, setSemester] = useState('')
+  const [years, setYears] = useState<AcademicYear[]>([])
+  const [terms, setTerms] = useState<AcademicTerm[]>([])
+
+  useEffect(() => {
+    void me()
+    const timer = window.setInterval(() => setNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [me])
+
+  useEffect(() => {
+    let isMounted = true
+
+    Promise.all([
+      apiGet<CatalogResponse<AcademicYear>>('/academic-catalog/nam-hocs'),
+      apiGet<CurrentTermResponse>('/academic-catalog/current-term'),
+    ])
+      .then(([yearResponse, currentResponse]) => {
+        if (!isMounted) return
+        setYears(yearResponse.data ?? [])
+        setAcademicYear(String(currentResponse.data?.nam_hoc_id ?? yearResponse.data?.[0]?.id ?? ''))
+        setSemester(currentResponse.data?.hoc_ky ?? '')
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setYears([])
+        setAcademicYear('')
+        setSemester('')
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!academicYear) return
+
+    let isMounted = true
+    apiGet<CatalogResponse<AcademicTerm>>('/academic-catalog/hoc-kys', {
+      params: { nam_hoc_id: Number(academicYear) },
+    })
+      .then((response) => {
+        if (!isMounted) return
+        setTerms(response.data ?? [])
+        setSemester((current) => current || response.data?.[0]?.hoc_ky || '')
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setTerms([])
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [academicYear])
+
+  const greeting = getGreeting(now.getHours())
+  const today = formatToday()
+  const enabledModules = modules.filter((module) => user?.permissions?.includes(module.permission))
+
   return (
     <RoleLayout
       brandSubtitle="Hệ thống Đào tạo"
@@ -130,100 +201,57 @@ export default function TrainingOfficerDashboardPage() {
       roleTitle="Chuyên viên đào tạo"
     >
       <main className="to-main">
-        <div className="to-quick-access-section">
-          <h2 className="to-section-title">Truy cập nhanh</h2>
-          <div className="to-qa-grid">
-            {quickAccessLinks.map((item) => (
-              <Link to={item.link} key={item.label} className="to-qa-card">
-                <DashboardIcon
-                  code={item.icon}
-                  tone={item.colorClass as IconTone}
-                  className="to-qa-icon"
-                />
-                <span className="to-qa-label">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <div className="to-content">
+          <section className="to-filter-bar" aria-label="Thông tin học kỳ">
+            <label>
+              <span>Hệ đào tạo</span>
+              <select value={trainingSystem} onChange={(event) => setTrainingSystem(event.target.value)}>
+                <option value="Đại học và Cao đẳng chính quy">Đại học và Cao đẳng chính quy</option>
+                <option value="Vừa học vừa làm">Vừa học vừa làm</option>
+                <option value="Đào tạo từ xa">Đào tạo từ xa</option>
+              </select>
+            </label>
+            <label>
+              <span>Năm học</span>
+              <select value={academicYear} onChange={(event) => { setAcademicYear(event.target.value); setSemester('') }}>
+                <option value="">Chọn năm học</option>
+                {years.map((year) => <option key={year.id} value={year.id}>{year.nam_hoc}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Học kỳ</span>
+              <select value={semester} onChange={(event) => setSemester(event.target.value)}>
+                <option value="">Chọn học kỳ</option>
+                {terms.map((term) => <option key={term.id} value={term.hoc_ky}>{term.hoc_ky}</option>)}
+              </select>
+            </label>
+          </section>
 
-        <div className="to-stats">
-          {stats.map((item) => (
-            <div key={item.label} className="to-stat-card">
-              <DashboardIcon
-                code={item.icon}
-                tone={item.colorClass as IconTone}
-                className="to-stat-icon"
-              />
-              <div className="to-stat-value">{item.value}</div>
-              <div className="to-stat-label">{item.label}</div>
+          {/* Hero Section with Greeting */}
+          <section className="to-hero-section" aria-label="Chào mừng">
+            <div className="to-hero-content">
+              <h1 className="to-hero-greeting">{greeting}, {displayName}!</h1>
+              <p className="to-hero-date">{today}</p>
             </div>
-          ))}
-        </div>
+          </section>
 
-        <div className="to-grid">
-          <div className="to-panel">
-            <div className="to-panel-header">
-              <span className="to-panel-title">Việc cần xử lý</span>
-              <a href="#" className="to-panel-link">Xem tất cả</a>
-            </div>
-            <div className="to-panel-body">
-              <div className="to-list">
-                {pendingItems.map((item) => (
-                  <div key={item.id} className="to-list-item">
-                    <div className="to-list-content">
-                      <span className="to-list-title">{item.title}</span>
-                      <span className="to-list-desc">{item.dept}</span>
-                    </div>
-                    <span className={`to-badge ${item.status}`}>{statusLabel[item.status]}</span>
+          {/* Modules Section */}
+          <section className="to-modules-section" aria-label="Nghiệp vụ chính">
+            <div className="to-modules-grid">
+              {enabledModules.map((module) => (
+                <Link
+                  to={module.href}
+                  key={module.title}
+                  className={`to-module-card tone-${module.tone}`}
+                >
+                  <div className="to-module-icon" aria-hidden="true">
+                    {module.icon}
                   </div>
-                ))}
-              </div>
+                  <h3 className="to-module-title">{module.title}</h3>
+                </Link>
+              ))}
             </div>
-          </div>
-
-          <div className="to-panel">
-            <div className="to-panel-header">
-              <span className="to-panel-title">Hoạt động gần đây</span>
-            </div>
-            <div className="to-panel-body">
-              <div className="to-timeline">
-                {recentActivities.map((log) => (
-                  <div key={`${log.action}-${log.time}`} className="to-timeline-item">
-                    <DashboardIcon code={log.icon} className="to-timeline-icon" variant="circle" />
-                    <div className="to-timeline-content">
-                      <div className="to-timeline-title">{log.action}</div>
-                      <div className="to-timeline-time">{log.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="to-panel" style={{ gridColumn: '1 / -1' }}>
-            <div className="to-panel-header">
-              <span className="to-panel-title">Công việc trọng tâm</span>
-            </div>
-            <div className="to-panel-body">
-              <div className="to-task-grid">
-                {quickTasks.map((task) =>
-                  task.link ? (
-                    <Link to={task.link} key={task.title} className="to-task-card">
-                      <DashboardIcon code={task.icon} className="to-task-icon" variant="plain" />
-                      <div className="to-task-title">{task.title}</div>
-                      <div className="to-task-note">{task.note}</div>
-                    </Link>
-                  ) : (
-                    <div key={task.title} className="to-task-card">
-                      <DashboardIcon code={task.icon} className="to-task-icon" variant="plain" />
-                      <div className="to-task-title">{task.title}</div>
-                      <div className="to-task-note">{task.note}</div>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
       </main>
     </RoleLayout>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowDownTrayIcon, ChevronRightIcon, PrinterIcon } from '@heroicons/react/24/outline'
 import { apiGet } from '@/api/core/request'
+import { LOGO_IMAGE_URL, MINISTRY_NAME, SCHOOL_NAME } from '@/app/branding'
+import { formatDisplayDate, formatDisplayDateTime } from '@/utils/dateFormat'
 import RoleLayout from '../../../layout/RoleLayout'
 import './TrainingOfficerStudyPlanStatisticsPage.css'
 
@@ -60,25 +62,11 @@ const downloadFile = (content: BlobPart, fileName: string, type: string) => {
 }
 
 const formatDate = (value?: string | null) => {
-  if (!value) return ''
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return date.toLocaleDateString('vi-VN')
+  return formatDisplayDate(value)
 }
 
 const formatDateTime = (value?: string | null) => {
-  if (!value) return ''
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return date.toLocaleString('vi-VN')
+  return formatDisplayDateTime(value)
 }
 
 export default function TrainingOfficerStudyPlanCourseRegistrationsPage() {
@@ -150,7 +138,7 @@ export default function TrainingOfficerStudyPlanCourseRegistrationsPage() {
   const handleExportExcel = () => {
     if (!course) return
 
-    const generatedAt = new Date().toLocaleString('vi-VN')
+    const generatedAt = formatDisplayDateTime(new Date().toISOString())
     const rows = students.map((student, index) => `
       <tr>
         <td>${index + 1}</td>
@@ -170,10 +158,13 @@ export default function TrainingOfficerStudyPlanCourseRegistrationsPage() {
             th, td { border: 1px solid #b7c5d8; padding: 8px; }
             th { background: #2f6fa5; color: #ffffff; }
             .title { font-size: 18px; font-weight: 700; }
+            .brand { text-align: center; font-weight: 700; }
+            .brand img { width: 44px; height: 44px; object-fit: contain; }
           </style>
         </head>
         <body>
           <table>
+            <tr><td colspan="6" class="brand"><img src="${LOGO_IMAGE_URL}" alt="NTU" /><br />${escapeExcelCell(SCHOOL_NAME)}</td></tr>
             <tr><td colspan="6" class="title">Danh sách sinh viên đăng ký KHHT</td></tr>
             <tr><td colspan="6">Học phần: ${escapeExcelCell(course.ma_hoc_phan)} - ${escapeExcelCell(course.ten_hoc_phan)}</td></tr>
             <tr><td colspan="6">Kỳ thống kê: ${escapeExcelCell(termLabel)}</td></tr>
@@ -222,8 +213,9 @@ export default function TrainingOfficerStudyPlanCourseRegistrationsPage() {
           <div className="sp-stat-panel-head">
             <div className="sp-stat-print-official">
               <div>
-                <strong>BỘ GIÁO DỤC VÀ ĐÀO TẠO</strong>
-                <strong>TRƯỜNG ĐẠI HỌC NHA TRANG</strong>
+                <img src={LOGO_IMAGE_URL} alt="NTU" width={44} height={44} />
+                <strong>{MINISTRY_NAME}</strong>
+                <strong>{SCHOOL_NAME}</strong>
               </div>
               <div>
                 <strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong>

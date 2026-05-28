@@ -20,4 +20,14 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: [
+      'src/app/pages/test/componentTestRegistry.tsx',
+      'src/components/alert/AlertContext.tsx',
+      'src/components/modal/ModalContext.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

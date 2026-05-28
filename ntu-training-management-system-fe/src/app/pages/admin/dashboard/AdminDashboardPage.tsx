@@ -1,153 +1,64 @@
 import { Link } from 'react-router-dom'
+import {
+  AcademicCapIcon,
+  BuildingOffice2Icon,
+  ChartBarSquareIcon,
+  CircleStackIcon,
+  ClipboardDocumentListIcon,
+  Cog6ToothIcon,
+  HomeModernIcon,
+  IdentificationIcon,
+  PencilSquareIcon,
+  ShieldCheckIcon,
+  UserGroupIcon,
+} from '@heroicons/react/24/outline'
+import { useAuth } from '@/api/query'
 import './AdminDashboardPage.css'
 
-// ── Placeholder data (thay bằng API thật sau) ────────────────────────
-const stats = [
-  { icon: '👥', label: 'Người dùng hoạt động', value: '2,486', colorClass: 'blue' },
-  { icon: '⚠️', label: 'Sự cố hệ thống', value: '1', colorClass: 'red' },
-  { icon: '⏳', label: 'Yêu cầu chờ duyệt', value: '11', colorClass: 'amber' },
-  { icon: '🟢', label: 'Uptime hệ thống', value: '99.9%', colorClass: 'green' },
-]
-
 const quickAccessLinks = [
-  { label: 'Quản lý người dùng', icon: '👤', colorClass: 'blue', link: '/quantri/taikhoan' },
-  { label: 'Phân quyền hệ thống', icon: '🔑', colorClass: 'purple', link: '/admin/roles' },
-  { label: 'Quản lý phòng ban', icon: '🏢', colorClass: 'cyan', link: '/admin/departments' },
-  { label: 'Quản lý lớp học', icon: '🏫', colorClass: 'orange', link: '/quantri/lophoc' },
-  { label: 'Quản lí phòng học', icon: 'PH', colorClass: 'cyan', link: '/quantri/phonghoc' },
-  { label: 'Chương trình đào tạo', icon: '🗺️', colorClass: 'teal', link: '/quantri/curriculum' },
-  { label: 'Kế hoạch học tập', icon: '📝', colorClass: 'amber', link: '/quantri/studyplan' },
-  { label: 'Cấu hình hệ thống', icon: '⚙️', colorClass: 'gray', link: '/quantri/cauhinh' },
-  { label: 'Nhật ký truy cập', icon: '📋', colorClass: 'indigo', link: '/admin/logs' },
-  { label: 'Sao lưu dữ liệu', icon: '💾', colorClass: 'teal', link: '/admin/backups' },
-  { label: 'Quản lý thông báo', icon: '📢', colorClass: 'amber', link: '/admin/notifications' },
-  { label: 'Báo cáo thống kê', icon: '📊', colorClass: 'green', link: '/admin/reports' },
+  { label: 'Đăng ký học phần', icon: PencilSquareIcon, colorClass: 'emerald', link: '/quantri/dangkyhocphan', permission: 'admin.course-registration.manage' },
+  { label: 'Quản lý người dùng', icon: UserGroupIcon, colorClass: 'blue', link: '/quantri/taikhoan', permission: 'admin.account.manage' },
+  { label: 'Thông tin sinh viên', icon: IdentificationIcon, colorClass: 'indigo', link: '/quantri/thongtinsinhvien', permission: 'admin.student-info.manage' },
+  { label: 'Phân quyền hệ thống', icon: ShieldCheckIcon, colorClass: 'purple', link: '/quantri/roles', permission: 'admin.permission.manage' },
+  { label: 'Quản lý lớp học', icon: BuildingOffice2Icon, colorClass: 'orange', link: '/quantri/lophoc', permission: 'admin.class.manage' },
+  { label: 'Quản lí phòng học', icon: HomeModernIcon, colorClass: 'cyan', link: '/quantri/phonghoc', permission: 'admin.room.manage' },
+  { label: 'Chương trình đào tạo', icon: AcademicCapIcon, colorClass: 'teal', link: '/quantri/curriculum', permission: 'admin.curriculum.manage' },
+  { label: 'Kế hoạch học tập', icon: ClipboardDocumentListIcon, colorClass: 'amber', link: '/quantri/studyplan', permission: 'admin.study-plan.manage' },
+  { label: 'Quản lý điểm', icon: ChartBarSquareIcon, colorClass: 'green', link: '/quantri/nhapdiem', permission: 'admin.grade-entry.lock.manage' },
+  { label: 'Cấu hình hệ thống', icon: Cog6ToothIcon, colorClass: 'gray', link: '/quantri/cauhinh', permission: 'admin.config.manage' },
+  { label: 'Sao lưu dữ liệu', icon: CircleStackIcon, colorClass: 'red', link: '/quantri/backup', permission: 'admin.backup.manage' },
 ]
-
-const pendingRequests = [
-  { id: 'REQ-001', user: 'Nguyen Van A', type: 'Cấp quyền Giảng viên', status: 'pending' },
-  { id: 'REQ-002', user: 'Tran Thi B', type: 'Reset mật khẩu', status: 'pending' },
-  { id: 'REQ-003', user: 'Le Van C', type: 'Mở khóa tài khoản', status: 'pending' },
-  { id: 'REQ-004', user: 'Pham Thi D', type: 'Cập nhật email', status: 'pending' },
-]
-
-const recentLogs = [
-  { action: 'Cập nhật phân quyền', user: 'admin_root', time: '10 phút trước' },
-  { action: 'Đăng nhập hệ thống (IP lạ)', user: 'gv_tuan', time: '1 giờ trước' },
-  { action: 'Sao lưu DB thành công', user: 'System', time: '2 giờ trước' },
-  { action: 'Xóa tài khoản sinh viên', user: 'admin_staff', time: 'Hôm qua' },
-]
-
-const systemStatus = [
-  { component: 'Web Server', status: 'Hoạt động tốt', state: 'success' },
-  { component: 'Database Server', status: 'Hoạt động tốt', state: 'success' },
-  { component: 'Storage', status: 'Cảnh báo: 85% đầy', state: 'warning' },
-  { component: 'Email Service', status: 'Hoạt động tốt', state: 'success' },
-]
-
-const stateLabel: Record<string, string> = {
-  success: 'Bình thường',
-  warning: 'Cảnh báo',
-  error: 'Lỗi',
-  info: 'Thông tin',
-}
 
 export default function AdminDashboardPage() {
+  const { user } = useAuth()
+  const enabledLinks = quickAccessLinks.filter((item) => user?.permissions?.includes(item.permission))
+
   return (
-    <div className="ad-root">
-
-      {/* ── MAIN ── */}
-      <main className="ad-main">
-        {/* Quick Access */}
-        <div className="ad-quick-access-section">
-          <h2 className="ad-section-title">Quản lý nhanh</h2>
+    <main className="ad-main">
+      <div className="ad-content-container">
+        <section className="ad-quick-access-section">
           <div className="ad-qa-grid">
-            {quickAccessLinks.map((item) => (
-              <Link to={item.link} key={item.label} className="ad-qa-card">
-                <div className={`ad-qa-icon ${item.colorClass}`}>
-                  {item.icon}
-                </div>
-                <span className="ad-qa-label">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
+            {enabledLinks.map((item) => {
+              const Icon = item.icon
 
-        {/* Stat cards */}
-        <div className="ad-stats">
-          {stats.map((s) => (
-            <div key={s.label} className="ad-stat-card">
-              <div className={`ad-stat-icon ${s.colorClass}`}>{s.icon}</div>
-              <div className="ad-stat-value">{s.value}</div>
-              <div className="ad-stat-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Grid 2 cột */}
-        <div className="ad-grid">
-          {/* Yêu cầu chờ duyệt */}
-          <div className="ad-panel">
-            <div className="ad-panel-header">
-              <span className="ad-panel-title">⏳ Yêu cầu chờ duyệt</span>
-              <a href="#" className="ad-panel-link">Xem tất cả</a>
-            </div>
-            <div className="ad-panel-body">
-              <div className="ad-list">
-                {pendingRequests.map((r) => (
-                  <div key={r.id} className="ad-list-item">
-                    <div className="ad-list-content">
-                      <span className="ad-list-title">{r.user}</span>
-                      <span className="ad-list-desc">{r.type}</span>
-                    </div>
-                    <span className="ad-badge warning">Chờ duyệt</span>
+              return (
+                <Link to={item.link} key={item.label} className="ad-qa-card">
+                  <div className="ad-qa-card-inner">
+                    <div className={`ad-qa-icon ${item.colorClass}`}><Icon aria-hidden="true" /></div>
+                    <span className="ad-qa-label">{item.label}</span>
+                    <span className="ad-qa-arrow" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="5" x2="19" y1="12" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
+                </Link>
+              )
+            })}
           </div>
-
-          {/* Nhật ký hệ thống */}
-          <div className="ad-panel">
-            <div className="ad-panel-header">
-              <span className="ad-panel-title">📋 Nhật ký hoạt động (Gần đây)</span>
-            </div>
-            <div className="ad-panel-body">
-              <div className="ad-timeline">
-                {recentLogs.map((log, idx) => (
-                  <div key={idx} className="ad-timeline-item">
-                    <div className="ad-timeline-icon">📝</div>
-                    <div className="ad-timeline-content">
-                      <div className="ad-timeline-title">{log.action}</div>
-                      <div className="ad-timeline-time">{log.user} • {log.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Tình trạng hệ thống */}
-          <div className="ad-panel" style={{ gridColumn: '1 / -1' }}>
-            <div className="ad-panel-header">
-              <span className="ad-panel-title">⚙️ Tình trạng hệ thống</span>
-            </div>
-            <div className="ad-panel-body">
-              <div className="ad-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '14px' }}>
-                {systemStatus.map((s, idx) => (
-                  <div key={idx} className="ad-list-item">
-                    <div className="ad-list-content">
-                      <span className="ad-list-title">{s.component}</span>
-                      <span className="ad-list-desc">{s.status}</span>
-                    </div>
-                    <span className={`ad-badge ${s.state}`}>{stateLabel[s.state]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+        </section>
+      </div>
+    </main>
   )
 }

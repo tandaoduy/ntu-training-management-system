@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Modal } from '@/components/modal'
 import { useAuth } from '../../api/query'
+import { SCHOOL_NAME, SYSTEM_NAME } from '../branding'
 import logoImage from '../../assets/Logo_NTU.png'
 import './RoleLayout.css'
 
@@ -12,16 +13,18 @@ interface RoleLayoutProps {
   roleColor: 'blue' | 'teal' | 'orange' | 'purple' | 'red'
   homeRoute: string
   roleTitle?: string
+  headerOverlay?: boolean
   children: React.ReactNode
 }
 
 export default function RoleLayout({
-  brandTitle = 'TRƯỜNG ĐẠI HỌC NHA TRANG',
+  brandTitle = SCHOOL_NAME,
   brandSubtitle,
   roleLabel,
   roleColor,
   homeRoute,
   roleTitle = '',
+  headerOverlay = false,
   children,
 }: RoleLayoutProps) {
   const navigate = useNavigate()
@@ -29,7 +32,7 @@ export default function RoleLayout({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const displayName = user?.username ?? roleTitle
+  const displayName = user?.name?.trim() || user?.username || roleTitle
 
   const confirmLogout = async () => {
     if (isLoggingOut) return
@@ -44,18 +47,16 @@ export default function RoleLayout({
   }
 
   return (
-    <div className="rl-root">
+    <div className={`rl-root${headerOverlay ? ' rl-root-dashboard' : ''}`}>
       <header className="rl-header">
         <div className="rl-topbar">
-          <div className="rl-brand">
+          <button type="button" className="rl-brand" onClick={() => navigate(homeRoute)} title="Về dashboard" aria-label="Về dashboard">
             <img src={logoImage} alt="NTU Logo" className="rl-brand-logo" />
             <div className="rl-brand-text">
               <h2 className="rl-brand-title">{brandTitle}</h2>
-              {brandSubtitle && (
-                <span className="rl-brand-subtitle">{brandSubtitle}</span>
-              )}
+              <span className="rl-brand-subtitle">{brandSubtitle || SYSTEM_NAME}</span>
             </div>
-          </div>
+          </button>
 
           <span className={`rl-role-chip ${roleColor}`}>{roleLabel}</span>
         </div>

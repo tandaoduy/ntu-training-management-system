@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { AcademicCapIcon, CalendarDaysIcon, ChartBarSquareIcon, IdentificationIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import { apiGet } from '../../../../api/core/request'
 import { authStorage } from '../../../../api/features/auth'
 import { useAuth } from '../../../../api/query'
@@ -7,64 +8,13 @@ import { Modal } from '@/components/modal'
 import { StudentHeader } from '../components/StudentHeader'
 import './StudentDashboardPage.css'
 
-// ── Placeholder data (thay bằng API thật sau) ────────────────────────
-const stats = [
-  { icon: '📚', label: 'Tín chỉ tích lũy', value: '78', colorClass: 'blue' },
-  { icon: '✅', label: 'Môn đã qua', value: '24', colorClass: 'green' },
-  { icon: '⏳', label: 'Môn đang học', value: '5', colorClass: 'amber' },
-  { icon: '🎯', label: 'GPA tích lũy', value: '3.2', colorClass: 'purple' },
-]
-
 const quickAccessLinks = [
-  { label: 'Thời khóa biểu', icon: '📅', colorClass: 'blue', link: '/student/schedule' },
-  { label: 'Đánh giá rèn luyện', icon: '📋', colorClass: 'teal', link: '/student/conduct' },
-  { label: 'Thông tin sinh viên', icon: '👤', colorClass: 'indigo', link: '/student/profile' },
-  { label: 'Kế hoạch học tập', icon: '🗺️', colorClass: 'amber', link: '/sinhvien/studyplan' },
-  { label: 'Đăng ký học phần', icon: '✍️', colorClass: 'purple', link: '/student/registration' },
-  { label: 'Xem lịch thi', icon: '⏰', colorClass: 'rose', link: '/student/exam-schedule' },
-  { label: 'Nhận xét học phần', icon: '📝', colorClass: 'cyan', link: '/student/feedback' },
-  { label: 'Kết quả học tập', icon: '📊', colorClass: 'emerald', link: '/student/grades' },
-  { label: 'Ký túc xá', icon: '🏢', colorClass: 'orange', link: '/student/dormitory' },
-  { label: 'Học phí', icon: '💵', colorClass: 'green', link: '/student/tuition' },
-  { label: 'Xét tốt nghiệp', icon: '🎓', colorClass: 'blue', link: '/student/graduation' },
-  { label: 'Đề tài luận văn', icon: '📚', colorClass: 'violet', link: '/student/thesis' },
-  { label: 'Tiến độ học tập', icon: '📈', colorClass: 'pink', link: '/student/progress' },
+  { label: 'Thời khóa biểu', icon: CalendarDaysIcon, colorClass: 'blue', link: '/sinhvien/thoikhoabieu', permission: 'student.timetable.view' },
+  { label: 'Thông tin sinh viên', icon: IdentificationIcon, colorClass: 'indigo', link: '/student/profile', permission: 'student.profile.view' },
+  { label: 'Kế hoạch học tập', icon: AcademicCapIcon, colorClass: 'amber', link: '/sinhvien/studyplan', permission: 'student.study-plan.view' },
+  { label: 'Đăng ký học phần', icon: PencilSquareIcon, colorClass: 'purple', link: '/sinhvien/dangkyhocphan/dangky', permission: 'student.course-registration.view' },
+  { label: 'Kết quả học tập', icon: ChartBarSquareIcon, colorClass: 'emerald', link: '/sinhvien/ketquahoctap', permission: 'student.grades.view' },
 ]
-
-const currentCourses = [
-  { name: 'Lập trình hướng đối tượng', credits: '3 TC', status: 'active' },
-  { name: 'Cơ sở dữ liệu', credits: '3 TC', status: 'active' },
-  { name: 'Mạng máy tính', credits: '3 TC', status: 'active' },
-  { name: 'Kiến trúc máy tính', credits: '2 TC', status: 'active' },
-  { name: 'Toán rời rạc', credits: '3 TC', status: 'active' },
-]
-
-const recentGrades = [
-  { name: 'Lập trình Web', credits: '3 TC', status: 'pass', score: '8.5' },
-  { name: 'Giải tích 2', credits: '3 TC', status: 'pass', score: '7.0' },
-  { name: 'Vật lý đại cương', credits: '2 TC', status: 'fail', score: '4.0' },
-  { name: 'Tiếng Anh 2', credits: '3 TC', status: 'pass', score: '9.0' },
-]
-
-const schedule = [
-  { day: 'T2', subject: 'Lập trình hướng đối tượng', time: '07:30 – 09:30 • P.B201' },
-  { day: 'T3', subject: 'Cơ sở dữ liệu', time: '09:45 – 11:45 • P.A302' },
-  { day: 'T4', subject: 'Mạng máy tính', time: '13:00 – 15:00 • P.C104' },
-  { day: 'T5', subject: 'Kiến trúc máy tính', time: '07:30 – 09:30 • P.B305' },
-  { day: 'T6', subject: 'Toán rời rạc', time: '09:45 – 11:45 • P.A201' },
-]
-
-const progressItems = [
-  { label: 'Tín chỉ tích lũy / Yêu cầu (130 TC)', pct: Math.round((78 / 130) * 100) },
-  { label: 'Tiến độ học kỳ hiện tại', pct: 65 },
-  { label: 'Hoàn thành chương trình đào tạo', pct: Math.round((78 / 130) * 100) },
-]
-
-const statusLabel: Record<string, string> = {
-  pass: 'Đạt',
-  fail: 'Không đạt',
-  active: 'Đang học',
-}
 
 interface CurrentAcademicTermResponse {
   data?: {
@@ -76,10 +26,60 @@ interface CurrentAcademicTermResponse {
   is_configured?: boolean
 }
 
+type TimetableRow = {
+  id: number
+  ma_hoc_phan: string
+  nhom_hoc_phan: string
+  ten_hoc_phan: string
+  so_tin_chi: number
+  lop_hoc_phan: string
+  thu: number
+  tiet_bat_dau: number
+  tiet_ket_thuc: number
+  tuan_bat_dau: number
+  tuan_ket_thuc: number
+  ten_giang_vien: string
+  ten_phong: string
+  ngay_bat_dau_hoc?: string | null
+}
+
+type CourseRegistrationResponse = {
+  data: {
+    registration_period: { term?: { nam_hoc?: string | null; hoc_ky?: string | null } | null } | null
+    student_academic_info?: { ma_lop?: string | null; ten_nganh_hoc?: string | null } | null
+    student_timetable: TimetableRow[]
+  }
+}
+
 const CURRENT_TERM_CACHE_KEY = 'student-current-academic-term'
+const STUDENT_TIMETABLE_CACHE_PREFIX = 'student-timetable-page'
 const FALLBACK_CURRENT_TERM = {
   year: '2024-2025',
   semester: '1',
+}
+
+function studentTimetableCacheKey(username?: string | null) {
+  return `${STUDENT_TIMETABLE_CACHE_PREFIX}:${username?.trim() || 'current'}`
+}
+
+function cacheStudentTimetable(username: string | undefined | null, response: CourseRegistrationResponse, term?: CurrentAcademicTermResponse['data']) {
+  const registrationTerm = response.data.registration_period?.term
+  const year = registrationTerm?.nam_hoc?.trim() || term?.nam_hoc?.trim() || FALLBACK_CURRENT_TERM.year
+  const semester = registrationTerm?.hoc_ky?.trim() || term?.hoc_ky?.trim() || FALLBACK_CURRENT_TERM.semester
+
+  try {
+    window.localStorage.setItem(studentTimetableCacheKey(username), JSON.stringify({
+      periodYear: year,
+      periodSemester: semester,
+      sysAcademicYear: term?.nam_hoc?.trim() || year,
+      sysSemester: term?.hoc_ky?.trim() || semester,
+      rows: response.data.student_timetable ?? [],
+      academicInfo: response.data.student_academic_info ?? null,
+      cachedAt: Date.now(),
+    }))
+  } catch {
+    // Prefetch cache is optional.
+  }
 }
 
 function readCachedCurrentTerm() {
@@ -120,7 +120,6 @@ export default function StudentDashboardPage() {
   const [sysAcademicYear, setSysAcademicYear] = useState(() => readCachedCurrentTerm().year)
   const [sysSemester, setSysSemester] = useState(() => readCachedCurrentTerm().semester)
 
-  // Lấy thông tin user khi vào trang
   useEffect(() => {
     if (!user) {
       void me()
@@ -148,6 +147,12 @@ export default function StudentDashboardPage() {
       setSysAcademicYear(namHoc ?? FALLBACK_CURRENT_TERM.year)
       setSysSemester(hocKy ?? FALLBACK_CURRENT_TERM.semester)
       cacheCurrentTerm(namHoc, hocKy)
+
+      if (user?.permissions?.includes('student.course-registration.view')) {
+        apiGet<CourseRegistrationResponse>('/student/course-registration')
+          .then((response) => cacheStudentTimetable(user?.username || authStorage.getUser()?.username, response, currentTerm))
+          .catch(() => undefined)
+      }
     }
 
     void fetchStudentDashboard()
@@ -155,7 +160,7 @@ export default function StudentDashboardPage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [user?.permissions, user?.username])
 
   const handleLogout = () => {
     setShowLogoutConfirm(false)
@@ -165,6 +170,7 @@ export default function StudentDashboardPage() {
 
   const cachedUserName = authStorage.getUser()?.name?.trim() || null
   const displayName = user?.name?.trim() || cachedUserName || ''
+  const enabledLinks = quickAccessLinks.filter((item) => user?.permissions?.includes(item.permission))
 
   return (
     <div className="sd-root">
@@ -176,7 +182,6 @@ export default function StudentDashboardPage() {
         onLogoutClick={() => setShowLogoutConfirm(true)}
       />
 
-      {/* MODAL XÁC NHẬN ĐĂNG XUẤT */}
       {showLogoutConfirm && (
         <Modal
           modal={{
@@ -204,118 +209,30 @@ export default function StudentDashboardPage() {
         />
       )}
 
-      {/* ── MAIN ── */}
       <main className="sd-main">
-        {/* Greeting */}
-        <div className="sd-greeting">
-          <h1>Xin chào, {displayName} 👋</h1>
-        </div>
+        <div className="sd-content-container">
+          <div className="sd-quick-access-section-new">
+            <div className="sd-qa-grid-new">
+              {enabledLinks.map((item) => {
+                const Icon = item.icon
 
-        {/* Quick Access */}
-        <div className="sd-quick-access-section">
-          <h2 className="sd-section-title">Chức năng chính</h2>
-          <div className="sd-qa-grid">
-            {quickAccessLinks.map((item) => (
-              <Link to={item.link} key={item.label} className="sd-qa-card">
-                <div className={`sd-qa-icon ${item.colorClass}`}>
-                  {item.icon}
-                </div>
-                <span className="sd-qa-label">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Stat cards */}
-        <div className="sd-stats">
-          {stats.map((s) => (
-            <div key={s.label} className="sd-stat-card">
-              <div className={`sd-stat-icon ${s.colorClass}`}>{s.icon}</div>
-              <div className="sd-stat-value">{s.value}</div>
-              <div className="sd-stat-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Grid 2 cột */}
-        <div className="sd-grid">
-          {/* Môn đang học */}
-          <div className="sd-panel">
-            <div className="sd-panel-header">
-              <span className="sd-panel-title">📖 Môn học kỳ này</span>
-              <a href="#" className="sd-panel-link">Xem tất cả</a>
-            </div>
-            <div className="sd-panel-body">
-              <div className="sd-course-list">
-                {currentCourses.map((c) => (
-                  <div key={c.name} className="sd-course-item">
-                    <span className="sd-course-name">{c.name}</span>
-                    <span className="sd-course-credit">{c.credits}</span>
-                    <span className={`sd-badge ${c.status}`}>{statusLabel[c.status]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Lịch học */}
-          <div className="sd-panel">
-            <div className="sd-panel-header">
-              <span className="sd-panel-title">🗓️ Lịch học tuần này</span>
-            </div>
-            <div className="sd-panel-body">
-              <div className="sd-schedule-list">
-                {schedule.map((s) => (
-                  <div key={s.day + s.subject} className="sd-schedule-item">
-                    <span className="sd-schedule-day">{s.day}</span>
-                    <div className="sd-schedule-info">
-                      <div className="sd-schedule-subject">{s.subject}</div>
-                      <div className="sd-schedule-time">{s.time}</div>
+                return (
+                  <Link to={item.link} key={item.label} className="sd-qa-card-new">
+                    <div className="sd-qa-card-inner">
+                      <div className={`sd-qa-icon-box ${item.colorClass}`}>
+                        <Icon aria-hidden="true" />
+                      </div>
+                      <span className="sd-qa-label-new">{item.label}</span>
+                      <span className="sd-qa-arrow" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="5" x2="19" y1="12" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                      </span>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Kết quả gần đây */}
-          <div className="sd-panel">
-            <div className="sd-panel-header">
-              <span className="sd-panel-title">📊 Kết quả học tập gần đây</span>
-              <a href="#" className="sd-panel-link">Xem bảng điểm</a>
-            </div>
-            <div className="sd-panel-body">
-              <div className="sd-course-list">
-                {recentGrades.map((c) => (
-                  <div key={c.name} className="sd-course-item">
-                    <span className="sd-course-name">{c.name}</span>
-                    <span className="sd-course-credit">{c.score}</span>
-                    <span className={`sd-badge ${c.status}`}>{statusLabel[c.status]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Tiến độ tốt nghiệp */}
-          <div className="sd-panel">
-            <div className="sd-panel-header">
-              <span className="sd-panel-title">🎓 Tiến độ tốt nghiệp</span>
-            </div>
-            <div className="sd-panel-body">
-              <div className="sd-progress-wrap">
-                {progressItems.map((p) => (
-                  <div key={p.label} className="sd-progress-item">
-                    <div className="sd-progress-row">
-                      <span className="sd-progress-label">{p.label}</span>
-                      <span className="sd-progress-pct">{p.pct}%</span>
-                    </div>
-                    <div className="sd-progress-track">
-                      <div className="sd-progress-bar" style={{ width: `${p.pct}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  </Link>
+                )
+              })}
             </div>
           </div>
         </div>

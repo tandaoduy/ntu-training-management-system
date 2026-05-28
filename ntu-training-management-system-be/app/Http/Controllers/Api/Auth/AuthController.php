@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\CanBo;
+use App\Models\DonVi;
+use App\Models\Lop;
+use App\Models\SinhVien;
 use App\Models\User;
 use App\Rules\NoSqlInjection;
 use Illuminate\Http\JsonResponse;
@@ -39,21 +43,12 @@ class AuthController extends Controller
         $user->forceFill(['last_login_at' => now()])->save();
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $unit = $this->profileUnit($user);
 
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => [
-                'id' => $user->id,
-                'username' => $user->username,
-                'name' => $user->profileName(),
-                'role' => $user->role?->code,
-                'email' => $user->profileEmail(),
-                'education_system' => $user->role?->code === 'student'
-                    ? $user->profile?->getAttribute('he_dao_tao')
-                    : null,
-                'email_verified' => $user->isEmailVerified(),
-            ],
+            'user' => $this->userPayload($user, $unit),
         ]);
     }
 
@@ -74,6 +69,27 @@ class AuthController extends Controller
         ]);
     }
 
+    // API: Gia han phien dang nhap hien tai bang cach cap token moi.
+    public function extendSession(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user || ! $user->status) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $currentToken = $user->currentAccessToken();
+        $token = $user->createToken('auth_token')->plainTextToken;
+        $currentToken?->delete();
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => ((int) config('sanctum.expiration', 15)) * 60,
+            'message' => 'Session extended successfully',
+        ]);
+    }
+
     // API: Lấy thông tin người dùng hiện tại
     public function me(Request $request): JsonResponse
     {
@@ -84,18 +100,78 @@ class AuthController extends Controller
         }
 
         $user->loadMissing(['role', 'profile', 'emailVerification']);
+        $unit = $this->profileUnit($user);
 
-        return response()->json([
-            'id' => $user?->id,
-            'username' => $user?->username,
-            'name' => $user?->profileName(),
-            'role' => $user?->role?->code,
-            'email' => $user?->profileEmail(),
-            'education_system' => $user?->role?->code === 'student'
-                ? $user?->profile?->getAttribute('he_dao_tao')
+        return response()->json($this->userPayload($user, $unit));
+    }
+
+    private function userPayload(User $user, ?DonVi $unit = null): array
+    {
+        return [
+            'id' => $user->id,
+            'username' => $user->username,
+            'name' => $user->profileName(),
+            'role' => $user->role?->code,
+            'email' => $user->profileEmail(),
+            'education_system' => $user->role?->code === 'student'
+                ? $user->profile?->getAttribute('he_dao_tao')
                 : null,
-            'email_verified' => $user?->isEmailVerified() ?? false,
-        ]);
+            'don_vi_id' => $unit?->id,
+            'ten_don_vi' => $unit?->ten_don_vi,
+            'email_verified' => $user->isEmailVerified(),
+            'permissions' => $user->permissionCodes()->values()->all(),
+            'advisor' => $this->studentAdvisorPayload($user),
+        ];
+    }
+
+    private function studentAdvisorPayload(User $user): ?array
+    {
+        if ($user->role?->code !== 'student') {
+            return null;
+        }
+
+        $profile = $user->relationLoaded('profile')
+            ? $user->profile
+            : $user->profile()->first();
+
+        if (! $profile instanceof SinhVien) {
+            return null;
+        }
+
+        $class = $profile->lop_id
+            ? Lop::query()->find($profile->lop_id)
+            : Lop::query()->where('lop_hoc_phan', $profile->ma_lop)->first();
+
+        $advisorName = trim((string) ($class?->ten_giang_vien ?? ''));
+        if ($advisorName === '') {
+            return [
+                'has_advisor' => false,
+                'message' => 'Không có cố vấn học tập',
+            ];
+        }
+
+        $advisor = CanBo::query()
+            ->whereRaw('LOWER(ten_giang_vien) = ?', [mb_strtolower($advisorName, 'UTF-8')])
+            ->first();
+
+        return [
+            'has_advisor' => true,
+            'code' => $advisor?->user_id,
+            'name' => $advisor?->ten_giang_vien ?? $advisorName,
+            'phone' => $advisor?->so_dien_thoai,
+            'email' => $advisor?->email,
+        ];
+    }
+
+    private function profileUnit(User $user): ?DonVi
+    {
+        $profile = $user->relationLoaded('profile')
+            ? $user->profile
+            : $user->profile()->first();
+
+        $unitId = $profile?->getAttribute('don_vi_id');
+
+        return $unitId ? DonVi::query()->find($unitId) : null;
     }
 
     // API: Đổi mật khẩu

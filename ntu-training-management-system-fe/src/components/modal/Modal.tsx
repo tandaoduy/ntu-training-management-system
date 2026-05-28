@@ -28,18 +28,19 @@ export const Modal = ({ modal, onClose }: ModalProps) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
+      className="ntu-modal-overlay fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 px-4 py-6"
       role="presentation"
       onMouseDown={handleOverlayClick}
+      style={{ zIndex: 1000 }}
     >
       <div
-        className={`w-full ${sizeClasses[modal.size ?? 'md']} rounded-lg bg-white shadow-xl`}
+        className={`ntu-modal-panel w-full ${sizeClasses[modal.size ?? 'md']} rounded-lg bg-white shadow-xl flex flex-col max-h-[90vh]`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${modal.id}-title`}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4 flex-shrink-0">
           <h2 id={`${modal.id}-title`} className="text-lg font-semibold text-gray-900">
             {modal.title}
           </h2>
@@ -57,7 +58,7 @@ export const Modal = ({ modal, onClose }: ModalProps) => {
         </div>
 
         {modal.content && (
-          <div className="px-6 py-5 text-sm leading-6 text-gray-700">{modal.content}</div>
+          <div className="px-6 py-5 text-sm leading-6 text-gray-700 overflow-y-auto flex-grow">{modal.content}</div>
         )}
 
         {modal.actions && modal.actions.length > 0 && (

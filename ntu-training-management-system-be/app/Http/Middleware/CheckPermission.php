@@ -11,7 +11,7 @@ class CheckPermission
     /**
      * Handle an incoming request.
      */
-    public function handle(Request $request, Closure $next, string $permission): Response
+    public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         $user = $request->user();
 
@@ -19,7 +19,13 @@ class CheckPermission
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $hasPermission = $user->hasPermission($permission);
+        $required = collect($permissions)
+            ->flatMap(fn (string $permission) => explode('|', $permission))
+            ->map(fn (string $permission) => trim($permission))
+            ->filter()
+            ->values();
+
+        $hasPermission = $required->contains(fn (string $permission) => $user->hasPermission($permission));
 
         if (! $hasPermission) {
             return response()->json(['message' => 'Unauthorized'], 403);

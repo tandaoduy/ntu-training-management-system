@@ -75,10 +75,12 @@ export default function AuthPage() {
       return
     }
 
+    const displayName = user.name?.trim() || user.username
+
     showAlert({
       variant: 'success',
       title: 'Đăng nhập thành công',
-      message: `Xin chào ${user.username}!`,
+      message: `Xin chào ${displayName}!`,
     })
 
     navigate(resolveDashboardPath(user.role), {
