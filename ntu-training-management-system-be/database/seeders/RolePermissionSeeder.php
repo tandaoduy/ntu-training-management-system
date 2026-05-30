@@ -167,6 +167,11 @@ class RolePermissionSeeder extends Seeder
             );
         }
 
+        $managerRole->permissions()->syncWithoutDetaching(
+            Permission::query()->where('module', 'manager')->pluck('id')->all()
+        );
+        Cache::forget(sprintf('role_permissions:%d', $managerRole->id));
+
         User::query()
             ->whereIn('username', ['65130001', '65133414'])
             ->where('role_id', $studentRole->id)

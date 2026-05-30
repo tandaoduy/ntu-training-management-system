@@ -1,4 +1,4 @@
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid'
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import type { PaginationProps } from './types'
 import { PAGE_SIZE_OPTIONS, getPageSizeLabel } from './utils'
 

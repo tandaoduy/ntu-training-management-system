@@ -6,7 +6,6 @@ import { MINISTRY_NAME, printBrandHtml, printBrandStyles, printFaviconLink } fro
 import { authStorage } from '../../../../api/features/auth'
 import { useAuth } from '../../../../api/query'
 import { useAlert } from '@/components/alert'
-import { Modal } from '@/components/modal'
 import { StudentHeader } from '../components/StudentHeader'
 import './StudentTimetablePage.css'
 
@@ -340,11 +339,10 @@ function escapeHtml(value: unknown) {
 export default function StudentTimetablePage() {
   const alert = useAlert()
   const navigate = useNavigate()
-  const { user, me, logout } = useAuth()
+  const { user, me } = useAuth()
   const cachedUsername = authStorage.getUser()?.username || null
   const cachedTimetable = useMemo(() => readStudentTimetableCache(cachedUsername), [cachedUsername])
   const lastLoadedTermIdRef = useRef<number | null>(cachedTimetable?.selectedTermId ?? null)
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [sysAcademicYear, setSysAcademicYear] = useState(() => cachedTimetable?.sysAcademicYear || readCachedCurrentTerm().year)
   const [sysSemester, setSysSemester] = useState(() => cachedTimetable?.sysSemester || readCachedCurrentTerm().semester)
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>(() => cachedTimetable?.academicYears ?? [])
@@ -498,11 +496,7 @@ export default function StudentTimetablePage() {
       ))
   ), [rows])
 
-  const handleLogout = () => {
-    setShowLogoutConfirm(false)
-    void logout()
-    navigate('/login', { replace: true })
-  }
+
 
   const cachedUserName = authStorage.getUser()?.name?.trim() || null
   const displayName = user?.name?.trim() || cachedUserName || ''
@@ -631,25 +625,7 @@ export default function StudentTimetablePage() {
         academicYear={sysAcademicYear}
         semester={sysSemester}
         onHomeClick={() => navigate('/sinhvien')}
-        onLogoutClick={() => setShowLogoutConfirm(true)}
       />
-
-      {showLogoutConfirm && (
-        <Modal
-          modal={{
-            id: 'student-timetable-logout-confirm',
-            title: 'Xác nhận đăng xuất',
-            content: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
-            dismissible: true,
-            closeOnOverlayClick: true,
-            actions: [
-              { label: 'Hủy', variant: 'secondary', autoClose: false, onClick: () => setShowLogoutConfirm(false) },
-              { label: 'Đăng xuất', variant: 'danger', autoClose: false, onClick: () => void handleLogout() },
-            ],
-          }}
-          onClose={() => setShowLogoutConfirm(false)}
-        />
-      )}
 
       <main className="student-timetable-page">
         <div className="portal-filters">

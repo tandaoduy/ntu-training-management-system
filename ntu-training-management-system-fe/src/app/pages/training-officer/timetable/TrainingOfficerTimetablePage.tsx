@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { EyeIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useSearchParams } from 'react-router-dom'
 import { useAlert } from '@/components/alert'
 import { apiDelete, apiGet, apiPost, apiPut } from '@/api/core/request'
+import { Pagination } from '@/components/pagination'
 import { clampPositiveInteger } from '@/utils/numberInput'
 import RoleLayout from '../../../layout/RoleLayout'
 import './TrainingOfficerTimetablePage.css'
@@ -13,15 +14,22 @@ type ApiListResponse<T> = { data: T }
 
 type Course = {
   id: number
+  don_vi_id?: number | null
   ma_hoc_phan: string
   ten_hoc_phan: string
   so_tin_chi: number
+  don_vi?: {
+    id: number
+    ma_don_vi: string
+    ten_don_vi: string
+  } | null
 }
 
 type Lecturer = {
   id: number
   user_id: string
   ten_giang_vien: string
+  don_vi_id?: number | null
   chuc_vu?: string | null
   chuc_danh?: string | null
 }
@@ -30,12 +38,14 @@ type Building = {
   id: number
   ma_giang_duong: string
   ten_giang_duong: string
+  mo_ta?: string | null
 }
 
 type Room = {
   id: number | null
   giang_duong_id: number | null
   ma_phong: string
+  suc_chua: number | null
   giang_duong?: Building
   da_xoa_phong_hoc?: boolean
 }
@@ -88,6 +98,8 @@ type TimetableItem = {
   tuan_ket_thuc: number
   ngay_bat_dau?: string | null
   ngay_ket_thuc?: string | null
+  si_so_toi_da?: number | null
+  so_sv_da_dk?: number
   lop_hoc_phan?: ClassSection
   phong_hoc?: Room
 }
@@ -101,7 +113,22 @@ type TimetableGroup = {
   lecturerName: string
   credits: number | ''
   maxStudents: number | ''
-  registeredStudents: ''
+  registeredStudents: number | ''
+}
+
+type TimetableDisplayRow = {
+  key: string
+  items: TimetableItem[]
+  firstItem: TimetableItem
+}
+
+type TimetableSlot = {
+  id: string
+  giang_duong_id: string
+  phong_hoc_id: string
+  thu: string
+  tiet_bat_dau: string
+  so_tiet: string
 }
 
 type CatalogResponse = {
@@ -113,6 +140,7 @@ type CatalogResponse = {
     lop_hanh_chinhs: AdministrativeClass[]
     lop_hoc_phans: ClassSection[]
     cau_hinh_tuan_hocs: WeekConfig[]
+    current_hoc_ky_id?: number | null
   }
 }
 
@@ -154,11 +182,29 @@ const emptyTimetableForm: TimetableForm = {
 
 const toMessage = (error: unknown, fallback: string) => {
   if (typeof error === 'object' && error && 'message' in error && typeof error.message === 'string') {
+    if (
+      error.message.includes('No query results for model [App\\Models\\ThoiKhoaBieu]')
+      || ('status' in error && error.status === 404)
+    ) {
+      return 'Lịch học này không còn tồn tại. Danh sách sẽ được tải lại.'
+    }
+
     return error.message
   }
 
   return fallback
 }
+
+const isMissingTimetableError = (error: unknown) => (
+  typeof error === 'object'
+  && error !== null
+  && (
+    ('status' in error && error.status === 404)
+    || ('message' in error
+      && typeof error.message === 'string'
+      && error.message.includes('No query results for model [App\\Models\\ThoiKhoaBieu]'))
+  )
+)
 
 const compactClassGroup = (value?: string | null) => {
   const part = value?.split('-').pop()?.trim()
@@ -170,12 +216,63 @@ const normalizeClassGroup = (value: string) => {
   return /^\d+$/.test(trimmed) ? trimmed.padStart(2, '0') : trimmed
 }
 
+const normalizeClassSectionCode = (value: string) => value.trim().toUpperCase()
+
+const rangesOverlap = (firstStart: number, firstEnd: number, secondStart: number, secondEnd: number) => (
+  firstStart <= secondEnd && firstEnd >= secondStart
+)
+
 const digitPattern = (start: number, end: number, max: number, disabled: Set<number> = new Set()) => (
   Array.from({ length: max }, (_, index) => {
     const value = index + 1
     return value >= start && value <= end && !disabled.has(value) ? String(value % 10) : '-'
   }).join('')
 )
+
+const digitPatternForItems = (items: TimetableItem[], max: number, disabled: Set<number> = new Set()) => {
+  const activeValues = new Set<number>()
+
+  items.forEach((item) => {
+    for (let value = item.tuan_bat_dau; value <= item.tuan_ket_thuc; value += 1) {
+      if (!disabled.has(value)) {
+        activeValues.add(value)
+      }
+    }
+  })
+
+  return Array.from({ length: max }, (_, index) => {
+    const value = index + 1
+    return activeValues.has(value) ? String(value % 10) : '-'
+  }).join('')
+}
+
+const getTimetableDisplayKey = (item: TimetableItem) => [
+  item.hoc_ky_id,
+  item.thu,
+  item.lop_hoc_phan_id ?? item.lop_hoc_phan?.id ?? '',
+  item.lop_hoc_phan?.ma_hoc_phan ?? '',
+  item.lop_hoc_phan?.lop_hoc_phan ?? '',
+  item.lop_hoc_phan?.nhom_hoc_phan ?? compactClassGroup(item.lop_hoc_phan?.lop_hoc_phan),
+  item.lop_hoc_phan?.ten_hoc_phan ?? '',
+  item.tiet_bat_dau,
+  item.tiet_ket_thuc,
+  item.phong_hoc_id ?? item.phong_hoc?.ma_phong ?? '',
+].join('|')
+
+const mergeTimetableDisplayRows = (items: TimetableItem[]): TimetableDisplayRow[] => {
+  const rows = new Map<string, TimetableItem[]>()
+
+  items.forEach((item) => {
+    const key = getTimetableDisplayKey(item)
+    rows.set(key, [...(rows.get(key) ?? []), item])
+  })
+
+  return Array.from(rows.entries()).map(([key, rowItems]) => ({
+    key,
+    items: rowItems.sort((first, second) => first.tuan_bat_dau - second.tuan_bat_dau),
+    firstItem: rowItems[0],
+  }))
+}
 
 const getTimetableGroupKey = (item: TimetableItem) => [
   item.hoc_ky_id,
@@ -185,6 +282,10 @@ const getTimetableGroupKey = (item: TimetableItem) => [
   item.lop_hoc_phan?.giang_vien_id ?? item.lop_hoc_phan?.ten_giang_vien ?? '',
 ].join('|')
 
+const isLecturerInCourseUnit = (lecturer: Lecturer, course?: Course) => (
+  !course?.don_vi_id || Number(lecturer.don_vi_id) === Number(course.don_vi_id)
+)
+
 export default function TrainingOfficerTimetablePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const alert = useAlert()
@@ -193,13 +294,11 @@ export default function TrainingOfficerTimetablePage() {
   const [semesters, setSemesters] = useState<Semester[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [lecturers, setLecturers] = useState<Lecturer[]>([])
+  const [classSections, setClassSections] = useState<ClassSection[]>([])
   const [administrativeClasses, setAdministrativeClasses] = useState<AdministrativeClass[]>([])
   const [buildings, setBuildings] = useState<Building[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
-  const [classSections, setClassSections] = useState<ClassSection[]>([])
   const [weekConfigs, setWeekConfigs] = useState<WeekConfig[]>([])
-  const [breakWeeks, setBreakWeeks] = useState<number[]>([])
-  const [isSavingBreakWeeks, setIsSavingBreakWeeks] = useState(false)
   const [items, setItems] = useState<TimetableItem[]>([])
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -207,44 +306,140 @@ export default function TrainingOfficerTimetablePage() {
   const [courseCodeInput, setCourseCodeInput] = useState('')
   const [courseNameInput, setCourseNameInput] = useState('')
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
+  const [editingItemIds, setEditingItemIds] = useState<number[]>([])
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null)
+  const [timetableSlots, setTimetableSlots] = useState<TimetableSlot[]>([])
+  const [selectedTeachingWeeks, setSelectedTeachingWeeks] = useState<number[]>([])
+  const [groupKeyword, setGroupKeyword] = useState('')
+  const [groupPageSize, setGroupPageSize] = useState('10')
+  const [groupPage, setGroupPage] = useState(1)
 
-  const selectedRooms = useMemo(() => (
-    timetableForm.giang_duong_id
-      ? rooms.filter((room) => String(room.giang_duong_id) === timetableForm.giang_duong_id)
-      : rooms
-  ), [rooms, timetableForm.giang_duong_id])
-  const conflictingRoomIds = useMemo(() => {
-    const thu = Number(timetableForm.thu)
-    const tietStart = Number(timetableForm.tiet_bat_dau)
-    const soTiet = Number(timetableForm.so_tiet)
-    const tuanStart = Number(timetableForm.tuan_bat_dau)
-    const soTuan = Number(timetableForm.so_tuan)
-
-    if (!thu || !tietStart || !soTiet || !tuanStart || !soTuan) return new Set<number>()
-
-    const tietEnd = tietStart + soTiet - 1
-    const tuanEnd = tuanStart + soTuan - 1
-
-    const conflicted = new Set<number>()
-    for (const item of items) {
-      if (editingItemId && item.id === editingItemId) continue
-      if (item.thu !== thu) continue
-      const periodOverlap = item.tiet_bat_dau <= tietEnd && item.tiet_ket_thuc >= tietStart
-      const weekOverlap = item.tuan_bat_dau <= tuanEnd && item.tuan_ket_thuc >= tuanStart
-      if (periodOverlap && weekOverlap && item.phong_hoc_id) {
-        conflicted.add(item.phong_hoc_id)
-      }
-    }
-    return conflicted
-  }, [items, timetableForm.thu, timetableForm.tiet_bat_dau, timetableForm.so_tiet, timetableForm.tuan_bat_dau, timetableForm.so_tuan, editingItemId])
-
-  const selectedLecturer = lecturers.find((lecturer) => String(lecturer.id) === timetableForm.giang_vien_id)
   const selectedTerm = semesters.find((semester) => (
     String(semester.nam_hoc_id) === timetableForm.nam_hoc_id
     && String(semester.hoc_ky) === timetableForm.hoc_ky
   ))
   const selectedTermId = selectedTerm ? String(selectedTerm.id) : ''
+  const selectedCourse = courses.find((course) => String(course.id) === timetableForm.hoc_phan_id)
+  const filteredLecturers = useMemo(() => (
+    selectedCourse?.don_vi_id
+      ? lecturers.filter((lecturer) => isLecturerInCourseUnit(lecturer, selectedCourse))
+      : lecturers
+  ), [lecturers, selectedCourse])
+  const selectedLecturer = lecturers.find((lecturer) => String(lecturer.id) === timetableForm.giang_vien_id)
+  const activeClassSectionIds = useMemo(() => new Set(
+    items
+      .filter((item) => !selectedTermId || String(item.hoc_ky_id) === selectedTermId)
+      .map((item) => item.lop_hoc_phan_id ?? item.lop_hoc_phan?.id ?? null)
+      .filter((id): id is number => typeof id === 'number')
+  ), [items, selectedTermId])
+  const duplicateClassGroupMessage = useMemo(() => {
+    const normalizedGroup = normalizeClassGroup(timetableForm.nhom_hoc_phan)
+    const sectionCode = normalizeClassSectionCode(timetableForm.lop_hoc_phan)
+
+    if (!selectedTermId || !timetableForm.hoc_phan_id || !normalizedGroup) {
+      return ''
+    }
+
+    const duplicate = classSections.find((section) => (
+      activeClassSectionIds.has(section.id)
+      && String(section.hoc_ky_id) === selectedTermId
+      && (
+        String(section.hoc_phan_id ?? '') === timetableForm.hoc_phan_id
+        || section.ma_hoc_phan === selectedCourse?.ma_hoc_phan
+      )
+      && normalizeClassGroup(section.nhom_hoc_phan ?? '') === normalizedGroup
+      && normalizeClassSectionCode(section.lop_hoc_phan) !== sectionCode
+    ))
+
+    return duplicate
+      ? `Mã học phần ${duplicate.ma_hoc_phan} đã có nhóm học phần ${normalizedGroup}. Vui lòng nhập nhóm khác.`
+      : ''
+  }, [
+    activeClassSectionIds,
+    classSections,
+    selectedCourse?.ma_hoc_phan,
+    selectedTermId,
+    timetableForm.hoc_phan_id,
+    timetableForm.lop_hoc_phan,
+    timetableForm.nhom_hoc_phan,
+  ])
+
+  const duplicateClassNameMessage = useMemo(() => {
+    const sectionCode = normalizeClassSectionCode(timetableForm.lop_hoc_phan)
+    const normalizedGroup = normalizeClassGroup(timetableForm.nhom_hoc_phan)
+
+    if (!selectedTermId || !timetableForm.hoc_phan_id || !sectionCode) {
+      return ''
+    }
+
+    const duplicate = classSections.find((section) => (
+      activeClassSectionIds.has(section.id)
+      && String(section.hoc_ky_id) === selectedTermId
+      && (
+        String(section.hoc_phan_id ?? '') === timetableForm.hoc_phan_id
+        || section.ma_hoc_phan === selectedCourse?.ma_hoc_phan
+      )
+      && normalizeClassSectionCode(section.lop_hoc_phan) === sectionCode
+      && normalizeClassGroup(section.nhom_hoc_phan ?? '') !== normalizedGroup
+    ))
+
+    return duplicate
+      ? `Mã học phần ${duplicate.ma_hoc_phan} đã có lớp học phần "${sectionCode}". Một môn học không thể có 2 lớp học phần cùng tên. Vui lòng nhập tên lớp khác.`
+      : ''
+  }, [
+    activeClassSectionIds,
+    classSections,
+    selectedCourse?.ma_hoc_phan,
+    selectedTermId,
+    timetableForm.hoc_phan_id,
+    timetableForm.lop_hoc_phan,
+    timetableForm.nhom_hoc_phan,
+  ])
+
+  const duplicateExistingGroupMessage = useMemo(() => {
+    if (editingItemId) return '' // Allow editing existing
+    const normalizedGroup = normalizeClassGroup(timetableForm.nhom_hoc_phan)
+    if (!selectedTermId || !timetableForm.hoc_phan_id || !normalizedGroup) {
+      return ''
+    }
+
+    const duplicate = classSections.find((section) => (
+      activeClassSectionIds.has(section.id)
+      && String(section.hoc_ky_id) === selectedTermId
+      && (
+        String(section.hoc_phan_id ?? '') === timetableForm.hoc_phan_id
+        || section.ma_hoc_phan === selectedCourse?.ma_hoc_phan
+      )
+      && normalizeClassGroup(section.nhom_hoc_phan ?? '') === normalizedGroup
+    ))
+
+    return duplicate
+      ? `Nhóm học phần ${normalizedGroup} đã được tạo và lưu lịch học. Không thể thêm chèn thêm lịch học mới vào nhóm này.`
+      : ''
+  }, [
+    activeClassSectionIds,
+    classSections,
+    selectedCourse?.ma_hoc_phan,
+    selectedTermId,
+    timetableForm.hoc_phan_id,
+    timetableForm.nhom_hoc_phan,
+    editingItemId,
+  ])
+  const applySelectedCourse = (course: Course | undefined, patch: Partial<TimetableForm> = {}) => {
+    setTimetableForm((current) => {
+      const currentLecturer = lecturers.find((lecturer) => String(lecturer.id) === current.giang_vien_id)
+      const shouldKeepLecturer = course && currentLecturer
+        ? isLecturerInCourseUnit(currentLecturer, course)
+        : true
+
+      return {
+        ...current,
+        ...patch,
+        hoc_phan_id: course ? String(course.id) : '',
+        giang_vien_id: shouldKeepLecturer ? current.giang_vien_id : '',
+      }
+    })
+  }
   const availableSemesters = useMemo(() => (
     timetableForm.nam_hoc_id
       ? semesters.filter((semester) => String(semester.nam_hoc_id) === timetableForm.nam_hoc_id)
@@ -283,8 +478,8 @@ export default function TrainingOfficerTimetablePage() {
         classGroup: classSection?.nhom_hoc_phan || compactClassGroup(classSection?.lop_hoc_phan),
         lecturerName: classSection?.ten_giang_vien || 'Chưa cập nhật',
         credits: course?.so_tin_chi ?? ('' as const),
-        maxStudents: classSection?.si_so ?? ('' as const),
-        registeredStudents: '' as const,
+        maxStudents: firstItem.si_so_toi_da ?? classSection?.si_so ?? ('' as const),
+        registeredStudents: firstItem.so_sv_da_dk ?? ('' as const),
       }
     }).sort((first, second) => (
       first.courseCode.localeCompare(second.courseCode, 'vi', { numeric: true })
@@ -292,6 +487,45 @@ export default function TrainingOfficerTimetablePage() {
       || first.classGroup.localeCompare(second.classGroup, 'vi', { numeric: true })
     ))
   }, [courses, displayedItems])
+
+  const filteredTimetableGroups = useMemo(() => {
+    const keyword = groupKeyword.trim().toLowerCase()
+
+    if (!keyword) {
+      return timetableGroups
+    }
+
+    return timetableGroups.filter((group) => (
+      group.courseCode.toLowerCase().includes(keyword)
+      || group.courseName.toLowerCase().includes(keyword)
+      || group.classGroup.toLowerCase().includes(keyword)
+      || group.lecturerName.toLowerCase().includes(keyword)
+    ))
+  }, [groupKeyword, timetableGroups])
+
+  const totalGroupPages = useMemo(() => {
+    if (groupPageSize === 'all') return 1
+    const size = Number(groupPageSize)
+    return Math.max(1, Math.ceil(filteredTimetableGroups.length / size))
+  }, [filteredTimetableGroups.length, groupPageSize])
+
+  const pagedTimetableGroups = useMemo(() => {
+    if (groupPageSize === 'all') return filteredTimetableGroups
+    const size = Number(groupPageSize)
+    const start = (groupPage - 1) * size
+    return filteredTimetableGroups.slice(start, start + size)
+  }, [filteredTimetableGroups, groupPage, groupPageSize])
+
+  const displayFrom = useMemo(() => {
+    if (filteredTimetableGroups.length === 0) return 0
+    if (groupPageSize === 'all') return 1
+    return (groupPage - 1) * Number(groupPageSize) + 1
+  }, [filteredTimetableGroups.length, groupPage, groupPageSize])
+
+  const displayTo = useMemo(() => {
+    if (groupPageSize === 'all') return filteredTimetableGroups.length
+    return Math.min(groupPage * Number(groupPageSize), filteredTimetableGroups.length)
+  }, [filteredTimetableGroups.length, groupPage, groupPageSize])
 
   const loadAll = async () => {
     const [yearsResponse, semestersResponse, catalogsResponse, timetableResponse] = await Promise.all([
@@ -305,19 +539,20 @@ export default function TrainingOfficerTimetablePage() {
     setSemesters(semestersResponse.data)
     setCourses(catalogsResponse.data.hoc_phans)
     setLecturers(catalogsResponse.data.giang_viens ?? [])
+    setClassSections(catalogsResponse.data.lop_hoc_phans ?? [])
     setAdministrativeClasses(catalogsResponse.data.lop_hanh_chinhs)
     setBuildings(catalogsResponse.data.giang_duongs)
     setRooms(catalogsResponse.data.phong_hocs)
-    setClassSections(catalogsResponse.data.lop_hoc_phans)
     setWeekConfigs(catalogsResponse.data.cau_hinh_tuan_hocs ?? [])
     setItems(timetableResponse.data)
 
-    const firstSemester = semestersResponse.data[0]
-    if (firstSemester && !timetableForm.nam_hoc_id && !timetableForm.hoc_ky) {
+    const currentHocKyId = catalogsResponse.data.current_hoc_ky_id
+    const defaultSemester = semestersResponse.data.find((semester) => semester.id === currentHocKyId) || semestersResponse.data[0]
+    if (defaultSemester && !timetableForm.nam_hoc_id && !timetableForm.hoc_ky) {
       setTimetableForm((current) => ({
         ...current,
-        nam_hoc_id: String(firstSemester.nam_hoc_id),
-        hoc_ky: String(firstSemester.hoc_ky),
+        nam_hoc_id: String(defaultSemester.nam_hoc_id),
+        hoc_ky: String(defaultSemester.hoc_ky),
       }))
     }
   }
@@ -327,25 +562,10 @@ export default function TrainingOfficerTimetablePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const refreshCatalogs = async () => {
-    const [catalogsResponse, timetableResponse] = await Promise.all([
-      apiGet<CatalogResponse>('/training-officer/timetable/catalogs'),
-      apiGet<ApiListResponse<TimetableItem[]>>('/training-officer/timetable'),
-    ])
-
-    setCourses(catalogsResponse.data.hoc_phans)
-    setLecturers(catalogsResponse.data.giang_viens ?? [])
-    setAdministrativeClasses(catalogsResponse.data.lop_hanh_chinhs)
-    setBuildings(catalogsResponse.data.giang_duongs)
-    setRooms(catalogsResponse.data.phong_hocs)
-    setClassSections(catalogsResponse.data.lop_hoc_phans)
-    setWeekConfigs(catalogsResponse.data.cau_hinh_tuan_hocs ?? [])
+  const refreshTimetableOnly = async () => {
+    const timetableResponse = await apiGet<ApiListResponse<TimetableItem[]>>('/training-officer/timetable')
     setItems(timetableResponse.data)
   }
-
-  useEffect(() => {
-    setBreakWeeks(selectedWeekConfig?.tuan_nghis ?? [])
-  }, [selectedWeekConfig])
 
   useEffect(() => {
     if (editingItemId || !selectedWeekConfig) {
@@ -364,40 +584,53 @@ export default function TrainingOfficerTimetablePage() {
     })
   }, [editingItemId, selectedWeekConfig])
 
-  const ensureClassSection = async () => {
-    const existing = classSections.find((item) => (
-      String(item.hoc_ky_id) === selectedTermId
-      && String(item.hoc_phan_id) === timetableForm.hoc_phan_id
-      && (item.nhom_hoc_phan ?? '').trim().toLowerCase() === normalizeClassGroup(timetableForm.nhom_hoc_phan).toLowerCase()
-      && item.lop_hoc_phan.trim().toLowerCase() === timetableForm.lop_hoc_phan.trim().toLowerCase()
-    ))
-
-    if (existing) {
-      return existing.id
+  useEffect(() => {
+    if (editingItemId) {
+      return
     }
 
+    if (!selectedWeekConfig) {
+      setSelectedTeachingWeeks([])
+      return
+    }
+
+    const disabledWeeks = new Set(selectedWeekConfig.tuan_nghis ?? [])
+    setSelectedTeachingWeeks(Array.from({ length: selectedWeekConfig.so_tuan_mac_dinh }, (_, index) => index + 1)
+      .filter((week) => !disabledWeeks.has(week)))
+  }, [editingItemId, selectedWeekConfig])
+
+  const ensureClassSection = async () => {
+    const sectionCode = normalizeClassSectionCode(timetableForm.lop_hoc_phan)
     const response = await apiPost<{ data: ClassSection }>('/training-officer/timetable/class-sections', {
       hoc_ky_id: Number(selectedTermId),
       hoc_phan_id: Number(timetableForm.hoc_phan_id),
       lop_hanh_chinh_id: timetableForm.lop_hanh_chinh_id ? Number(timetableForm.lop_hanh_chinh_id) : null,
-      lop_hoc_phan: timetableForm.lop_hoc_phan.trim(),
+      lop_hoc_phan: sectionCode,
       nhom_hoc_phan: normalizeClassGroup(timetableForm.nhom_hoc_phan),
       giang_vien_id: Number(timetableForm.giang_vien_id),
       ten_giang_vien: selectedLecturer?.ten_giang_vien ?? null,
       si_so: Number(timetableForm.si_so),
     })
 
-    return response.data.id
+    const newSection = response.data
+    setClassSections((prev) => {
+      if (prev.some((s) => s.id === newSection.id)) return prev
+      return [...prev, newSection]
+    })
+
+    return newSection.id
   }
 
   const handleSaveTimetable = async () => {
     setError('')
     setMessage('')
+    const editSlot = timetableSlots[0]
+    const weekRanges = getWeekRanges(selectedTeachingWeeks)
 
     if (
       !selectedTermId
-      || !timetableForm.phong_hoc_id
-      || !timetableForm.so_tuan
+      || !(editSlot?.phong_hoc_id ?? timetableForm.phong_hoc_id)
+      || weekRanges.length === 0
       || !timetableForm.hoc_phan_id
       || !timetableForm.lop_hoc_phan.trim()
       || !timetableForm.nhom_hoc_phan.trim()
@@ -406,6 +639,34 @@ export default function TrainingOfficerTimetablePage() {
       const validationMessage = 'Vui lòng chọn học kỳ, học phần, lớp học phần, nhóm học phần, giảng viên, phòng học và số tuần học.'
       setError(validationMessage)
       alert.showError('Thiếu thông tin', validationMessage)
+      return
+    }
+
+    if (duplicateClassGroupMessage) {
+      setError(duplicateClassGroupMessage)
+      alert.showError('Trùng nhóm học phần', duplicateClassGroupMessage)
+      return
+    }
+
+    if (duplicateClassNameMessage) {
+      setError(duplicateClassNameMessage)
+      alert.showError('Trùng tên lớp học phần', duplicateClassNameMessage)
+      return
+    }
+
+    const startPeriod = Number(editSlot?.tiet_bat_dau ?? timetableForm.tiet_bat_dau)
+    const periodsCount = Number(editSlot?.so_tiet ?? timetableForm.so_tiet)
+    const endPeriod = startPeriod + periodsCount - 1
+    if (startPeriod <= 5 && endPeriod >= 6) {
+      const msg = 'Lịch học không thể kéo dài từ ca Sáng sang ca Chiều (không thể vừa học tiết 5 và tiết 6).'
+      setError(msg)
+      alert.showError('Lỗi ca học', msg)
+      return
+    }
+    if (startPeriod <= 10 && endPeriod >= 11) {
+      const msg = 'Lịch học không thể kéo dài từ ca Chiều sang ca Tối (không thể vừa học tiết 10 và tiết 11).'
+      setError(msg)
+      alert.showError('Lỗi ca học', msg)
       return
     }
 
@@ -419,54 +680,312 @@ export default function TrainingOfficerTimetablePage() {
         return
       }
 
-      const payload = {
+      const payloadBase = {
         hoc_ky_id: Number(selectedTermId),
         lop_hoc_phan_id: classSectionId,
-        phong_hoc_id: Number(timetableForm.phong_hoc_id),
-        thu: Number(timetableForm.thu),
-        tiet_bat_dau: Number(timetableForm.tiet_bat_dau),
-        so_tiet: Number(timetableForm.so_tiet),
-        tuan_bat_dau: Number(timetableForm.tuan_bat_dau),
-        so_tuan: Number(timetableForm.so_tuan),
+        phong_hoc_id: Number(editSlot?.phong_hoc_id ?? timetableForm.phong_hoc_id),
+        thu: Number(editSlot?.thu ?? timetableForm.thu),
+        tiet_bat_dau: Number(editSlot?.tiet_bat_dau ?? timetableForm.tiet_bat_dau),
+        so_tiet: Number(editSlot?.so_tiet ?? timetableForm.so_tiet),
       }
 
       if (editingItemId) {
-        await apiPut(`/training-officer/timetable/${editingItemId}`, payload)
+        const targetIds = editingItemIds.length > 0 ? editingItemIds : [editingItemId]
+
+        if (targetIds.length === 1 && weekRanges.length === 1) {
+          await apiPut(`/training-officer/timetable/${editingItemId}`, {
+            ...payloadBase,
+            tuan_bat_dau: weekRanges[0].start,
+            so_tuan: weekRanges[0].length,
+          })
+        } else {
+          await Promise.all(targetIds.map((id) => apiDelete(`/training-officer/timetable/${id}`)))
+          for (const range of weekRanges) {
+            await apiPost('/training-officer/timetable', {
+              ...payloadBase,
+              tuan_bat_dau: range.start,
+              so_tuan: range.length,
+            })
+          }
+        }
       } else {
-        await apiPost('/training-officer/timetable', payload)
+        await apiPost('/training-officer/timetable', {
+          ...payloadBase,
+          tuan_bat_dau: weekRanges[0].start,
+          so_tuan: weekRanges[0].length,
+        })
       }
 
       setTimetableForm((current) => ({
-        ...emptyTimetableForm,
+        ...current,
         nam_hoc_id: current.nam_hoc_id,
         hoc_ky: current.hoc_ky,
         giang_duong_id: current.giang_duong_id,
-        so_tuan: selectedWeekConfig ? String(selectedWeekConfig.so_tuan_mac_dinh) : '',
+        phong_hoc_id: current.phong_hoc_id,
+        so_tuan: current.so_tuan || (selectedWeekConfig ? String(selectedWeekConfig.so_tuan_mac_dinh) : ''),
       }))
-      setCourseCodeInput('')
-      setCourseNameInput('')
       setEditingItemId(null)
+      setEditingItemIds([])
+      setTimetableSlots([])
       const successMessage = editingItemId ? 'Đã cập nhật lịch học.' : 'Đã lưu thời khóa biểu.'
       setMessage(successMessage)
       alert.showSuccess(editingItemId ? 'Cập nhật thành công' : 'Thêm thành công', successMessage)
-      await refreshCatalogs()
+      await refreshTimetableOnly()
     } catch (err) {
       const errorMessage = toMessage(err, 'Không lưu được thời khóa biểu.')
+      if (editingItemId && isMissingTimetableError(err)) {
+        setEditingItemId(null)
+        setEditingItemIds([])
+        setTimetableSlots([])
+        setTimetableForm(emptyTimetableForm)
+        setCourseCodeInput('')
+        setCourseNameInput('')
+        await refreshTimetableOnly()
+      }
       setError(errorMessage)
       alert.showError('Không lưu được', errorMessage)
     }
   }
 
-  const handleEditItem = (item: TimetableItem) => {
+  const makeTimetableSlot = (day: string): TimetableSlot => ({
+    id: `${Date.now()}-${Math.random()}`,
+    giang_duong_id: '',
+    phong_hoc_id: '',
+    thu: day,
+    tiet_bat_dau: '1',
+    so_tiet: '3',
+  })
+
+  const toggleTeachingWeek = (week: number) => {
+    setSelectedTeachingWeeks((current) => (
+      current.includes(week)
+        ? current.filter((item) => item !== week)
+        : [...current, week].sort((a, b) => a - b)
+    ))
+  }
+
+  const getWeekRanges = (weeks: number[]) => {
+    const sortedWeeks = [...new Set(weeks)].sort((a, b) => a - b)
+    const ranges: Array<{ start: number; length: number }> = []
+
+    sortedWeeks.forEach((week) => {
+      const currentRange = ranges[ranges.length - 1]
+      if (!currentRange || currentRange.start + currentRange.length !== week) {
+        ranges.push({ start: week, length: 1 })
+        return
+      }
+
+      currentRange.length += 1
+    })
+
+    return ranges
+  }
+
+  const isRoomAvailableForRanges = (
+    roomId: number,
+    slot: Pick<TimetableSlot, 'thu' | 'tiet_bat_dau' | 'so_tiet'>,
+    weekRanges: Array<{ start: number; length: number }>,
+    ignoreIds: number[] = [],
+  ) => {
+    const startPeriod = Number(slot.tiet_bat_dau)
+    const periodCount = Number(slot.so_tiet)
+    const ignored = new Set(ignoreIds)
+
+    if (!selectedTermId || !slot.thu || !startPeriod || !periodCount || weekRanges.length === 0) {
+      return true
+    }
+
+    return weekRanges.every((range) => (
+      !items.some((item) => (
+        !ignored.has(item.id)
+        && item.hoc_ky_id === Number(selectedTermId)
+        && Number(item.phong_hoc_id) === roomId
+        && item.thu === Number(slot.thu)
+        && rangesOverlap(startPeriod, startPeriod + periodCount - 1, item.tiet_bat_dau, item.tiet_ket_thuc)
+        && rangesOverlap(range.start, range.start + range.length - 1, item.tuan_bat_dau, item.tuan_ket_thuc)
+      ))
+    ))
+  }
+
+  const validateSlotInput = () => {
+    setError('')
+    setMessage('')
+    return true
+  }
+
+  const handleToggleTimetableDay = (day: string, checked: boolean) => {
+    const sameDay = (slot: TimetableSlot) => slot.thu === day
+
+    if (!checked) {
+      setTimetableSlots((current) => current.filter((slot) => !sameDay(slot)))
+      return
+    }
+
+    if (!validateSlotInput()) return
+    setTimetableSlots((current) => [
+      ...current.filter((slot) => !sameDay(slot)),
+      makeTimetableSlot(day),
+    ].sort((first, second) => Number(first.thu) - Number(second.thu)))
+  }
+
+  const updateTimetableSlot = (slotId: string, patch: Partial<TimetableSlot>) => {
+    const weekRanges = getWeekRanges(selectedTeachingWeeks)
+
+    setTimetableSlots((current) => current.map((slot) => (
+      slot.id === slotId
+        ? (() => {
+          const nextSlot = { ...slot, ...patch }
+          const roomId = Number(nextSlot.phong_hoc_id)
+
+          if (roomId && !isRoomAvailableForRanges(roomId, nextSlot, weekRanges, editingItemIds)) {
+            return { ...nextSlot, phong_hoc_id: '' }
+          }
+
+          return nextSlot
+        })()
+        : slot
+    )))
+  }
+
+  useEffect(() => {
+    const weekRanges = getWeekRanges(selectedTeachingWeeks)
+
+    if (!selectedTermId || weekRanges.length === 0) {
+      return
+    }
+
+    setTimetableSlots((current) => current.map((slot) => {
+      const roomId = Number(slot.phong_hoc_id)
+
+      if (!roomId || isRoomAvailableForRanges(roomId, slot, weekRanges, editingItemIds)) {
+        return slot
+      }
+
+      return { ...slot, phong_hoc_id: '' }
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingItemIds, items, selectedTeachingWeeks, selectedTermId])
+
+  const handleSaveTimetableSlots = async () => {
+    setError('')
+    setMessage('')
+
+    if (
+      !selectedTermId
+      || !timetableForm.hoc_phan_id
+      || !timetableForm.lop_hoc_phan.trim()
+      || !timetableForm.nhom_hoc_phan.trim()
+      || !timetableForm.giang_vien_id
+      || timetableSlots.length === 0
+      || selectedTeachingWeeks.length === 0
+      || timetableSlots.some((slot) => !slot.phong_hoc_id || !slot.tiet_bat_dau || !slot.so_tiet)
+    ) {
+      const validationMessage = 'Vui lòng chọn học phần, lớp, giảng viên, ngày học, tuần học và nhập đủ phòng, tiết.'
+      setError(validationMessage)
+      alert.showError('Thiếu thông tin', validationMessage)
+      return
+    }
+
+    if (duplicateClassGroupMessage) {
+      setError(duplicateClassGroupMessage)
+      alert.showError('Trùng nhóm học phần', duplicateClassGroupMessage)
+      return
+    }
+
+    if (duplicateClassNameMessage) {
+      setError(duplicateClassNameMessage)
+      alert.showError('Trùng tên lớp học phần', duplicateClassNameMessage)
+      return
+    }
+
+    if (duplicateExistingGroupMessage) {
+      setError(duplicateExistingGroupMessage)
+      alert.showError('Nhóm học phần đã tồn tại', duplicateExistingGroupMessage)
+      return
+    }
+
+    for (const slot of timetableSlots) {
+      const start = Number(slot.tiet_bat_dau)
+      const count = Number(slot.so_tiet)
+      const end = start + count - 1
+      if (start <= 5 && end >= 6) {
+        const msg = `Buổi học ${Number(slot.thu) === 8 ? 'Chủ Nhật' : `Thứ ${slot.thu}`} không thể kéo dài từ ca Sáng sang ca Chiều (không thể vừa học tiết 5 và tiết 6).`
+        setError(msg)
+        alert.showError('Lỗi ca học', msg)
+        return
+      }
+      if (start <= 10 && end >= 11) {
+        const msg = `Buổi học ${Number(slot.thu) === 8 ? 'Chủ Nhật' : `Thứ ${slot.thu}`} không thể kéo dài từ ca Chiều sang ca Tối (không thể vừa học tiết 10 và tiết 11).`
+        setError(msg)
+        alert.showError('Lỗi ca học', msg)
+        return
+      }
+    }
+
+    try {
+      const classSectionId = await ensureClassSection()
+      const weekRanges = getWeekRanges(selectedTeachingWeeks)
+      for (const slot of timetableSlots) {
+        for (const range of weekRanges) {
+          await apiPost('/training-officer/timetable', {
+            hoc_ky_id: Number(selectedTermId),
+            lop_hoc_phan_id: classSectionId,
+            phong_hoc_id: Number(slot.phong_hoc_id),
+            thu: Number(slot.thu),
+            tiet_bat_dau: Number(slot.tiet_bat_dau),
+            so_tiet: Number(slot.so_tiet),
+            tuan_bat_dau: range.start,
+            so_tuan: range.length,
+          })
+        }
+      }
+
+      setTimetableSlots([])
+      setEditingItemId(null)
+      setCourseCodeInput('')
+      setCourseNameInput('')
+      setTimetableForm({
+        ...emptyTimetableForm,
+        nam_hoc_id: timetableForm.nam_hoc_id,
+        hoc_ky: timetableForm.hoc_ky,
+      })
+      const successMessage = 'Đã lưu các buổi học.'
+      setMessage(successMessage)
+      alert.showSuccess('Thêm thành công', successMessage)
+      await refreshTimetableOnly()
+    } catch (err) {
+      const errorMessage = toMessage(err, 'Không lưu được các buổi học.')
+      setError(errorMessage)
+      alert.showError('Không lưu được', errorMessage)
+    }
+  }
+
+  const handleEditItem = (item: TimetableItem, editItems: TimetableItem[] = [item]) => {
     const classSection = item.lop_hoc_phan
     const lecturer = lecturers.find((candidate) => (
       candidate.id === classSection?.giang_vien_id
       || candidate.ten_giang_vien === classSection?.ten_giang_vien
     ))
+    const weeks = editItems.flatMap((editItem) => (
+      Array.from(
+        { length: editItem.tuan_ket_thuc - editItem.tuan_bat_dau + 1 },
+        (_, index) => editItem.tuan_bat_dau + index,
+      )
+    ))
 
     setEditingItemId(item.id)
+    setEditingItemIds(editItems.map((editItem) => editItem.id))
     setCourseCodeInput(classSection?.ma_hoc_phan ?? '')
     setCourseNameInput(classSection?.ten_hoc_phan ?? '')
+    setSelectedTeachingWeeks([...new Set(weeks)].sort((first, second) => first - second))
+    setTimetableSlots([{
+      id: `edit-${item.id}`,
+      giang_duong_id: String(item.phong_hoc?.giang_duong_id ?? ''),
+      phong_hoc_id: String(item.phong_hoc_id ?? ''),
+      thu: String(item.thu),
+      tiet_bat_dau: String(item.tiet_bat_dau),
+      so_tiet: String(item.so_tiet),
+    }])
     setTimetableForm({
       nam_hoc_id: String(semesters.find((semester) => semester.id === item.hoc_ky_id)?.nam_hoc_id ?? ''),
       hoc_ky: String(semesters.find((semester) => semester.id === item.hoc_ky_id)?.hoc_ky ?? ''),
@@ -489,17 +1008,22 @@ export default function TrainingOfficerTimetablePage() {
     })
   }
 
-  const handleDeleteItem = async (item: TimetableItem) => {
+  const handleDeleteItems = async (deleteItems: TimetableItem[]) => {
     setError('')
     setMessage('')
     try {
-      await apiDelete(`/training-officer/timetable/${item.id}`)
+      await Promise.all(deleteItems.map((item) => apiDelete(`/training-officer/timetable/${item.id}`)))
       const successMessage = 'Đã xóa lịch học.'
       setMessage(successMessage)
       alert.showSuccess('Xóa thành công', successMessage)
-      await refreshCatalogs()
+      await refreshTimetableOnly()
     } catch (err) {
       const errorMessage = toMessage(err, 'Không xóa được lịch học.')
+      if (isMissingTimetableError(err)) {
+        const deleteIds = new Set(deleteItems.map((item) => item.id))
+        setItems((current) => current.filter((candidate) => !deleteIds.has(candidate.id)))
+        await refreshTimetableOnly()
+      }
       setError(errorMessage)
       alert.showError('Không xóa được', errorMessage)
     }
@@ -524,43 +1048,22 @@ export default function TrainingOfficerTimetablePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, searchParams, editingItemId])
 
-  const toggleBreakWeek = (week: number) => {
-    setBreakWeeks((current) => (
-      current.includes(week)
-        ? current.filter((item) => item !== week)
-        : [...current, week].sort((a, b) => a - b)
-    ))
-  }
+  useEffect(() => {
+    setGroupPage(1)
+  }, [selectedTermId, groupKeyword, groupPageSize])
 
-  const handleSaveBreakWeeks = async () => {
-    setError('')
-    setMessage('')
-
-    if (!selectedTermId) {
-      const validationMessage = 'Vui lòng chọn năm học và học kỳ trước khi đánh dấu tuần nghỉ.'
-      setError(validationMessage)
-      alert.showError('Thiếu học kỳ', validationMessage)
-      return
+  useEffect(() => {
+    if (groupPage > totalGroupPages) {
+      setGroupPage(totalGroupPages)
     }
+  }, [groupPage, totalGroupPages])
 
-    setIsSavingBreakWeeks(true)
-    try {
-      await apiPost('/training-officer/timetable/break-weeks', {
-        hoc_ky_id: Number(selectedTermId),
-        tuan_nghis: breakWeeks,
-      })
-      const successMessage = 'Đã lưu tuần nghỉ.'
-      setMessage(successMessage)
-      alert.showSuccess('Lưu thành công', successMessage)
-      await refreshCatalogs()
-    } catch (err) {
-      const errorMessage = toMessage(err, 'Không lưu được tuần nghỉ.')
-      setError(errorMessage)
-      alert.showError('Không lưu được', errorMessage)
-    } finally {
-      setIsSavingBreakWeeks(false)
+  useEffect(() => {
+    if (expandedGroupKey && !filteredTimetableGroups.some((group) => group.key === expandedGroupKey)) {
+      setExpandedGroupKey(null)
     }
-  }
+  }, [expandedGroupKey, filteredTimetableGroups])
+
 
   return (
     <RoleLayout
@@ -578,7 +1081,6 @@ export default function TrainingOfficerTimetablePage() {
           <section ref={formPanelRef} className="to-timetable-panel to-timetable-form-panel">
             <div className="to-timetable-panel-head">
               <h2>Xếp thời khóa biểu</h2>
-              <p>Chọn học phần, lớp, giảng viên, phòng và thời gian học trong một biểu mẫu.</p>
             </div>
 
             <div className="to-timetable-form to-timetable-form-horizontal">
@@ -628,7 +1130,7 @@ export default function TrainingOfficerTimetablePage() {
                     const selected = courses.find((course) => course.ma_hoc_phan.toLowerCase() === value.toLowerCase())
                     setCourseCodeInput(event.target.value)
                     setCourseNameInput(selected?.ten_hoc_phan ?? '')
-                    setTimetableForm((current) => ({ ...current, hoc_phan_id: selected ? String(selected.id) : '' }))
+                    applySelectedCourse(selected)
                   }}
                   placeholder="Gõ hoặc chọn mã học phần"
                 />
@@ -649,7 +1151,7 @@ export default function TrainingOfficerTimetablePage() {
                     const selected = courses.find((course) => course.ten_hoc_phan.toLowerCase() === value.toLowerCase())
                     setCourseNameInput(event.target.value)
                     setCourseCodeInput(selected?.ma_hoc_phan ?? '')
-                    setTimetableForm((current) => ({ ...current, hoc_phan_id: selected ? String(selected.id) : '' }))
+                    applySelectedCourse(selected)
                   }}
                   placeholder="Gõ hoặc chọn tên học phần"
                 />
@@ -669,7 +1171,7 @@ export default function TrainingOfficerTimetablePage() {
                     setTimetableForm((current) => ({
                       ...current,
                       lop_hanh_chinh_id: event.target.value,
-                      lop_hoc_phan: selectedClass?.lop_hoc_phan ?? current.lop_hoc_phan,
+                      lop_hoc_phan: selectedClass ? normalizeClassSectionCode(selectedClass.lop_hoc_phan) : current.lop_hoc_phan,
                       nhom_hoc_phan: selectedClass ? compactClassGroup(selectedClass.lop_hoc_phan) : current.nhom_hoc_phan,
                     }))
                   }}
@@ -687,8 +1189,8 @@ export default function TrainingOfficerTimetablePage() {
                 Lớp học phần
                 <input
                   value={timetableForm.lop_hoc_phan ?? ''}
-                  onChange={(event) => setTimetableForm((current) => ({ ...current, lop_hoc_phan: event.target.value }))}
-                  placeholder="Ví dụ: Hè-CNTT-1"
+                  onChange={(event) => setTimetableForm((current) => ({ ...current, lop_hoc_phan: normalizeClassSectionCode(event.target.value) }))}
+                  placeholder=""
                 />
               </label>
 
@@ -719,88 +1221,146 @@ export default function TrainingOfficerTimetablePage() {
                   onChange={(event) => setTimetableForm((current) => ({ ...current, giang_vien_id: event.target.value }))}
                 >
                   <option value="">Chọn giảng viên</option>
-                  {lecturers.map((lecturer) => (
+                  {filteredLecturers.map((lecturer) => (
                     <option key={lecturer.id} value={lecturer.id}>
                       {lecturer.user_id ? `${lecturer.user_id} - ` : ''}{lecturer.ten_giang_vien}
                     </option>
                   ))}
                 </select>
+                {selectedCourse?.don_vi && (
+                  <span className="to-timetable-field-hint">
+                    Đơn vị quản lý: {selectedCourse.don_vi.ma_don_vi} - {selectedCourse.don_vi.ten_don_vi}
+                  </span>
+                )}
               </label>
 
-              <label className="span-2">
-                Giảng đường
-                <select
-                  value={timetableForm.giang_duong_id}
-                  onChange={(event) => setTimetableForm((current) => ({ ...current, giang_duong_id: event.target.value, phong_hoc_id: '' }))}
-                >
-                  <option value="">Tất cả</option>
-                  {buildings.map((building) => (
-                    <option key={building.id} value={building.id}>{building.ma_giang_duong}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="span-2">
-                Phòng học
-                <select value={timetableForm.phong_hoc_id} onChange={(event) => setTimetableForm((current) => ({ ...current, phong_hoc_id: event.target.value }))}>
-                  <option value="">Chọn phòng</option>
-                  {selectedRooms.map((room) => {
-                    if (!room.id) return null
-                    const isConflict = conflictingRoomIds.has(room.id)
-                    return (
-                      <option key={room.id} value={room.id} disabled={isConflict}>
-                        {room.ma_phong}{isConflict ? ' (Đã có lịch)' : ''}
-                      </option>
-                    )
-                  })}
-                </select>
-              </label>
-
-              <label className="span-2">
-                Thứ
-                <select value={timetableForm.thu} onChange={(event) => setTimetableForm((current) => ({ ...current, thu: event.target.value }))}>
+              <div className="to-timetable-session-box span-12">
+                <div className="to-timetable-session-head">
+                  <strong>Các ngày học của học phần</strong>
+                  <span>Tick ngày học rồi chỉnh phòng, tiết và tuần riêng cho từng ngày.</span>
+                </div>
+                <div className="to-timetable-week-picker">
+                  <div className="to-timetable-week-picker-head">
+                    <strong>Tuần học</strong>
+                    <span>Bỏ tick các tuần không học của học phần.</span>
+                  </div>
+                  {selectedWeekConfig ? (
+                    <div className="to-timetable-week-checks">
+                      {Array.from({ length: selectedWeekConfig.so_tuan_mac_dinh }, (_, index) => index + 1).map((week) => (
+                        <label key={week} className="to-timetable-week-check">
+                          <input
+                            type="checkbox"
+                            checked={selectedTeachingWeeks.includes(week)}
+                            onChange={() => toggleTeachingWeek(week)}
+                          />
+                          <span>Tuần {week}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="to-timetable-empty">Chưa có cấu hình tuần học cho học kỳ này.</div>
+                  )}
+                </div>
+                <div className="to-timetable-day-checks">
                   {[2, 3, 4, 5, 6, 7, 8].map((day) => (
-                    <option key={day} value={day}>{day === 8 ? 'Chủ nhật' : `Thứ ${day}`}</option>
+                    <label key={day} className="to-timetable-day-check">
+                      <input
+                        type="checkbox"
+                        checked={timetableSlots.some((slot) => Number(slot.thu) === day)}
+                        onChange={(event) => handleToggleTimetableDay(String(day), event.target.checked)}
+                      />
+                      <span>{day === 8 ? 'Chủ Nhật' : `Thứ ${day}`}</span>
+                    </label>
                   ))}
-                </select>
-              </label>
+                </div>
+                {timetableSlots.length > 0 ? (
+                  <div className="to-timetable-session-list">
+                    {timetableSlots.map((slot, index) => {
+                      const slotWeekRanges = getWeekRanges(selectedTeachingWeeks)
+                      const candidateRooms = slot.giang_duong_id
+                        ? rooms.filter((room) => String(room.giang_duong_id) === slot.giang_duong_id)
+                        : rooms
+                      const slotRooms = candidateRooms.filter((room) => (
+                        room.id ? isRoomAvailableForRanges(room.id, slot, slotWeekRanges, editingItemIds) : false
+                      ))
 
-              <label className="span-2">
-                Tiết bắt đầu
-                <input type="text" inputMode="numeric" pattern="[1-9][0-9]*" value={timetableForm.tiet_bat_dau} onChange={(event) => setTimetableForm((current) => ({ ...current, tiet_bat_dau: clampPositiveInteger(event.target.value, 13) }))} />
-              </label>
-
-              <label className="span-2">
-                Số tiết
-                <input type="text" inputMode="numeric" pattern="[1-9][0-9]*" value={timetableForm.so_tiet} onChange={(event) => setTimetableForm((current) => ({ ...current, so_tiet: clampPositiveInteger(event.target.value, 13) }))} />
-              </label>
-
-              <label className="span-2">
-                Tuần bắt đầu
-                <input type="text" inputMode="numeric" pattern="[1-9][0-9]*" value={timetableForm.tuan_bat_dau} onChange={(event) => setTimetableForm((current) => ({ ...current, tuan_bat_dau: clampPositiveInteger(event.target.value, 52) }))} />
-              </label>
-
-              <label className="span-2">
-                Số tuần học
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[1-9][0-9]*"
-                  value={timetableForm.so_tuan}
-                  placeholder={selectedWeekConfig ? String(selectedWeekConfig.so_tuan_mac_dinh) : 'Chưa cấu hình'}
-                  onChange={(event) => setTimetableForm((current) => ({
-                    ...current,
-                    so_tuan: clampPositiveInteger(event.target.value, selectedWeekConfig?.so_tuan_mac_dinh ?? 52),
-                  }))}
-                />
-              </label>
+                      return (
+                        <div key={slot.id} className="to-timetable-session-item">
+                          <span className="to-timetable-session-index">{index + 1}</span>
+                          <strong>{Number(slot.thu) === 8 ? 'CN' : `Thứ ${slot.thu}`}</strong>
+                          <label>
+                            Giảng đường
+                            <select
+                              value={slot.giang_duong_id}
+                              onChange={(event) => updateTimetableSlot(slot.id, { giang_duong_id: event.target.value, phong_hoc_id: '' })}
+                            >
+                              <option value="">Tất cả</option>
+                              {buildings.map((building) => (
+                                <option key={building.id} value={building.id}>{building.ma_giang_duong}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Phòng
+                            <select
+                              value={slot.phong_hoc_id}
+                              onChange={(event) => updateTimetableSlot(slot.id, { phong_hoc_id: event.target.value })}
+                            >
+                              <option value="">Chọn phòng</option>
+                              {slotRooms.length === 0 && (
+                                <option value="" disabled>Không có phòng trống</option>
+                              )}
+                              {slotRooms.map((room) => (
+                                <option key={room.id} value={room.id ?? ''}>{room.ma_phong}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Tiết bắt đầu
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={slot.tiet_bat_dau}
+                              onChange={(event) => updateTimetableSlot(slot.id, { tiet_bat_dau: clampPositiveInteger(event.target.value, 13) })}
+                            />
+                          </label>
+                          <label>
+                            Số tiết
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={slot.so_tiet}
+                              onChange={(event) => updateTimetableSlot(slot.id, { so_tiet: clampPositiveInteger(event.target.value, 13) })}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="to-timetable-icon-btn danger"
+                            onClick={() => setTimetableSlots((current) => current.filter((item) => item.id !== slot.id))}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="to-timetable-empty">Chưa thêm ngày học nào.</div>
+                )}
+              </div>
 
               <div className="to-timetable-form-actions span-4">
-                <button type="button" className="to-timetable-btn" onClick={() => void handleSaveTimetable()}>
-                  {editingItemId ? 'Cập nhật lịch học' : 'Lưu lịch học'}
-                </button>
+                {editingItemId ? (
+                  <button type="button" className="to-timetable-btn" onClick={() => void handleSaveTimetable()}>
+                    Lưu
+                  </button>
+                ) : (
+                  <button type="button" className="to-timetable-btn" onClick={() => void handleSaveTimetableSlots()}>
+                    Lưu
+                  </button>
+                )}
                 {editingItemId && (
-                  <button type="button" className="to-timetable-btn secondary" onClick={() => { setEditingItemId(null); setTimetableForm(emptyTimetableForm); setCourseCodeInput(''); setCourseNameInput('') }}>
+                  <button type="button" className="to-timetable-btn secondary" onClick={() => { setEditingItemId(null); setEditingItemIds([]); setTimetableSlots([]); setTimetableForm(emptyTimetableForm); setCourseCodeInput(''); setCourseNameInput('') }}>
                     Hủy sửa
                   </button>
                 )}
@@ -808,43 +1368,35 @@ export default function TrainingOfficerTimetablePage() {
             </div>
           </section>
 
-          <section className="to-timetable-panel">
-            <div className="to-timetable-panel-head">
-              <h2>Đánh dấu tuần nghỉ</h2>
-              <p>{selectedWeekConfig ? `${selectedTermLabel} có ${selectedWeekConfig.so_tuan_mac_dinh} tuần.` : 'Vui lòng cấu hình tuần học trước khi đánh dấu tuần nghỉ.'}</p>
-            </div>
-            <div className="to-break-week-box">
-              {selectedWeekConfig ? (
-                <>
-                  <div className="to-break-week-grid">
-                    {Array.from({ length: selectedWeekConfig.so_tuan_mac_dinh }, (_, index) => index + 1).map((week) => (
-                      <label key={week} className="to-break-week-item">
-                        <input
-                          type="checkbox"
-                          checked={breakWeeks.includes(week)}
-                          onChange={() => toggleBreakWeek(week)}
-                        />
-                        <span>Tuần {week}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <button type="button" className="to-timetable-btn to-break-week-save" onClick={() => void handleSaveBreakWeeks()} disabled={isSavingBreakWeeks}>
-                    {isSavingBreakWeeks ? 'Đang lưu...' : 'Lưu tuần nghỉ'}
-                  </button>
-                </>
-              ) : (
-                <div className="to-timetable-empty">Chưa có cấu hình tuần học cho học kỳ này.</div>
-              )}
-            </div>
-          </section>
 
-          <section className="to-timetable-panel">
+          <section className="to-timetable-panel to-timetable-list-panel">
             <div className="to-timetable-panel-head">
               <h2>Lịch học đã xếp</h2>
               <p>{selectedTermLabel}</p>
             </div>
+            <div className="to-timetable-list-toolbar">
+              <div className="to-timetable-list-search">
+                <span>Tìm nhanh</span>
+                <div className="to-timetable-search-box">
+                  <MagnifyingGlassIcon />
+                  <input
+                    value={groupKeyword}
+                    onChange={(event) => { setGroupKeyword(event.target.value); setGroupPage(1); }}
+                    placeholder="Nhập mã HP, tên học phần, nhóm hoặc giảng viên..."
+                  />
+                  {groupKeyword && (
+                    <button type="button" onClick={() => setGroupKeyword('')}>
+                      &times;
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
             <div className="to-timetable-table-wrap">
-              <div className="to-timetable-total">Tổng số: <strong>{timetableGroups.length}</strong> dòng</div>
+              <div className="to-timetable-total">
+                Hiển thị <strong>{displayFrom}-{displayTo}</strong> / <strong>{filteredTimetableGroups.length}</strong> nhóm
+                <span> (Tổng số: <strong>{timetableGroups.length}</strong> nhóm)</span>
+              </div>
               <table className="to-timetable-table to-timetable-summary-table">
                 <thead>
                   <tr>
@@ -860,32 +1412,32 @@ export default function TrainingOfficerTimetablePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {timetableGroups.map((group, index) => {
+                  {pagedTimetableGroups.map((group, index) => {
                     const isExpanded = expandedGroupKey === group.key
 
                     return (
                       <Fragment key={group.key}>
                         <tr className={isExpanded ? 'is-expanded' : undefined}>
-                      <td><strong>{index + 1}</strong></td>
-                      <td>{group.courseCode}</td>
-                      <td>{group.courseName}</td>
-                      <td>{group.classGroup}</td>
-                      <td>{group.lecturerName}</td>
-                      <td>{group.credits}</td>
-                      <td>{group.maxStudents}</td>
-                      <td>{group.registeredStudents}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="to-timetable-detail-btn"
-                          onClick={() => setExpandedGroupKey(isExpanded ? null : group.key)}
-                          title="Xem thời khóa biểu"
-                          aria-label={`Xem thời khóa biểu ${group.courseCode}`}
-                          aria-expanded={isExpanded}
-                        >
-                          <EyeIcon aria-hidden="true" />
-                        </button>
-                      </td>
+                          <td><strong>{displayFrom + index}</strong></td>
+                          <td>{group.courseCode}</td>
+                          <td>{group.courseName}</td>
+                          <td>{group.classGroup}</td>
+                          <td>{group.lecturerName}</td>
+                          <td>{group.credits}</td>
+                          <td>{group.maxStudents}</td>
+                          <td>{group.registeredStudents}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="to-timetable-detail-btn"
+                              onClick={() => setExpandedGroupKey(isExpanded ? null : group.key)}
+                              title="Xem thời khóa biểu"
+                              aria-label={`Xem thời khóa biểu ${group.courseCode}`}
+                              aria-expanded={isExpanded}
+                            >
+                              <EyeIcon aria-hidden="true" />
+                            </button>
+                          </td>
                         </tr>
                         {isExpanded && (
                           <tr className="to-timetable-detail-row">
@@ -907,26 +1459,27 @@ export default function TrainingOfficerTimetablePage() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {group.items.map((item) => {
+                                  {mergeTimetableDisplayRows(group.items).map((row) => {
+                                    const item = row.firstItem
                                     const weekConfig = weekConfigs.find((config) => config.hoc_ky_id === item.hoc_ky_id)
                                     const disabledWeeks = new Set(weekConfig?.tuan_nghis ?? [])
-                                    const maxWeeks = weekConfig?.so_tuan_mac_dinh ?? item.tuan_ket_thuc
+                                    const maxWeeks = weekConfig?.so_tuan_mac_dinh ?? Math.max(...row.items.map((rowItem) => rowItem.tuan_ket_thuc))
 
                                     return (
-                                      <tr key={item.id}>
+                                      <tr key={row.key}>
                                         <td><strong>{item.thu === 8 ? 'CN' : item.thu}</strong></td>
                                         <td>{item.lop_hoc_phan?.ma_hoc_phan || '-'}</td>
                                         <td>{item.lop_hoc_phan?.nhom_hoc_phan || compactClassGroup(item.lop_hoc_phan?.lop_hoc_phan)}</td>
                                         <td>{item.lop_hoc_phan?.ten_hoc_phan || 'Chưa cập nhật'}</td>
                                         <td className="to-pattern-cell">{digitPattern(item.tiet_bat_dau, item.tiet_ket_thuc, 13)}</td>
                                         <td>{item.phong_hoc?.ma_phong || '-'}</td>
-                                        <td className="to-pattern-cell">{digitPattern(item.tuan_bat_dau, item.tuan_ket_thuc, maxWeeks, disabledWeeks)}</td>
+                                        <td className="to-pattern-cell">{digitPatternForItems(row.items, maxWeeks, disabledWeeks)}</td>
                                         <td>
                                           <div className="to-timetable-actions">
                                             <button
                                               type="button"
                                               className="to-timetable-action-icon-btn"
-                                              onClick={() => handleEditItem(item)}
+                                              onClick={() => handleEditItem(item, row.items)}
                                               title="Sửa lịch học"
                                               aria-label="Sửa lịch học"
                                             >
@@ -935,7 +1488,7 @@ export default function TrainingOfficerTimetablePage() {
                                             <button
                                               type="button"
                                               className="to-timetable-action-icon-btn danger"
-                                              onClick={() => void handleDeleteItem(item)}
+                                              onClick={() => void handleDeleteItems(row.items)}
                                               title="Xóa lịch học"
                                               aria-label="Xóa lịch học"
                                             >
@@ -954,12 +1507,38 @@ export default function TrainingOfficerTimetablePage() {
                       </Fragment>
                     )
                   })}
-                  {timetableGroups.length === 0 && (
+                  {filteredTimetableGroups.length === 0 && (
                     <tr><td colSpan={9} className="to-timetable-empty">Chưa có lịch học.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
+            {filteredTimetableGroups.length > 0 && (
+              <div className="to-timetable-list-pagination">
+                <div className="to-timetable-pagination-group">
+                  <div className="to-timetable-list-page-size-bottom">
+                    <span>Số dòng/trang</span>
+                    <select value={groupPageSize} onChange={(event) => { setGroupPageSize(event.target.value); setGroupPage(1); }}>
+                      <option value="5">5</option>
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                      <option value="500">500</option>
+                      <option value="all">Tất cả</option>
+                    </select>
+                  </div>
+                  {groupPageSize !== 'all' && totalGroupPages > 1 && (
+                    <Pagination
+                      page={groupPage}
+                      totalPages={totalGroupPages}
+                      onPageChange={setGroupPage}
+                      className="to-timetable-pagination-control"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </main>

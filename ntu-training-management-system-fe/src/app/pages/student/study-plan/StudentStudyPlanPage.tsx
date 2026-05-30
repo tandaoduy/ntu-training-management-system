@@ -471,7 +471,7 @@ function escapeHtml(value: unknown) {
 export default function StudentStudyPlanPage() {
   const config = defaultProps
   const navigate = useNavigate()
-  const { user, me, logout } = useAuth()
+  const { user, me } = useAuth()
   const { showAlert, clearAlerts } = useAlert()
   const isStudentShell = config.mode === 'studyplan'
   const isStudentMode = isStudentShell && user?.role === 'student'
@@ -495,7 +495,7 @@ export default function StudentStudyPlanPage() {
     sortBy: 'term',
     sortDirection: 'asc',
   })
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
   const [sysAcademicYear, setSysAcademicYear] = useState(() => readCachedCurrentTerm().year)
   const [sysSemester, setSysSemester] = useState(() => readCachedCurrentTerm().semester)
   const [studentActiveView, setStudentActiveView] = useState<'curriculum' | 'studyplan'>('curriculum')
@@ -1511,11 +1511,7 @@ export default function StudentStudyPlanPage() {
     </div>
   )
 
-  const handleLogout = () => {
-    setShowLogoutConfirm(false)
-    void logout()
-    navigate('/login', { replace: true })
-  }
+
 
   const renderCourse = (groupId: string, course: CurriculumCourse & { rowNo: number }) => (
     <tr key={`${groupId}-${course.id}-${course.rowNo}`} className="cp-course-row">
@@ -1626,34 +1622,6 @@ export default function StudentStudyPlanPage() {
           academicYear={sysAcademicYear}
           semester={sysSemester}
           onHomeClick={() => navigate('/sinhvien')}
-          onLogoutClick={() => setShowLogoutConfirm(true)}
-        />
-      )}
-
-      {showLogoutConfirm && (
-        <Modal
-          modal={{
-            id: 'curriculum-logout-confirm',
-            title: 'Xác nhận đăng xuất',
-            content: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
-            dismissible: true,
-            closeOnOverlayClick: true,
-            actions: [
-              {
-                label: 'Hủy',
-                variant: 'secondary',
-                autoClose: false,
-                onClick: () => setShowLogoutConfirm(false),
-              },
-              {
-                label: 'Đăng xuất',
-                variant: 'danger',
-                autoClose: false,
-                onClick: () => void handleLogout(),
-              },
-            ],
-          }}
-          onClose={() => setShowLogoutConfirm(false)}
         />
       )}
 

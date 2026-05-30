@@ -4,7 +4,7 @@ import {
   InformationCircleIcon,
   XCircleIcon,
   XMarkIcon,
-} from '@heroicons/react/24/solid';
+} from '@heroicons/react/24/outline';
 import type { AlertMessage, AlertVariant } from './types';
 
 interface AlertNotificationProps {

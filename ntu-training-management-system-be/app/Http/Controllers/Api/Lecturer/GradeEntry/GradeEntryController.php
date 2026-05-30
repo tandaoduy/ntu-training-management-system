@@ -51,7 +51,7 @@ class GradeEntryController extends Controller
 
         $termId = (int) ($payload['hoc_ky_id'] ?? $this->currentTermId());
 
-        $classes = LopHocPhanDangKy::query()
+        $classesCollection = LopHocPhanDangKy::query()
             ->with([
                 'hocKy.namHoc:id,nam_hoc',
                 'lopHocPhan:id,hoc_phan_id,hoc_ky_id,giang_vien_id,ma_hoc_phan,ten_hoc_phan,lop_hoc_phan,nhom_hoc_phan,ten_giang_vien,si_so',
@@ -63,8 +63,15 @@ class GradeEntryController extends Controller
             ->whereHas('lopHocPhan', fn ($query) => $query->where('giang_vien_id', $lecturer->id))
             ->orderBy('hoc_ky_id')
             ->orderBy('lop_hoc_phan_id')
-            ->get()
-            ->map(fn (LopHocPhanDangKy $class) => $this->classPayload($class))
+            ->get();
+
+        $lopHocPhanIds = $classesCollection->pluck('lop_hoc_phan_id')->filter()->unique()->values();
+        $preloadedWeights = Schema::hasTable('grade_weight_configs')
+            ? GradeWeightConfig::query()->whereIn('lop_hoc_phan_id', $lopHocPhanIds->all())->get()->keyBy('lop_hoc_phan_id')
+            : collect();
+
+        $classes = $classesCollection
+            ->map(fn (LopHocPhanDangKy $class) => $this->classPayload($class, $preloadedWeights))
             ->values();
 
         return $this->jsonResponse([
@@ -433,12 +440,15 @@ class GradeEntryController extends Controller
             ->first();
     }
 
-    private function classPayload(LopHocPhanDangKy $class): array
+    private function classPayload(LopHocPhanDangKy $class, ?object $preloadedWeights = null): array
     {
         $section = $class->lopHocPhan;
-        $weights = Schema::hasTable('grade_weight_configs')
-            ? GradeWeightConfig::query()->where('lop_hoc_phan_id', $class->lop_hoc_phan_id)->first()
-            : null;
+        $weights = null;
+        if (Schema::hasTable('grade_weight_configs')) {
+            $weights = $preloadedWeights !== null
+                ? $preloadedWeights->get($class->lop_hoc_phan_id)
+                : GradeWeightConfig::query()->where('lop_hoc_phan_id', $class->lop_hoc_phan_id)->first();
+        }
 
         return [
             'id' => $class->id,

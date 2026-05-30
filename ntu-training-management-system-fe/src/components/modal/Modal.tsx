@@ -1,4 +1,4 @@
-import { XMarkIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import type { ActiveModal, ModalActionVariant, ModalSize } from './types';
 
 interface ModalProps {
