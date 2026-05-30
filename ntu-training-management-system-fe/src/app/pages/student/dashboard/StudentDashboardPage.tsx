@@ -4,7 +4,6 @@ import { AcademicCapIcon, CalendarDaysIcon, ChartBarSquareIcon, IdentificationIc
 import { apiGet } from '../../../../api/core/request'
 import { authStorage } from '../../../../api/features/auth'
 import { useAuth } from '../../../../api/query'
-import { Modal } from '@/components/modal'
 import { StudentHeader } from '../components/StudentHeader'
 import './StudentDashboardPage.css'
 
@@ -115,8 +114,7 @@ function cacheCurrentTerm(year?: string | null, semester?: string | null) {
 
 export default function StudentDashboardPage() {
   const navigate = useNavigate()
-  const { user, logout, me } = useAuth()
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const { user, me } = useAuth()
   const [sysAcademicYear, setSysAcademicYear] = useState(() => readCachedCurrentTerm().year)
   const [sysSemester, setSysSemester] = useState(() => readCachedCurrentTerm().semester)
 
@@ -162,11 +160,7 @@ export default function StudentDashboardPage() {
     }
   }, [user?.permissions, user?.username])
 
-  const handleLogout = () => {
-    setShowLogoutConfirm(false)
-    void logout()
-    navigate('/login', { replace: true })
-  }
+
 
   const cachedUserName = authStorage.getUser()?.name?.trim() || null
   const displayName = user?.name?.trim() || cachedUserName || ''
@@ -179,35 +173,7 @@ export default function StudentDashboardPage() {
         academicYear={sysAcademicYear}
         semester={sysSemester}
         onHomeClick={() => navigate('/sinhvien')}
-        onLogoutClick={() => setShowLogoutConfirm(true)}
       />
-
-      {showLogoutConfirm && (
-        <Modal
-          modal={{
-            id: 'student-logout-confirm',
-            title: 'Xác nhận đăng xuất',
-            content: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
-            dismissible: true,
-            closeOnOverlayClick: true,
-            actions: [
-              {
-                label: 'Hủy',
-                variant: 'secondary',
-                autoClose: false,
-                onClick: () => setShowLogoutConfirm(false),
-              },
-              {
-                label: 'Đăng xuất',
-                variant: 'danger',
-                autoClose: false,
-                onClick: () => void handleLogout(),
-              },
-            ],
-          }}
-          onClose={() => setShowLogoutConfirm(false)}
-        />
-      )}
 
       <main className="sd-main">
         <div className="sd-content-container">

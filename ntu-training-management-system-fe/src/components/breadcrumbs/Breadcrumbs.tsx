@@ -1,4 +1,4 @@
-import { ChevronRightIcon, HomeIcon } from '@heroicons/react/24/solid';
+import { ChevronRightIcon, HomeIcon } from '@heroicons/react/24/outline';
 import type { BreadcrumbsProps } from './types';
 
 export const Breadcrumbs = ({ items, className = '' }: BreadcrumbsProps) => (

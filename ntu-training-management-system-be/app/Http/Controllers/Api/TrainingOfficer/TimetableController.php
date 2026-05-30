@@ -96,6 +96,7 @@ class TimetableController extends Controller
                     ->get()
                     ->map(fn (CauHinhTuanHoc $config) => $this->weekConfigPayload($config))
                     ->values(),
+                'current_hoc_ky_id' => $this->currentTermId(),
             ],
         ]);
     }

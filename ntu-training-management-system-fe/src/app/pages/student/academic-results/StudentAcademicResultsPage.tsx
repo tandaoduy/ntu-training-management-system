@@ -120,18 +120,60 @@ function summarize(rows: GradeRow[]) {
 export default function StudentAcademicResultsPage() {
   const navigate = useNavigate()
   const { user, me } = useAuth()
-  const [years, setYears] = useState<AcademicYear[]>([])
-  const [terms, setTerms] = useState<AcademicTerm[]>([])
-  const [rows, setRows] = useState<GradeRow[]>([])
+  const [years, setYears] = useState<AcademicYear[]>(() => {
+    try {
+      const cached = localStorage.getItem('sar-years')
+      return cached ? JSON.parse(cached) : []
+    } catch {
+      return []
+    }
+  })
+  const [terms, setTerms] = useState<AcademicTerm[]>(() => {
+    try {
+      const cached = localStorage.getItem('sar-terms')
+      return cached ? JSON.parse(cached) : []
+    } catch {
+      return []
+    }
+  })
+  const [rows, setRows] = useState<GradeRow[]>(() => {
+    try {
+      const cached = localStorage.getItem('sar-rows')
+      return cached ? JSON.parse(cached) : []
+    } catch {
+      return []
+    }
+  })
   const [fromYearId, setFromYearId] = useState('')
   const [fromTermId, setFromTermId] = useState('')
   const [toYearId, setToYearId] = useState('')
   const [toTermId, setToTermId] = useState('')
   const [appliedFilter, setAppliedFilter] = useState({ fromYearId: '', fromTermId: '', toYearId: '', toTermId: '' })
   const [selectedDetail, setSelectedDetail] = useState<GradeRow | null>(null)
-  const [sysAcademicYear, setSysAcademicYear] = useState('')
-  const [sysSemester, setSysSemester] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
+  const [sysAcademicYear, setSysAcademicYear] = useState(() => {
+    try {
+      const cached = localStorage.getItem('student-current-academic-term')
+      return cached ? JSON.parse(cached).year : ''
+    } catch {
+      return ''
+    }
+  })
+  const [sysSemester, setSysSemester] = useState(() => {
+    try {
+      const cached = localStorage.getItem('student-current-academic-term')
+      return cached ? JSON.parse(cached).semester : ''
+    } catch {
+      return ''
+    }
+  })
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const cachedRows = localStorage.getItem('sar-rows')
+      return !cachedRows
+    } catch {
+      return true
+    }
+  })
 
   useEffect(() => {
     if (!user) void me()
@@ -140,28 +182,62 @@ export default function StudentAcademicResultsPage() {
   useEffect(() => {
     let mounted = true
 
-    const load = async () => {
-      setIsLoading(true)
-      try {
-        const [yearResponse, termResponse, gradeResponse, currentTermResponse] = await Promise.all([
-          apiGet<CatalogResponse<AcademicYear>>('/academic-catalog/nam-hocs'),
-          apiGet<CatalogResponse<AcademicTerm>>('/academic-catalog/hoc-kys'),
-          apiGet<GradesResponse>('/student/grades'),
-          apiGet<CurrentAcademicTermResponse>('/academic-catalog/current-term'),
-        ])
+    // 1. Fetch current configured academic term immediately (non-blocking)
+    apiGet<CurrentAcademicTermResponse>('/academic-catalog/current-term')
+      .then((currentTermResponse) => {
+        if (!mounted) return
+        const freshYear = currentTermResponse.data?.nam_hoc ?? ''
+        const freshSem = currentTermResponse.data?.hoc_ky ?? ''
+        setSysAcademicYear(freshYear)
+        setSysSemester(freshSem)
+        try {
+          localStorage.setItem('student-current-academic-term', JSON.stringify({ year: freshYear, semester: freshSem }))
+        } catch {}
+      })
+      .catch((err) => console.error('Failed to load current term:', err))
 
+    // 2. Fetch academic year options (non-blocking)
+    apiGet<CatalogResponse<AcademicYear>>('/academic-catalog/nam-hocs')
+      .then((yearResponse) => {
         if (!mounted) return
         setYears(yearResponse.data)
+        try {
+          localStorage.setItem('sar-years', JSON.stringify(yearResponse.data))
+        } catch {}
+      })
+      .catch((err) => console.error('Failed to load years catalog:', err))
+
+    // 3. Fetch academic term options (non-blocking)
+    apiGet<CatalogResponse<AcademicTerm>>('/academic-catalog/hoc-kys')
+      .then((termResponse) => {
+        if (!mounted) return
         setTerms(termResponse.data)
+        try {
+          localStorage.setItem('sar-terms', JSON.stringify(termResponse.data))
+        } catch {}
+      })
+      .catch((err) => console.error('Failed to load terms catalog:', err))
+
+    // 4. Fetch grade results (non-blocking)
+    const loadGrades = async () => {
+      const cachedRows = localStorage.getItem('sar-rows')
+      if (!cachedRows) {
+        setIsLoading(true)
+      }
+      try {
+        const gradeResponse = await apiGet<GradesResponse>('/student/grades')
+        if (!mounted) return
         setRows(gradeResponse.data)
-        setSysAcademicYear(currentTermResponse.data?.nam_hoc ?? '')
-        setSysSemester(currentTermResponse.data?.hoc_ky ?? '')
+        try {
+          localStorage.setItem('sar-rows', JSON.stringify(gradeResponse.data))
+        } catch {}
+      } catch (err) {
+        console.error('Failed to load student grades:', err)
       } finally {
         if (mounted) setIsLoading(false)
       }
     }
-
-    void load()
+    void loadGrades()
 
     return () => {
       mounted = false

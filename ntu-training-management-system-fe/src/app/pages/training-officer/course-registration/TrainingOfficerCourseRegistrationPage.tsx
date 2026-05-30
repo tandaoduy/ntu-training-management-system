@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CheckCircleIcon, EyeIcon, EyeSlashIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/solid'
+import { CheckCircleIcon, EyeIcon, EyeSlashIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { apiDelete, apiGet, apiPut } from '@/api/core/request'
 import { useAlert } from '@/components/alert'
 import { Pagination, getPageSizeNumber } from '@/components/pagination'

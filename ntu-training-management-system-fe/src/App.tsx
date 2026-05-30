@@ -306,7 +306,7 @@ function AppShell() {
           path="/quanly/thongtinsinhvien"
           element={
             canUse('manager', location.pathname) ? (
-              <RoleLayout brandSubtitle="Há»‡ thá»‘ng ÄÃ o táº¡o" roleLabel="QUáº¢N LÃ" roleColor="teal" homeRoute="/quanly" roleTitle="Quáº£n lÃ½">
+              <RoleLayout brandSubtitle="Hệ thống Đào tạo" roleLabel="QUẢN LÝ" roleColor="teal" homeRoute="/quanly" roleTitle="Quản lý">
                 <AdminStudentInfoPage access="manager" />
               </RoleLayout>
             ) : (
@@ -502,7 +502,7 @@ function AppShell() {
           path="/chuyenvien/thongtinsinhvien"
           element={
             canUse('training_officer', location.pathname) ? (
-              <RoleLayout brandSubtitle="Há»‡ thá»‘ng ÄÃ o táº¡o" roleLabel="CHUYÃŠN VIÃŠN" roleColor="orange" homeRoute="/chuyenvien" roleTitle="ChuyÃªn viÃªn Ä‘Ã o táº¡o">
+              <RoleLayout brandSubtitle="Hệ thống Đào tạo" roleLabel="CHUYÊN VIÊN" roleColor="orange" homeRoute="/chuyenvien" roleTitle="Chuyên viên đào tạo">
                 <AdminStudentInfoPage access="training_officer" />
               </RoleLayout>
             ) : (

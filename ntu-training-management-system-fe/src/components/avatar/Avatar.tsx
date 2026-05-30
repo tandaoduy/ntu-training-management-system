@@ -1,4 +1,4 @@
-import { UserIcon } from '@heroicons/react/24/solid';
+import { UserIcon } from '@heroicons/react/24/outline';
 import type { AvatarProps, AvatarSize, AvatarStatus } from './types';
 
 const sizeClasses: Record<AvatarSize, string> = {

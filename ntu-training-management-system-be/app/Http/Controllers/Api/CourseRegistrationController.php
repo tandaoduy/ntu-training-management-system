@@ -78,15 +78,17 @@ class CourseRegistrationController extends Controller
         }
 
         $classes = LopHocPhanDangKy::query()
+            ->select('lop_hoc_phan_dang_kys.*')
+            ->join('lop_hoc_phans', 'lop_hoc_phans.id', '=', 'lop_hoc_phan_dang_kys.lop_hoc_phan_id')
             ->with([
                 'lopHocPhan:id,hoc_phan_id,hoc_ky_id,lop_hanh_chinh_id,ma_hoc_phan,ten_hoc_phan,lop_hoc_phan,nhom_hoc_phan,ten_giang_vien,si_so',
                 'lopHocPhan.hocPhan:id,so_tin_chi',
                 'hocKy.namHoc:id,nam_hoc',
             ])
             ->withCount(['dangKys as so_sv_da_dk' => fn ($query) => $query->where('status', 'registered')])
-            ->when($termId, fn ($query) => $query->where('hoc_ky_id', $termId))
-            ->orderBy(LopHocPhan::query()->select('ma_hoc_phan')->whereColumn('lop_hoc_phans.id', 'lop_hoc_phan_dang_kys.lop_hoc_phan_id'))
-            ->orderBy(LopHocPhan::query()->select('nhom_hoc_phan')->whereColumn('lop_hoc_phans.id', 'lop_hoc_phan_dang_kys.lop_hoc_phan_id'))
+            ->when($termId, fn ($query) => $query->where('lop_hoc_phan_dang_kys.hoc_ky_id', $termId))
+            ->orderBy('lop_hoc_phans.ma_hoc_phan')
+            ->orderBy('lop_hoc_phans.nhom_hoc_phan')
             ->get()
             ->map(fn (LopHocPhanDangKy $item) => $this->classPayload($item))
             ->values();
@@ -106,6 +108,8 @@ class CourseRegistrationController extends Controller
             'status' => $payload['status'] ?? $lopHocPhanDangKy->status,
         ])->save();
 
+
+
         return $this->jsonResponse([
             'message' => 'Đã cập nhật chỉ tiêu đăng ký.',
             'data' => $this->classPayload($lopHocPhanDangKy->fresh(['lopHocPhan.hocPhan', 'hocKy.namHoc'])->loadCount(['dangKys as so_sv_da_dk' => fn ($query) => $query->where('status', 'registered')])),
@@ -115,6 +119,8 @@ class CourseRegistrationController extends Controller
     public function deleteClass(LopHocPhanDangKy $lopHocPhanDangKy): JsonResponse
     {
         $lopHocPhanDangKy->delete();
+
+
 
         return $this->jsonResponse([
             'message' => 'Đã xóa lớp học phần đăng ký.',
@@ -247,10 +253,47 @@ class CourseRegistrationController extends Controller
         $registrationIdsByCourse = $registrations
             ->mapWithKeys(fn (DangKyHocPhan $item) => [$item->ma_hoc_phan => $item->id])
             ->all();
+
+        // Preload schedules to avoid N+1 queries in the loop below
+        $registeredClassIdsForConflict = $registrations
+            ->where('status', 'registered')
+            ->pluck('lop_hoc_phan_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $preloadedRegisteredSchedules = $registeredClassIdsForConflict->isEmpty()
+            ? collect()
+            : ThoiKhoaBieu::query()
+                ->where('hoc_ky_id', $selectedTermId)
+                ->whereIn('lop_hoc_phan_id', $registeredClassIdsForConflict->all())
+                ->get();
+
+        $allOptionClassSectionIds = $classes
+            ->pluck('lop_hoc_phan_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $preloadedSchedules = $allOptionClassSectionIds->isEmpty()
+            ? collect()
+            : ThoiKhoaBieu::query()
+                ->where('hoc_ky_id', $selectedTermId)
+                ->whereIn('lop_hoc_phan_id', $allOptionClassSectionIds->all())
+                ->get()
+                ->groupBy('lop_hoc_phan_id');
+
         $courses = $classes
             ->groupBy(fn (LopHocPhanDangKy $item) => $item->lopHocPhan?->ma_hoc_phan ?? '')
             ->filter(fn ($items, $courseCode) => $courseCode !== '')
-            ->map(function ($items, string $courseCode) use ($student, $registeredCourseCodes, $registrationIdsByCourse, $selectedTermId) {
+            ->map(function ($items, string $courseCode) use (
+                $student,
+                $registeredCourseCodes,
+                $registrationIdsByCourse,
+                $selectedTermId,
+                $preloadedSchedules,
+                $preloadedRegisteredSchedules
+            ) {
                 $first = $items->first()->lopHocPhan;
                 $ignoreRegistrationId = $registrationIdsByCourse[$courseCode] ?? null;
                 $options = $items
@@ -258,7 +301,14 @@ class CourseRegistrationController extends Controller
                         fn (LopHocPhanDangKy $item) => $item->lopHocPhan?->nhom_hoc_phan ?? '',
                         fn (LopHocPhanDangKy $item) => $item->lopHocPhan?->lop_hoc_phan ?? '',
                     ])
-                    ->map(fn (LopHocPhanDangKy $item) => $this->studentClassOptionPayload($item, $student, $selectedTermId, $ignoreRegistrationId))
+                    ->map(fn (LopHocPhanDangKy $item) => $this->studentClassOptionPayload(
+                        $item,
+                        $student,
+                        $selectedTermId,
+                        $ignoreRegistrationId,
+                        $preloadedSchedules,
+                        $preloadedRegisteredSchedules
+                    ))
                     ->values();
 
                 return [
@@ -512,6 +562,15 @@ class CourseRegistrationController extends Controller
             ->distinct()
             ->pluck('lop_hoc_phan_id');
 
+        $existingCount = LopHocPhanDangKy::query()
+            ->where('hoc_ky_id', $termId)
+            ->count();
+
+        // If the counts are equal, the timetable is already fully synchronized
+        if ($classSectionIds->count() === $existingCount) {
+            return;
+        }
+
         $staleClassRegistrations = LopHocPhanDangKy::query()
             ->where('hoc_ky_id', $termId);
 
@@ -523,19 +582,42 @@ class CourseRegistrationController extends Controller
                 ->delete();
         }
 
+        if ($classSectionIds->isEmpty()) {
+            return;
+        }
+
+        $classSections = LopHocPhan::query()
+            ->whereIn('id', $classSectionIds->all())
+            ->get()
+            ->keyBy('id');
+
+        $existingRegistrations = LopHocPhanDangKy::query()
+            ->where('hoc_ky_id', $termId)
+            ->get()
+            ->keyBy('lop_hoc_phan_id');
+
+        $inserts = [];
+        $now = now();
         foreach ($classSectionIds as $classSectionId) {
-            $classSection = LopHocPhan::query()->find($classSectionId);
+            $classSection = $classSections->get($classSectionId);
             if (! $classSection) {
                 continue;
             }
 
-            LopHocPhanDangKy::query()->firstOrCreate([
-                'hoc_ky_id' => $termId,
-                'lop_hoc_phan_id' => $classSection->id,
-            ], [
-                'si_so_toi_da' => max(0, (int) $classSection->si_so),
-                'status' => 'open',
-            ]);
+            if (! $existingRegistrations->has($classSectionId)) {
+                $inserts[] = [
+                    'hoc_ky_id' => $termId,
+                    'lop_hoc_phan_id' => $classSection->id,
+                    'si_so_toi_da' => max(0, (int) $classSection->si_so),
+                    'status' => 'open',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+        }
+
+        if (! empty($inserts)) {
+            LopHocPhanDangKy::query()->insert($inserts);
         }
     }
 
@@ -701,28 +783,53 @@ class CourseRegistrationController extends Controller
         ], 422, [], JSON_UNESCAPED_UNICODE));
     }
 
-    private function hasScheduleConflict(SinhVien $student, int $termId, int $newClassSectionId, ?int $ignoreRegistrationId = null): bool
-    {
-        $newSchedules = ThoiKhoaBieu::query()
-            ->where('hoc_ky_id', $termId)
-            ->where('lop_hoc_phan_id', $newClassSectionId)
-            ->get();
+    private function hasScheduleConflict(
+        SinhVien $student,
+        int $termId,
+        int $newClassSectionId,
+        ?int $ignoreRegistrationId = null,
+        ?object $preloadedSchedules = null,
+        ?object $preloadedRegisteredSchedules = null
+    ): bool {
+        $newSchedules = $preloadedSchedules !== null
+            ? ($preloadedSchedules->get($newClassSectionId) ?? collect())
+            : ThoiKhoaBieu::query()
+                ->where('hoc_ky_id', $termId)
+                ->where('lop_hoc_phan_id', $newClassSectionId)
+                ->get();
 
-        $registeredClassIds = DangKyHocPhan::query()
-            ->where('sinh_vien_id', $student->id)
-            ->where('hoc_ky_id', $termId)
-            ->where('status', 'registered')
-            ->when($ignoreRegistrationId, fn ($query) => $query->whereKeyNot($ignoreRegistrationId))
-            ->pluck('lop_hoc_phan_id');
-
-        if ($registeredClassIds->isEmpty() || $newSchedules->isEmpty()) {
+        if ($newSchedules->isEmpty()) {
             return false;
         }
 
-        $registeredSchedules = ThoiKhoaBieu::query()
-            ->where('hoc_ky_id', $termId)
-            ->whereIn('lop_hoc_phan_id', $registeredClassIds)
-            ->get();
+        if ($preloadedRegisteredSchedules !== null) {
+            $registeredSchedules = $preloadedRegisteredSchedules;
+            if ($ignoreRegistrationId > 0) {
+                // Ignore the specific registration's class section
+                $ignoredLopHocPhanId = DangKyHocPhan::query()
+                    ->whereKey($ignoreRegistrationId)
+                    ->value('lop_hoc_phan_id');
+                if ($ignoredLopHocPhanId) {
+                    $registeredSchedules = $registeredSchedules->filter(fn ($s) => (int) $s->lop_hoc_phan_id !== (int) $ignoredLopHocPhanId);
+                }
+            }
+        } else {
+            $registeredClassIds = DangKyHocPhan::query()
+                ->where('sinh_vien_id', $student->id)
+                ->where('hoc_ky_id', $termId)
+                ->where('status', 'registered')
+                ->when($ignoreRegistrationId, fn ($query) => $query->whereKeyNot($ignoreRegistrationId))
+                ->pluck('lop_hoc_phan_id');
+
+            if ($registeredClassIds->isEmpty()) {
+                return false;
+            }
+
+            $registeredSchedules = ThoiKhoaBieu::query()
+                ->where('hoc_ky_id', $termId)
+                ->whereIn('lop_hoc_phan_id', $registeredClassIds)
+                ->get();
+        }
 
         foreach ($newSchedules as $newSchedule) {
             foreach ($registeredSchedules as $registeredSchedule) {
@@ -857,8 +964,14 @@ class CourseRegistrationController extends Controller
         ];
     }
 
-    private function studentClassOptionPayload(LopHocPhanDangKy $item, SinhVien $student, int $termId, ?int $ignoreRegistrationId = null): array
-    {
+    private function studentClassOptionPayload(
+        LopHocPhanDangKy $item,
+        SinhVien $student,
+        int $termId,
+        ?int $ignoreRegistrationId = null,
+        ?object $preloadedSchedules = null,
+        ?object $preloadedRegisteredSchedules = null
+    ): array {
         $section = $item->lopHocPhan;
 
         return [
@@ -868,7 +981,14 @@ class CourseRegistrationController extends Controller
                 && (int) $section->lop_hanh_chinh_id === (int) $student->lop_id,
             'is_full' => (int) ($item->so_sv_da_dk ?? 0) >= $item->si_so_toi_da,
             'has_conflict' => $section
-                ? $this->hasScheduleConflict($student, $termId, $section->id, $ignoreRegistrationId)
+                ? $this->hasScheduleConflict(
+                    $student,
+                    $termId,
+                    $section->id,
+                    $ignoreRegistrationId,
+                    $preloadedSchedules,
+                    $preloadedRegisteredSchedules
+                )
                 : false,
         ];
     }

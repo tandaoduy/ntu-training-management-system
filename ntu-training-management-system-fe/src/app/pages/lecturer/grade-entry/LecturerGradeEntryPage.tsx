@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { PencilSquareIcon } from '@heroicons/react/24/solid'
+import { PencilSquareIcon } from '@heroicons/react/24/outline'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx-js-style'
 import RoleLayout from '../../../layout/RoleLayout'
@@ -467,6 +467,7 @@ export default function LecturerGradeEntryPage() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([])
   const [academicTerms, setAcademicTerms] = useState<AcademicTerm[]>([])
+  const [currentTermConfig, setCurrentTermConfig] = useState<{ nam_hoc_id: number; id: number } | null>(null)
   const [yearId, setYearId] = useState('')
   const [termId, setTermId] = useState('')
   const [courseCode, setCourseCode] = useState('')
@@ -514,25 +515,64 @@ export default function LecturerGradeEntryPage() {
     }
   }, [showAlert, termId])
 
-  const loadYears = useCallback(async () => {
-    const response = await apiGet<CatalogResponse<AcademicYear>>('/academic-catalog/nam-hocs')
-    setAcademicYears(response.data)
-    setYearId((current) => current || String(response.data[0]?.id ?? ''))
-  }, [])
+  const loadInitialCatalog = useCallback(async () => {
+    try {
+      const [yearsRes, currentRes] = await Promise.all([
+        apiGet<CatalogResponse<AcademicYear>>('/academic-catalog/nam-hocs'),
+        apiGet<{ data: { nam_hoc_id: number; id: number } | null }>('/academic-catalog/current-term'),
+      ])
+      setAcademicYears(yearsRes.data)
+      if (currentRes.data) {
+        setCurrentTermConfig(currentRes.data)
+        setYearId(String(currentRes.data.nam_hoc_id))
+      } else {
+        setYearId(String(yearsRes.data[0]?.id ?? ''))
+      }
+    } catch (error) {
+      showAlert({
+        title: 'Không tải được dữ liệu năm học',
+        message: messageFromError(error, 'Vui lòng thử lại sau.'),
+        variant: 'error',
+      })
+    }
+  }, [showAlert])
 
-  const loadTerms = useCallback(async (selectedYearId: string) => {
-    if (!selectedYearId) {
+  useEffect(() => {
+    void loadInitialCatalog()
+  }, [loadInitialCatalog])
+
+  useEffect(() => {
+    if (!yearId) {
       setAcademicTerms([])
       setTermId('')
       return
     }
 
-    const response = await apiGet<CatalogResponse<AcademicTerm>>('/academic-catalog/hoc-kys', {
-      params: { nam_hoc_id: Number(selectedYearId) },
+    let isMounted = true
+    apiGet<CatalogResponse<AcademicTerm>>('/academic-catalog/hoc-kys', {
+      params: { nam_hoc_id: Number(yearId) },
+    }).then((response) => {
+      if (!isMounted) return
+      setAcademicTerms(response.data)
+      
+      if (currentTermConfig && String(currentTermConfig.nam_hoc_id) === yearId) {
+        setTermId(String(currentTermConfig.id))
+      } else {
+        setTermId(String(response.data[0]?.id ?? ''))
+      }
+    }).catch((error) => {
+      if (!isMounted) return
+      showAlert({
+        title: 'Không tải được học kỳ',
+        message: messageFromError(error, 'Vui lòng thử lại.'),
+        variant: 'error',
+      })
     })
-    setAcademicTerms(response.data)
-    setTermId((current) => current || String(response.data[0]?.id ?? ''))
-  }, [])
+
+    return () => {
+      isMounted = false
+    }
+  }, [yearId, currentTermConfig, showAlert])
 
   const loadClassDetail = useCallback(async (classId: number) => {
     try {
@@ -548,14 +588,6 @@ export default function LecturerGradeEntryPage() {
       })
     }
   }, [showAlert])
-
-  useEffect(() => {
-    void loadYears()
-  }, [loadYears])
-
-  useEffect(() => {
-    void loadTerms(yearId)
-  }, [loadTerms, yearId])
 
   useEffect(() => {
     void loadClasses(termId)

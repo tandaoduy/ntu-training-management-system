@@ -56,13 +56,15 @@ class LecturerTimetableController extends Controller
             ->groupBy('lop_hoc_phan_id')
             ->pluck('aggregate', 'lop_hoc_phan_id');
 
+        $weekConfig = CauHinhTuanHoc::query()
+            ->where('hoc_ky_id', $termId)
+            ->first();
+
         $items = $timetableItems
-            ->map(fn (ThoiKhoaBieu $item) => $this->timetablePayload($item, (int) ($registeredCounts[$item->lop_hoc_phan_id] ?? 0)))
+            ->map(fn (ThoiKhoaBieu $item) => $this->timetablePayload($item, (int) ($registeredCounts[$item->lop_hoc_phan_id] ?? 0), $weekConfig))
             ->values();
 
-        $weekCount = CauHinhTuanHoc::query()
-            ->where('hoc_ky_id', $termId)
-            ->value('so_tuan_mac_dinh') ?: 20;
+        $weekCount = $weekConfig?->so_tuan_mac_dinh ?: 20;
 
         return response()->json([
             'data' => $items->all(),
@@ -105,9 +107,9 @@ class LecturerTimetableController extends Controller
         return $termId;
     }
 
-    private function timetablePayload(ThoiKhoaBieu $item, int $registeredCount): array
+    private function timetablePayload(ThoiKhoaBieu $item, int $registeredCount, ?CauHinhTuanHoc $weekConfig = null): array
     {
-        $dates = $this->computedDates($item);
+        $dates = $this->computedDates($item, $weekConfig);
         $class = $item->lopHocPhan;
 
         return [
@@ -133,9 +135,9 @@ class LecturerTimetableController extends Controller
         ];
     }
 
-    private function computedDates(ThoiKhoaBieu $item): array
+    private function computedDates(ThoiKhoaBieu $item, ?CauHinhTuanHoc $weekConfig = null): array
     {
-        $config = CauHinhTuanHoc::query()->where('hoc_ky_id', $item->hoc_ky_id)->first();
+        $config = $weekConfig ?? CauHinhTuanHoc::query()->where('hoc_ky_id', $item->hoc_ky_id)->first();
         if (! $config) {
             return ['ngay_bat_dau' => null];
         }
