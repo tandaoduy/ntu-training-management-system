@@ -1,0 +1,21 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_TOKEN
+@verificationUrl = REPLACE_WITH_SIGNED_VERIFICATION_URL
+
+### Verification status
+GET {{baseUrl}}/auth/email/verification-status
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Send verification notification
+POST {{baseUrl}}/auth/email/verification-notification
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Verify email by signed URL
+GET {{verificationUrl}}
+Accept: application/json
+
+### Auth case missing token, expect 401
+GET {{baseUrl}}/auth/email/verification-status
+Accept: application/json

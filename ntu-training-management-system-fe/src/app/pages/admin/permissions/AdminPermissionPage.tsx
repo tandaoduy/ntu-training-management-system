@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { apiGet, apiPut } from '@/api/core/request'
 import { useAlert } from '@/components/alert'
@@ -64,8 +64,14 @@ export default function AdminPermissionPage() {
   const [savingCode, setSavingCode] = useState<string | null>(null)
   const [draftPermissions, setDraftPermissions] = useState<Record<string, string[]>>({})
 
-  const selectedRole = roles.find((role) => role.code === selectedRoleCode) ?? roles[0]
-  const selectedDraftPermissions = selectedRole ? draftPermissions[selectedRole.code] ?? selectedRole.permissions : []
+  const selectedRole = useMemo(
+    () => roles.find((role) => role.code === selectedRoleCode) ?? roles[0],
+    [roles, selectedRoleCode],
+  )
+  const selectedDraftPermissions = useMemo(
+    () => (selectedRole ? draftPermissions[selectedRole.code] ?? selectedRole.permissions : []),
+    [draftPermissions, selectedRole],
+  )
   const activePermissions = useMemo(() => new Set(selectedDraftPermissions), [selectedDraftPermissions])
   const lockedPermissions = useMemo(() => new Set(locked[selectedRole?.code ?? ''] ?? []), [locked, selectedRole])
   const modules = useMemo(() => (
@@ -75,7 +81,7 @@ export default function AdminPermissionPage() {
     [...new Set(selectedDraftPermissions)].sort().join('|') !== [...new Set(selectedRole.permissions)].sort().join('|')
   ))
 
-  const loadPermissions = async () => {
+  const loadPermissions = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await apiGet<PermissionResponse>('/admin/permissions')
@@ -95,11 +101,11 @@ export default function AdminPermissionPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [showAlert])
 
   useEffect(() => {
     void loadPermissions()
-  }, [])
+  }, [loadPermissions])
 
   const saveRolePermissions = async (role: Role) => {
     setSavingCode(role.code)

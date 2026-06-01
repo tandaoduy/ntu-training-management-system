@@ -240,42 +240,52 @@ Content-Type: image/jpeg
 
 ### Lay danh sach tat ca tinh thanh pho
 GET {{baseUrl}}/admin/locations/provinces
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Tim kiem tinh thanh pho theo ten
 GET {{baseUrl}}/admin/locations/provinces/search?q=Ha%20Noi
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Lay chi tiet tinh thanh pho + danh sach quan huyen (code=79 la Khanh Hoa)
 GET {{baseUrl}}/admin/locations/provinces/79
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Lay danh sach quan huyen cua tinh (79 = Khanh Hoa)
 GET {{baseUrl}}/admin/locations/provinces/79/districts
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Lay chi tiet quan huyen (code=1574 la TP Nha Trang)
 GET {{baseUrl}}/admin/locations/districts/1574
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Lay danh sach xa phuong cua tinh (khong chi dinh province_code = lay tat ca)
 GET {{baseUrl}}/admin/locations/wards
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Lay danh sach xa phuong cua tinh Khanh Hoa (province_code=79)
 GET {{baseUrl}}/admin/locations/wards?province_code=79
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Tim kiem xa phuong theo ten
 GET {{baseUrl}}/admin/locations/wards?q=Ba%20Ria
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Tim kiem xa phuong cua tinh Khanh Hoa theo ten
 GET {{baseUrl}}/admin/locations/wards?province_code=79&q=phuong
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Lay chi tiet xa phuong (code=26560 la Phuong Ba Ria)
 GET {{baseUrl}}/admin/locations/wards/26560
+Authorization: Bearer {{authToken}}
 Accept: application/json
 
 ### Tim xa phuong tu ma luu dep (backward compatibility)

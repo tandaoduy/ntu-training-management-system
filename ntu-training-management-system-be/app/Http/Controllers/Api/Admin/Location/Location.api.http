@@ -1,0 +1,53 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_ADMIN_TOKEN
+@provinceCode = 56
+@districtCode = 568
+@wardCode = 22363
+
+### NOTE
+### These routes are registered in routes/api.php under auth:sanctum.
+
+### Get provinces
+GET {{baseUrl}}/admin/locations/provinces
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Search provinces
+GET {{baseUrl}}/admin/locations/provinces/search?q=Nha%20Trang
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Get province detail
+GET {{baseUrl}}/admin/locations/provinces/{{provinceCode}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Get districts by province
+GET {{baseUrl}}/admin/locations/provinces/{{provinceCode}}/districts
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Get district detail
+GET {{baseUrl}}/admin/locations/districts/{{districtCode}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Get wards
+GET {{baseUrl}}/admin/locations/wards
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Get wards by province and search
+GET {{baseUrl}}/admin/locations/wards?province_code={{provinceCode}}&q=phuong
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Get ward detail
+GET {{baseUrl}}/admin/locations/wards/{{wardCode}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Lookup ward from legacy data
+GET {{baseUrl}}/admin/locations/wards/legacy?legacy_name=Phuong%20Ba%20Ria&legacy_code=26560
+Authorization: Bearer {{authToken}}
+Accept: application/json

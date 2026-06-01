@@ -1,0 +1,75 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_ADMIN_TOKEN
+@studentToken = REPLACE_WITH_STUDENT_TOKEN
+@programId = 1
+@versionId = 1
+@studentId = 1
+
+### Shared: list curriculum programs
+GET {{baseUrl}}/curriculum-programs
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Shared: program detail
+GET {{baseUrl}}/curriculum-programs/{{programId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Shared: list curriculum versions
+GET {{baseUrl}}/curriculum-versions
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Shared: version detail
+GET {{baseUrl}}/curriculum-versions/{{versionId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Admin: list curriculum programs
+GET {{baseUrl}}/admin/curriculum-programs
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Admin: program detail
+GET {{baseUrl}}/admin/curriculum-programs/{{programId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Admin: list curriculum versions
+GET {{baseUrl}}/admin/curriculum-versions
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Admin: version detail
+GET {{baseUrl}}/admin/curriculum-versions/{{versionId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Admin: show student curriculum
+GET {{baseUrl}}/admin/students/{{studentId}}/curriculum
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Admin: assign student curriculum
+POST {{baseUrl}}/admin/students/{{studentId}}/curriculum
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "chuong_trinh_dao_tao_id": {{programId}},
+  "phien_ban_ctdt_id": {{versionId}}
+}
+
+### Admin: validation case missing payload, expect 422
+POST {{baseUrl}}/admin/students/{{studentId}}/curriculum
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+### Student: own curriculum
+GET {{baseUrl}}/student/curriculum
+Authorization: Bearer {{studentToken}}
+Accept: application/json

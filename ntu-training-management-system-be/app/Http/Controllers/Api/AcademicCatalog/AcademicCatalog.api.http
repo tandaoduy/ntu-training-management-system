@@ -1,0 +1,43 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_TOKEN
+@namHocId = 1
+
+### Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "Admin",
+  "password": "Admin@123456789"
+}
+
+### List academic years
+GET {{baseUrl}}/academic-catalog/nam-hocs
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List semesters
+GET {{baseUrl}}/academic-catalog/hoc-kys
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List semesters by academic year
+GET {{baseUrl}}/academic-catalog/hoc-kys?nam_hoc_id={{namHocId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List active courses
+GET {{baseUrl}}/academic-catalog/hoc-phans
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Current academic term
+GET {{baseUrl}}/academic-catalog/current-term
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Validation case: invalid nam_hoc_id, expect 422
+GET {{baseUrl}}/academic-catalog/hoc-kys?nam_hoc_id=abc
+Authorization: Bearer {{authToken}}
+Accept: application/json

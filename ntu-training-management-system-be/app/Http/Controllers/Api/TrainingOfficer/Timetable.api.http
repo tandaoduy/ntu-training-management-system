@@ -1,0 +1,186 @@
+@baseUrl = http://localhost:8000/api
+@officerToken = REPLACE_WITH_TRAINING_OFFICER_TOKEN
+@adminToken = REPLACE_WITH_ADMIN_TOKEN
+@hocKyId = 1
+@hocPhanId = 1
+@lopHocPhanId = 1
+@lopHanhChinhId = 1
+@giangVienId = 1
+@giangDuongId = 1
+@phongHocId = 1
+@thoiKhoaBieuId = 1
+
+### Training officer: list timetable
+GET {{baseUrl}}/training-officer/timetable?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Training officer: catalogs
+GET {{baseUrl}}/training-officer/timetable/catalogs
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Training officer: create/update class section
+POST {{baseUrl}}/training-officer/timetable/class-sections
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_phan_id": {{hocPhanId}},
+  "hoc_ky_id": {{hocKyId}},
+  "lop_hanh_chinh_id": {{lopHanhChinhId}},
+  "lop_hoc_phan": "65.CNTT-1",
+  "nhom_hoc_phan": "01",
+  "giang_vien_id": {{giangVienId}},
+  "si_so": 40
+}
+
+### Training officer: validation case missing section, expect 422
+POST {{baseUrl}}/training-officer/timetable/class-sections
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+### Training officer: create timetable item
+POST {{baseUrl}}/training-officer/timetable
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lop_hoc_phan_id": {{lopHocPhanId}},
+  "phong_hoc_id": {{phongHocId}},
+  "hoc_ky_id": {{hocKyId}},
+  "thu": 2,
+  "tiet_bat_dau": 1,
+  "so_tiet": 3,
+  "tuan_bat_dau": 1,
+  "so_tuan": 15
+}
+
+### Training officer: validation case period overflow, expect 422
+POST {{baseUrl}}/training-officer/timetable
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lop_hoc_phan_id": {{lopHocPhanId}},
+  "phong_hoc_id": {{phongHocId}},
+  "hoc_ky_id": {{hocKyId}},
+  "thu": 2,
+  "tiet_bat_dau": 12,
+  "so_tiet": 3,
+  "tuan_bat_dau": 1,
+  "so_tuan": 1
+}
+
+### Training officer: update timetable item
+PUT {{baseUrl}}/training-officer/timetable/{{thoiKhoaBieuId}}
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lop_hoc_phan_id": {{lopHocPhanId}},
+  "phong_hoc_id": {{phongHocId}},
+  "hoc_ky_id": {{hocKyId}},
+  "thu": 3,
+  "tiet_bat_dau": 1,
+  "so_tiet": 3,
+  "tuan_bat_dau": 1,
+  "so_tuan": 15
+}
+
+### Training officer: save break weeks
+POST {{baseUrl}}/training-officer/timetable/break-weeks
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_ky_id": {{hocKyId}},
+  "tuan_nghis": [8]
+}
+
+### Training officer: delete timetable item
+DELETE {{baseUrl}}/training-officer/timetable/{{thoiKhoaBieuId}}
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Admin room management: catalogs
+GET {{baseUrl}}/admin/timetable-management/catalogs
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### Admin room management: save week config
+POST {{baseUrl}}/admin/timetable-management/week-configs
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_ky_id": {{hocKyId}},
+  "tuan_1_bat_dau": "2026-06-01",
+  "so_tuan_mac_dinh": 15,
+  "tuan_nghis": [8]
+}
+
+### Admin room management: create building
+POST {{baseUrl}}/admin/timetable-management/buildings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "ma_giang_duong": "GDTEST",
+  "ten_giang_duong": "Giang duong test",
+  "mo_ta": "Dung de test API"
+}
+
+### Admin room management: update building
+PUT {{baseUrl}}/admin/timetable-management/buildings/{{giangDuongId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "ma_giang_duong": "GDTEST",
+  "ten_giang_duong": "Giang duong test update",
+  "mo_ta": "Updated"
+}
+
+### Admin room management: create room
+POST {{baseUrl}}/admin/timetable-management/rooms
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "giang_duong_id": {{giangDuongId}},
+  "ma_phong": "PTEST"
+}
+
+### Admin room management: update room
+PUT {{baseUrl}}/admin/timetable-management/rooms/{{phongHocId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "giang_duong_id": {{giangDuongId}},
+  "ma_phong": "PTEST2"
+}
+
+### Admin room management: delete room
+DELETE {{baseUrl}}/admin/timetable-management/rooms/{{phongHocId}}
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### Admin room management: delete building
+DELETE {{baseUrl}}/admin/timetable-management/buildings/{{giangDuongId}}
+Authorization: Bearer {{adminToken}}
+Accept: application/json

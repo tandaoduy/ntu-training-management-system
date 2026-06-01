@@ -149,8 +149,30 @@ export default function TrainingOfficerCourseRegistrationDetailPage() {
   }, [id, showError])
 
   useEffect(() => {
-    void loadDetail()
-  }, [loadDetail])
+    let isMounted = true
+
+    if (!id) {
+      return () => {
+        isMounted = false
+      }
+    }
+
+    void apiGet<{ data: ClassDetail }>(`/training-officer/course-registration/classes/${id}`)
+      .then((response) => {
+        if (isMounted) {
+          setDetail(response.data)
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          showError('Không tải được chi tiết', err instanceof Error ? err.message : 'Vui lòng thử lại.')
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [id, showError])
 
   const handleAddStudent = async () => {
     const code = studentCodeToAdd.trim()

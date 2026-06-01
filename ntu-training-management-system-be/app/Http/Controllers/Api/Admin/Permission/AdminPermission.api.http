@@ -1,0 +1,31 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_ADMIN_TOKEN
+@roleId = 1
+
+### List roles and permissions
+GET {{baseUrl}}/admin/permissions
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Sync role permissions
+PUT {{baseUrl}}/admin/permissions/roles/{{roleId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "permissions": [
+    "student.dashboard.view",
+    "student.profile.edit"
+  ]
+}
+
+### Validation case permissions must be array, expect 422
+PUT {{baseUrl}}/admin/permissions/roles/{{roleId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "permissions": "student.dashboard.view"
+}

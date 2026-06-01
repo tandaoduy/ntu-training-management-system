@@ -1,0 +1,24 @@
+@baseUrl = http://localhost:8000/api
+@lecturerToken = REPLACE_WITH_LECTURER_TOKEN
+@hocKyId = 1
+@lopHocPhanId = 1
+
+### Lecturer: timetable current term
+GET {{baseUrl}}/lecturer/timetable
+Authorization: Bearer {{lecturerToken}}
+Accept: application/json
+
+### Lecturer: timetable by term
+GET {{baseUrl}}/lecturer/timetable?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{lecturerToken}}
+Accept: application/json
+
+### Lecturer: timetable by class section
+GET {{baseUrl}}/lecturer/timetable?hoc_ky_id={{hocKyId}}&lop_hoc_phan_id={{lopHocPhanId}}
+Authorization: Bearer {{lecturerToken}}
+Accept: application/json
+
+### Validation case invalid term id, expect 422
+GET {{baseUrl}}/lecturer/timetable?hoc_ky_id=abc
+Authorization: Bearer {{lecturerToken}}
+Accept: application/json

@@ -192,7 +192,9 @@ export default function StudentAcademicResultsPage() {
         setSysSemester(freshSem)
         try {
           localStorage.setItem('student-current-academic-term', JSON.stringify({ year: freshYear, semester: freshSem }))
-        } catch {}
+        } catch {
+          // localStorage can fail in private browsing or when storage is full.
+        }
       })
       .catch((err) => console.error('Failed to load current term:', err))
 
@@ -203,7 +205,9 @@ export default function StudentAcademicResultsPage() {
         setYears(yearResponse.data)
         try {
           localStorage.setItem('sar-years', JSON.stringify(yearResponse.data))
-        } catch {}
+        } catch {
+          // localStorage can fail in private browsing or when storage is full.
+        }
       })
       .catch((err) => console.error('Failed to load years catalog:', err))
 
@@ -214,7 +218,9 @@ export default function StudentAcademicResultsPage() {
         setTerms(termResponse.data)
         try {
           localStorage.setItem('sar-terms', JSON.stringify(termResponse.data))
-        } catch {}
+        } catch {
+          // localStorage can fail in private browsing or when storage is full.
+        }
       })
       .catch((err) => console.error('Failed to load terms catalog:', err))
 
@@ -230,7 +236,9 @@ export default function StudentAcademicResultsPage() {
         setRows(gradeResponse.data)
         try {
           localStorage.setItem('sar-rows', JSON.stringify(gradeResponse.data))
-        } catch {}
+        } catch {
+          // localStorage can fail in private browsing or when storage is full.
+        }
       } catch (err) {
         console.error('Failed to load student grades:', err)
       } finally {
@@ -471,4 +479,3 @@ export default function StudentAcademicResultsPage() {
     </div>
   )
 }
-

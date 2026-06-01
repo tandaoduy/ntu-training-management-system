@@ -1,0 +1,69 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_ADMIN_TOKEN
+@lopId = 1
+@donViId = 1
+
+### List classes
+GET {{baseUrl}}/admin/lops
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List classes by keyword/status
+GET {{baseUrl}}/admin/lops?keyword=65&trang_thai=1
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List units
+GET {{baseUrl}}/admin/don-vis
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Create class
+POST {{baseUrl}}/admin/lops
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "don_vi_id": {{donViId}},
+  "lop_hoc_phan": "65.CNTT-TEST",
+  "ten_hoc_phan": "Lop test",
+  "ten_giang_vien": "Giang vien test",
+  "mo_hinh_dao_tao": "Dai hoc",
+  "ma_khoi": "65.CNTT",
+  "ten_khoi": "Khoa 65 CNTT"
+}
+
+### Validation case missing required fields, expect 422
+POST {{baseUrl}}/admin/lops
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+### Update class
+PUT {{baseUrl}}/admin/lops/{{lopId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "don_vi_id": {{donViId}},
+  "lop_hoc_phan": "65.CNTT-TEST",
+  "ten_hoc_phan": "Lop test update",
+  "ten_giang_vien": "Giang vien test",
+  "mo_hinh_dao_tao": "Dai hoc",
+  "ma_khoi": "65.CNTT",
+  "ten_khoi": "Khoa 65 CNTT"
+}
+
+### Toggle class status
+POST {{baseUrl}}/admin/lops/{{lopId}}/toggle-status
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Delete class
+DELETE {{baseUrl}}/admin/lops/{{lopId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json

@@ -1,0 +1,47 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_ADMIN_TOKEN
+@backupFile = backup.sql
+
+### List backups
+GET {{baseUrl}}/admin/backups
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Create backup
+POST {{baseUrl}}/admin/backups
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Upload backup file
+POST {{baseUrl}}/admin/backups/upload
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=----ApiBoundary
+
+------ApiBoundary
+Content-Disposition: form-data; name="file"; filename="backup.sql"
+Content-Type: application/sql
+
+< ./backup.sql
+------ApiBoundary--
+
+### Validation case missing upload file, expect 422
+POST {{baseUrl}}/admin/backups/upload
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=----ApiBoundary
+
+------ApiBoundary--
+
+### Download backup
+GET {{baseUrl}}/admin/backups/{{backupFile}}/download
+Authorization: Bearer {{authToken}}
+Accept: application/octet-stream
+
+### Restore backup
+POST {{baseUrl}}/admin/backups/{{backupFile}}/restore
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Delete backup
+DELETE {{baseUrl}}/admin/backups/{{backupFile}}
+Authorization: Bearer {{authToken}}
+Accept: application/json

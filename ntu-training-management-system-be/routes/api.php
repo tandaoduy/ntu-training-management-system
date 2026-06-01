@@ -1,22 +1,23 @@
 <?php
 
-use App\Http\Controllers\Api\Auth\AuthController;
-use App\Http\Controllers\Api\Auth\EmailVerificationController;
-use App\Http\Controllers\Api\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Auth\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\EmailVerification\EmailVerificationController;
+use App\Http\Controllers\Api\Auth\PasswordReset\PasswordResetController;
 use App\Http\Controllers\Api\Admin\Account\AdminAccountController;
 use App\Http\Controllers\Api\Admin\AcademicTerm\AcademicTermController;
 use App\Http\Controllers\Api\Admin\Backup\AdminBackupController;
 use App\Http\Controllers\Api\Admin\Classes\LopController;
 use App\Http\Controllers\Api\Admin\Curriculum\StudentCurriculumController;
 use App\Http\Controllers\Api\Admin\GradeEntry\GradeInputPeriodController;
+use App\Http\Controllers\Api\Admin\Location\LocationController;
 use App\Http\Controllers\Api\Admin\Permission\AdminPermissionController;
-use App\Http\Controllers\Api\AcademicCatalogController;
+use App\Http\Controllers\Api\AcademicCatalog\AcademicCatalogController;
 use App\Http\Controllers\Api\Admin\Province\ProvinceController;
 use App\Http\Controllers\Api\Grades\GradeViewController;
 use App\Http\Controllers\Api\Student\Curriculum\StudentCurriculumController as StudentCurriculumApiController;
-use App\Http\Controllers\Api\StudentDashboardController;
-use App\Http\Controllers\Api\StudyPlanRegistrationController;
-use App\Http\Controllers\Api\CourseRegistrationController;
+use App\Http\Controllers\Api\StudentDashboard\StudentDashboardController;
+use App\Http\Controllers\Api\StudyPlanRegistration\StudyPlanRegistrationController;
+use App\Http\Controllers\Api\CourseRegistration\CourseRegistrationController;
 use App\Http\Controllers\Api\Lecturer\GradeEntry\GradeEntryController;
 use App\Http\Controllers\Api\Lecturer\Timetable\LecturerTimetableController;
 use App\Http\Controllers\Api\TrainingOfficer\TimetableController;
@@ -63,6 +64,10 @@ Route::middleware(['auth:sanctum', 'student.role'])
     ->middleware('permission:student.dashboard.view');
 
 Route::middleware(['auth:sanctum', 'student.role'])
+    ->get('/student/profile-catalog', [AdminAccountController::class, 'studentCatalog'])
+    ->middleware('permission:student.profile.view');
+
+Route::middleware(['auth:sanctum', 'student.role'])
     ->put('/student/profile', [StudentDashboardController::class, 'updateProfile'])
     ->middleware('permission:student.profile.edit');
 
@@ -102,6 +107,17 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::get('/provinces', [ProvinceController::class, 'provinces']);
     Route::get('/provinces/with-districts', [ProvinceController::class, 'index']);
     Route::get('/districts', [ProvinceController::class, 'districts']);
+
+    Route::prefix('admin/locations')->group(function (): void {
+        Route::get('/provinces', [LocationController::class, 'getProvinces']);
+        Route::get('/provinces/search', [LocationController::class, 'searchProvinces']);
+        Route::get('/provinces/{code}', [LocationController::class, 'getProvince']);
+        Route::get('/provinces/{provinceCode}/districts', [LocationController::class, 'getDistrictsByProvince']);
+        Route::get('/districts/{code}', [LocationController::class, 'getDistrict']);
+        Route::get('/wards', [LocationController::class, 'getWards']);
+        Route::get('/wards/legacy', [LocationController::class, 'lookupWardFromLegacy']);
+        Route::get('/wards/{code}', [LocationController::class, 'getWard']);
+    });
 });
 
 Route::middleware(['auth:sanctum', 'permission:admin.config.manage'])->group(function (): void {

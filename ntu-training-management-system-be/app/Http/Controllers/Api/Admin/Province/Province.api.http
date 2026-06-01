@@ -1,0 +1,28 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_TOKEN
+@provinceCode = 56
+
+### List provinces with districts
+GET {{baseUrl}}/provinces/with-districts
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List provinces
+GET {{baseUrl}}/provinces
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List districts
+GET {{baseUrl}}/districts
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List districts by province code
+GET {{baseUrl}}/districts?province_code={{provinceCode}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Validation case invalid province code shape
+GET {{baseUrl}}/districts?province_code=abc
+Authorization: Bearer {{authToken}}
+Accept: application/json

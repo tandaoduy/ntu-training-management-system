@@ -1,0 +1,98 @@
+@baseUrl = http://localhost:8000/api
+@lecturerToken = REPLACE_WITH_LECTURER_TOKEN
+@hocKyId = 1
+@classRegistrationId = 1
+@registrationId = 1
+
+### Lecturer: grade input periods
+GET {{baseUrl}}/lecturer/grade-entry/periods
+Authorization: Bearer {{lecturerToken}}
+Accept: application/json
+
+### Lecturer: assigned classes
+GET {{baseUrl}}/lecturer/grade-entry/classes?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{lecturerToken}}
+Accept: application/json
+
+### Lecturer: class detail
+GET {{baseUrl}}/lecturer/grade-entry/classes/{{classRegistrationId}}
+Authorization: Bearer {{lecturerToken}}
+Accept: application/json
+
+### Lecturer: save numeric weights
+PUT {{baseUrl}}/lecturer/grade-entry/classes/{{classRegistrationId}}/weights
+Authorization: Bearer {{lecturerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "attendance_weight": 20,
+  "midterm_weight": 30,
+  "final_weight": 50,
+  "grade_mode": "numeric"
+}
+
+### Lecturer: validation case weights do not sum to 100, expect 422
+PUT {{baseUrl}}/lecturer/grade-entry/classes/{{classRegistrationId}}/weights
+Authorization: Bearer {{lecturerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "attendance_weight": 20,
+  "midterm_weight": 20,
+  "final_weight": 20,
+  "grade_mode": "numeric"
+}
+
+### Lecturer: save numeric grades
+PUT {{baseUrl}}/lecturer/grade-entry/classes/{{classRegistrationId}}/grades
+Authorization: Bearer {{lecturerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "grade_mode": "numeric",
+  "grades": [
+    {
+      "dang_ky_hoc_phan_id": {{registrationId}},
+      "attendance_score": 8,
+      "midterm_score": 8,
+      "final_score": 8,
+      "note": "Dat"
+    }
+  ]
+}
+
+### Lecturer: save pass/fail grades
+PUT {{baseUrl}}/lecturer/grade-entry/classes/{{classRegistrationId}}/grades
+Authorization: Bearer {{lecturerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "grade_mode": "pass_fail",
+  "grades": [
+    {
+      "dang_ky_hoc_phan_id": {{registrationId}},
+      "final_score": "passed",
+      "note": "Dat"
+    }
+  ]
+}
+
+### Lecturer: validation case invalid score, expect 422
+PUT {{baseUrl}}/lecturer/grade-entry/classes/{{classRegistrationId}}/grades
+Authorization: Bearer {{lecturerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "grade_mode": "numeric",
+  "grades": [
+    {
+      "dang_ky_hoc_phan_id": {{registrationId}},
+      "final_score": 11
+    }
+  ]
+}
