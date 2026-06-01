@@ -223,10 +223,6 @@ const displayScore = (row: GradeRow, value?: string | number | null) => (
   isExemptCourse(row) ? 'Miễn' : row.grade_mode === 'pass_fail' ? passFailScoreText(value) : scoreText(value)
 )
 
-const displayGradePoint = (row: GradeRow) => (
-  isExemptCourse(row) ? 'Miễn' : scoreText(row.grade_point)
-)
-
 const completionMark = (row: GradeRow) => (
   isPassedCourse(row) ? (isExemptCourse(row) ? '*(BL)' : '*') : ''
 )
@@ -426,7 +422,7 @@ export default function GradeViewPage({ viewerRole, tool }: { viewerRole: Viewer
   const [completedCourseForm, setCompletedCourseForm] = useState({ ma_hoc_phan: '', hoc_ky_id: '' })
   const [courseCatalog, setCourseCatalog] = useState<CourseCatalogItem[]>([])
   const [editingGradeRow, setEditingGradeRow] = useState<GradeRow | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [, setIsLoading] = useState(true)
 
   const refreshStudentLookup = async (code = selectedStudentCode) => {
     if (!code || !meta.studentEndpoint) return
@@ -991,9 +987,6 @@ export default function GradeViewPage({ viewerRole, tool }: { viewerRole: Viewer
                     <span>Lớp học phần</span>
                     <select value={selectedSectionKey} onChange={(event) => setSelectedSectionKey(event.target.value)}>
                       <option value="">-- Chọn nhóm học phần --</option>
-                      {false && (
-                      <option value="">-- Chọn nhóm học phần --</option>
-                      )}
                       {sectionOptions.map((row) => (
                         <option key={sectionKey(row)} value={sectionKey(row)}>
                           {row.ma_hoc_phan} - {row.ten_hoc_phan} - {row.lop_hoc_phan ?? row.nhom_hoc_phan}
@@ -1080,57 +1073,6 @@ export default function GradeViewPage({ viewerRole, tool }: { viewerRole: Viewer
           </section>
         )}
 
-        {false && !tool && (
-          <section className="gv-card">
-            <div className="gv-table-wrap">
-              <table className="gv-table">
-                <thead>
-                  <tr>
-                    {viewerRole !== 'student' && <th>Mã SV</th>}
-                    {viewerRole !== 'student' && <th>Họ tên</th>}
-                    {viewerRole !== 'student' && <th>Lớp</th>}
-                    <th>Mã HP</th>
-                    <th>Tên học phần</th>
-                    <th>Nhóm</th>
-                    <th>Tín chỉ</th>
-                    <th>KT</th>
-                    <th>GK</th>
-                    <th>Thi</th>
-                    <th>TK</th>
-                    <th>Chữ</th>
-                    <th>Hệ 4</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      {viewerRole !== 'student' && <td>{row.ma_sinh_vien}</td>}
-                      {viewerRole !== 'student' && <td>{row.ho_ten}</td>}
-                      {viewerRole !== 'student' && <td>{row.ma_lop}</td>}
-                      <td>{row.ma_hoc_phan}</td>
-                      <td>{row.ten_hoc_phan}</td>
-                      <td>{row.nhom_hoc_phan || row.lop_hoc_phan}</td>
-                      <td>{row.so_tin_chi}</td>
-                      <td>{displayScore(row, row.attendance_score) || '-'}</td>
-                      <td>{displayScore(row, row.midterm_score) || '-'}</td>
-                      <td>{displayScore(row, row.final_score) || '-'}</td>
-                      <td>{displayScore(row, row.average_score) || '-'}</td>
-                      <td>{row.grade_mode === 'pass_fail' ? row.letter_grade ?? '-' : letterGradeFromAverage(row.average_score) || '-'}</td>
-                      <td>{displayGradePoint(row) || '-'}</td>
-                    </tr>
-                  ))}
-                  {!isLoading && rows.length === 0 && (
-                    <tr><td className="gv-empty" colSpan={viewerRole === 'student' ? 10 : 13}>Chưa có dữ liệu điểm.</td></tr>
-                  )}
-                  {isLoading && (
-                    <tr><td className="gv-empty" colSpan={viewerRole === 'student' ? 10 : 13}>Đang tải điểm...</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
-
         {editingGradeRow && editingGradeRow.dang_ky_hoc_phan_id && (() => {
           const registrationId = editingGradeRow.dang_ky_hoc_phan_id
           const draft = gradeDrafts[registrationId] ?? { attendance_score: '', midterm_score: '', final_score: '', average_score: '' }
@@ -1163,28 +1105,6 @@ export default function GradeViewPage({ viewerRole, tool }: { viewerRole: Viewer
                     <span>Điểm TK</span>
                     <output>{averageScore || '-'}</output>
                   </label>
-                  {false && (
-                    <>
-                    <div>
-                  <label>
-                    <span>Chuyên cần</span>
-                    <input type="number" min="0" max="10" step="0.1" value={draft.attendance_score} onChange={(event) => updateGradeDraft(registrationId, 'attendance_score', event.target.value)} />
-                  </label>
-                  <label>
-                    <span>Giữa kỳ</span>
-                    <input type="number" min="0" max="10" step="0.1" value={draft.midterm_score} onChange={(event) => updateGradeDraft(registrationId, 'midterm_score', event.target.value)} />
-                  </label>
-                  <label>
-                    <span>Cuối kỳ</span>
-                    <input type="number" min="0" max="10" step="0.1" value={draft.final_score} onChange={(event) => updateGradeDraft(registrationId, 'final_score', event.target.value)} />
-                  </label>
-                  <label>
-                    <span>Điểm TK</span>
-                    <input type="number" min="0" max="10" step="0.1" value={draft.average_score} onChange={(event) => updateGradeDraft(registrationId, 'average_score', event.target.value)} />
-                  </label>
-                </div>
-                    </>
-                  )}
                 </div>
                 <div className="gv-grade-modal-actions">
                   <button type="button" onClick={() => setEditingGradeRow(null)}>Hủy</button>

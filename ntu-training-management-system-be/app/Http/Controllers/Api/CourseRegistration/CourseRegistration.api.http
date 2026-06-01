@@ -1,0 +1,154 @@
+@baseUrl = http://localhost:8000/api
+@adminToken = REPLACE_WITH_ADMIN_TOKEN
+@studentToken = REPLACE_WITH_STUDENT_TOKEN
+@officerToken = REPLACE_WITH_TRAINING_OFFICER_TOKEN
+@hocKyId = 1
+@classRegistrationId = 1
+@registrationId = 1
+@studentCode = 65131708
+
+### Login admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "Admin",
+  "password": "Admin@123456789"
+}
+
+### Admin: list course registration periods
+GET {{baseUrl}}/admin/course-registration-periods
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### Admin: create course registration period
+POST {{baseUrl}}/admin/course-registration-periods
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_ky_id": {{hocKyId}},
+  "starts_at": "2026-06-01 08:00:00",
+  "ends_at": "2026-06-30 17:00:00",
+  "status": "open"
+}
+
+### Admin: validation case, ends_at before starts_at, expect 422
+POST {{baseUrl}}/admin/course-registration-periods
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_ky_id": {{hocKyId}},
+  "starts_at": "2026-06-30 17:00:00",
+  "ends_at": "2026-06-01 08:00:00",
+  "status": "open"
+}
+
+### Training officer: list registered class sections
+GET {{baseUrl}}/training-officer/course-registration/classes?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Training officer: class detail
+GET {{baseUrl}}/training-officer/course-registration/classes/{{classRegistrationId}}
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Training officer: update capacity/status
+PUT {{baseUrl}}/training-officer/course-registration/classes/{{classRegistrationId}}
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "si_so_toi_da": 60,
+  "status": "open"
+}
+
+### Training officer: validation case invalid capacity, expect 422
+PUT {{baseUrl}}/training-officer/course-registration/classes/{{classRegistrationId}}
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "si_so_toi_da": -1,
+  "status": "open"
+}
+
+### Training officer: add student to class
+POST {{baseUrl}}/training-officer/course-registration/classes/{{classRegistrationId}}/students
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "ma_sinh_vien": "{{studentCode}}"
+}
+
+### Training officer: validation case invalid student code, expect 422
+POST {{baseUrl}}/training-officer/course-registration/classes/{{classRegistrationId}}/students
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "ma_sinh_vien": "abc"
+}
+
+### Student: registration status
+GET {{baseUrl}}/student/course-registration?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{studentToken}}
+Accept: application/json
+
+### Student: class timetable
+GET {{baseUrl}}/student/course-registration/classes/{{classRegistrationId}}/timetable
+Authorization: Bearer {{studentToken}}
+Accept: application/json
+
+### Student: register class
+POST {{baseUrl}}/student/course-registration
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lop_hoc_phan_dang_ky_id": {{classRegistrationId}}
+}
+
+### Student: validation case missing class id, expect 422
+POST {{baseUrl}}/student/course-registration
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+### Student: confirm registration
+POST {{baseUrl}}/student/course-registration/{{registrationId}}/confirm
+Authorization: Bearer {{studentToken}}
+Accept: application/json
+
+### Student: change class
+PUT {{baseUrl}}/student/course-registration/{{registrationId}}/change-class
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lop_hoc_phan_dang_ky_id": {{classRegistrationId}}
+}
+
+### Student: cancel registration
+DELETE {{baseUrl}}/student/course-registration/{{registrationId}}
+Authorization: Bearer {{studentToken}}
+Accept: application/json
+
+### Training officer: delete registered class section
+DELETE {{baseUrl}}/training-officer/course-registration/classes/{{classRegistrationId}}
+Authorization: Bearer {{officerToken}}
+Accept: application/json

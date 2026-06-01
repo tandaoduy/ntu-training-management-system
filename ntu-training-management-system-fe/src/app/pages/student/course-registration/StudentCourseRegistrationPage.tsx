@@ -236,7 +236,9 @@ export default function StudentCourseRegistrationPage() {
         const data = JSON.parse(cached)
         return data.registration_period?.term ? 'Năm học: ' + data.registration_period.term.nam_hoc + ' ; Học kỳ: ' + data.registration_period.term.hoc_ky : ''
       }
-    } catch {}
+    } catch {
+      // Ignore invalid cached registration data and use empty fallback state.
+    }
     return ''
   })
   const [message, setMessage] = useState(() => {
@@ -245,9 +247,11 @@ export default function StudentCourseRegistrationPage() {
       const cached = localStorage.getItem('student-course-registration:' + username)
       if (cached) {
         const data = JSON.parse(cached)
-        return Boolean(data.registration_open) ? data.message ?? '' : 'Thời gian đăng ký không hợp lệ\nSinh viên vui lòng xem thông báo của trường hoặc liên hệ với cán bộ quản lý.'
+        return data.registration_open ? data.message ?? '' : 'Thời gian đăng ký không hợp lệ\nSinh viên vui lòng xem thông báo của trường hoặc liên hệ với cán bộ quản lý.'
       }
-    } catch {}
+    } catch {
+      // Ignore invalid cached registration data and use empty fallback state.
+    }
     return ''
   })
   const [courses, setCourses] = useState<CourseGroup[]>(() => {
@@ -288,7 +292,9 @@ export default function StudentCourseRegistrationPage() {
           return [course.ma_hoc_phan, String(registered?.lop_hoc_phan_dang_ky_id ?? '')]
         }))
       }
-    } catch {}
+    } catch {
+      // Ignore invalid cached registration data and use empty fallback state.
+    }
     return {}
   })
   const [busyCourse, setBusyCourse] = useState('')
@@ -386,7 +392,9 @@ export default function StudentCourseRegistrationPage() {
       const username = authStorage.getUser()?.username || 'current'
       try {
         localStorage.setItem('student-course-registration:' + username, JSON.stringify(data))
-      } catch {}
+      } catch {
+        // localStorage can fail in private browsing or when storage is full.
+      }
       const isRegistrationOpen = Boolean(data.registration_open)
       setRegistrationOpen(isRegistrationOpen)
       setMessage(isRegistrationOpen ? data.message ?? '' : 'Thời gian đăng ký không hợp lệ\nSinh viên vui lòng xem thông báo của trường hoặc liên hệ với cán bộ quản lý.')
@@ -399,7 +407,7 @@ export default function StudentCourseRegistrationPage() {
         const registered = data.registrations?.find((item: Registration) => item.ma_hoc_phan === course.ma_hoc_phan)
         return [course.ma_hoc_phan, String(registered?.lop_hoc_phan_dang_ky_id ?? '')]
       })))
-    } catch (err) {
+    } catch {
       alert.showError('Không tải được dữ liệu', 'Vui lòng kiểm tra backend.')
     }
   }

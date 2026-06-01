@@ -1,0 +1,71 @@
+@baseUrl = http://localhost:8000/api
+@studentToken = REPLACE_WITH_STUDENT_TOKEN
+@officerToken = REPLACE_WITH_TRAINING_OFFICER_TOKEN
+@managerToken = REPLACE_WITH_MANAGER_TOKEN
+@registrationId = 1
+@studentCode = 65131708
+@hocPhanId = 1
+@hocKyId = 1
+
+### Student: own grades
+GET {{baseUrl}}/student/grades
+Authorization: Bearer {{studentToken}}
+Accept: application/json
+
+### Training officer: grade overview
+GET {{baseUrl}}/training-officer/grades
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Training officer: lookup student
+GET {{baseUrl}}/training-officer/grades/students/{{studentCode}}
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Training officer: update registration grade
+PUT {{baseUrl}}/training-officer/grades/registrations/{{registrationId}}
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "attendance_score": 8,
+  "midterm_score": 8,
+  "final_score": 8,
+  "note": "Dat"
+}
+
+### Training officer: validation case score out of range, expect 422
+PUT {{baseUrl}}/training-officer/grades/registrations/{{registrationId}}
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "final_score": 11
+}
+
+### Training officer: add completed course
+POST {{baseUrl}}/training-officer/grades/students/{{studentCode}}/completed-courses
+Authorization: Bearer {{officerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_phan_id": {{hocPhanId}},
+  "hoc_ky_id": {{hocKyId}},
+  "attendance_score": 8,
+  "midterm_score": 8,
+  "final_score": 8,
+  "note": "Bo sung"
+}
+
+### Manager: grade overview
+GET {{baseUrl}}/manager/grades
+Authorization: Bearer {{managerToken}}
+Accept: application/json
+
+### Manager: lookup student grade
+GET {{baseUrl}}/manager/grades/students/{{studentCode}}
+Authorization: Bearer {{managerToken}}
+Accept: application/json

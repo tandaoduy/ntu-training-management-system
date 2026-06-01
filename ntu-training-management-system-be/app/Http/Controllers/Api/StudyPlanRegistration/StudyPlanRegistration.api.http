@@ -1,0 +1,85 @@
+@baseUrl = http://localhost:8000/api
+@adminToken = REPLACE_WITH_ADMIN_TOKEN
+@studentToken = REPLACE_WITH_STUDENT_TOKEN
+@officerToken = REPLACE_WITH_TRAINING_OFFICER_TOKEN
+@hocKyId = 1
+@hocPhanId = 1
+
+### Admin: list study plan registration periods
+GET {{baseUrl}}/admin/study-plan-registration-periods
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### Admin: create study plan registration period
+POST {{baseUrl}}/admin/study-plan-registration-periods
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "target_hoc_ky_id": {{hocKyId}},
+  "starts_at": "2026-06-01T08:00",
+  "ends_at": "2026-06-30T17:00",
+  "status": "open",
+  "ghi_chu": "Mo dot dang ky ke hoach hoc tap"
+}
+
+### Admin: validation case bad date order, expect 422
+POST {{baseUrl}}/admin/study-plan-registration-periods
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "target_hoc_ky_id": {{hocKyId}},
+  "starts_at": "2026-06-30T17:00",
+  "ends_at": "2026-06-01T08:00",
+  "status": "open"
+}
+
+### Student: current study plan status
+GET {{baseUrl}}/student/study-plan-registration?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{studentToken}}
+Accept: application/json
+
+### Student: submit selected course ids
+POST {{baseUrl}}/student/study-plan-registration
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_ky_id": {{hocKyId}},
+  "course_ids": [{{hocPhanId}}],
+  "course_terms": [
+    {
+      "course_id": {{hocPhanId}},
+      "hoc_ky_id": {{hocKyId}}
+    }
+  ]
+}
+
+### Student: validation case no course ids, expect 422
+POST {{baseUrl}}/student/study-plan-registration
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "course_ids": []
+}
+
+### Training officer: statistics
+GET {{baseUrl}}/training-officer/study-plan-statistics?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Training officer: statistics by year/semester
+GET {{baseUrl}}/training-officer/study-plan-statistics?nam_hoc=2025-2026&hoc_ky=1
+Authorization: Bearer {{officerToken}}
+Accept: application/json
+
+### Training officer: course registration students
+GET {{baseUrl}}/training-officer/study-plan-statistics/courses/{{hocPhanId}}/students?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{officerToken}}
+Accept: application/json

@@ -1,0 +1,61 @@
+@baseUrl = http://localhost:8000/api
+@studentToken = REPLACE_WITH_STUDENT_TOKEN
+
+### Login student
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "65131708",
+  "password": "123456789"
+}
+
+### Student dashboard/profile
+GET {{baseUrl}}/student/dashboard
+Authorization: Bearer {{studentToken}}
+Accept: application/json
+
+### Student profile catalog
+GET {{baseUrl}}/student/profile-catalog
+Authorization: Bearer {{studentToken}}
+Accept: application/json
+
+### Update student profile
+PUT {{baseUrl}}/student/profile
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "ngay_sinh": "2005-12-07",
+  "noi_sinh": "Khanh Hoa",
+  "gioi_tinh": "Nam",
+  "dan_toc": "Kinh",
+  "ton_giao": "Khong",
+  "ho_khau_tinh_thanh_pho": "Khanh Hoa",
+  "ho_khau_quan_huyen": "Nha Trang",
+  "que_quan_tinh_thanh_pho": "Khanh Hoa",
+  "que_quan_quan_huyen": "Nha Trang",
+  "dia_chi_lien_lac": "Nha Trang",
+  "so_dien_thoai": "0900000000",
+  "so_dien_thoai_gia_dinh": "0911111111",
+  "ho_ten_cha": "Nguyen Van A",
+  "ngay_sinh_cha": "1975-01-01",
+  "que_quan_cha": "Khanh Hoa",
+  "nghe_nghiep_cha": "Kinh doanh",
+  "ho_ten_me": "Tran Thi B",
+  "ngay_sinh_me": "1978-01-01",
+  "que_quan_me": "Khanh Hoa",
+  "nghe_nghiep_me": "Giao vien"
+}
+
+### Validation case invalid phone, expect 422
+PUT {{baseUrl}}/student/profile
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "so_dien_thoai": "123"
+}

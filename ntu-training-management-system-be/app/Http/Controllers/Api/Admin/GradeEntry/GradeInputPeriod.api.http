@@ -1,0 +1,58 @@
+@baseUrl = http://localhost:8000/api
+@authToken = REPLACE_WITH_ADMIN_TOKEN
+@periodId = 1
+@hocKyId = 1
+
+### List grade input periods
+GET {{baseUrl}}/admin/grade-input-periods
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### List grade input periods by term
+GET {{baseUrl}}/admin/grade-input-periods?hoc_ky_id={{hocKyId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Create grade input period
+POST {{baseUrl}}/admin/grade-input-periods
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_ky_id": {{hocKyId}},
+  "starts_at": "2026-06-01 08:00:00",
+  "ends_at": "2026-06-30 17:00:00",
+  "status": "open"
+}
+
+### Validation case bad date order, expect 422
+POST {{baseUrl}}/admin/grade-input-periods
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_ky_id": {{hocKyId}},
+  "starts_at": "2026-06-30 17:00:00",
+  "ends_at": "2026-06-01 08:00:00",
+  "status": "open"
+}
+
+### Update grade input period
+PUT {{baseUrl}}/admin/grade-input-periods/{{periodId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "hoc_ky_id": {{hocKyId}},
+  "starts_at": "2026-06-01 08:00:00",
+  "ends_at": "2026-07-15 17:00:00",
+  "status": "closed"
+}
+
+### Delete grade input period
+DELETE {{baseUrl}}/admin/grade-input-periods/{{periodId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json

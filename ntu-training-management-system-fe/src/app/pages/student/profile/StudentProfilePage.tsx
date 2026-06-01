@@ -376,7 +376,7 @@ export default function StudentProfilePage() {
     try {
       const [provinceResponse, catalogResponse] = await Promise.all([
         apiGet<ProvinceResponse>('/provinces/with-districts'),
-        apiGet<StudentCatalogResponse>('/admin/accounts/student-catalog'),
+        apiGet<StudentCatalogResponse>('/student/profile-catalog'),
       ]);
       setProvinces(provinceResponse.data ?? []);
       setEthnicOptions((catalogResponse.data?.dan_tocs ?? []).map((item) => item.ten_dan_toc));

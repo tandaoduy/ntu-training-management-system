@@ -118,7 +118,7 @@ export default function AdminRoomManagementPage() {
 
     setIsSavingBuilding(true)
     try {
-      await apiPost('/admin/timetable-management/buildings', buildingForm as any)
+      await apiPost('/admin/timetable-management/buildings', buildingForm)
       setBuildingForm(emptyBuildingForm)
       showAlert({ title: 'Thành công', message: 'Đã thêm giảng đường.', variant: 'success' })
       await fetchCatalogs()

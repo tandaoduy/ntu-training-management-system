@@ -4,7 +4,6 @@ import { apiGet, apiPost, apiPut } from '@/api/core/request'
 import { API_BASE_URL } from '@/api/config/env'
 import { printBrandHtml, printBrandStyles, printFaviconLink } from '@/app/branding'
 import { useAlert } from '@/components/alert'
-import { Breadcrumbs } from '@/components/breadcrumbs/Breadcrumbs'
 import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import './AdminStudentInfoPage.css'
@@ -131,43 +130,6 @@ const escapeHtml = (value: unknown) => String(value ?? '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;')
 
-const studentInfoFields = (student: StudentAccount): Array<[string, string]> => {
-  const profile = student.profile
-  return [
-    ['Mã sinh viên', student.username],
-    ['Họ tên', display(student.display_name || profile?.ten_sinh_vien)],
-    ['Ngày sinh', display(profile?.ngay_sinh)],
-    ['Nơi sinh', display(profile?.noi_sinh)],
-    ['Giới tính', display(profile?.gioi_tinh)],
-    ['Email', display(student.email || profile?.email)],
-    ['Số điện thoại', display(profile?.so_dien_thoai)],
-    ['Lớp', display(profile?.ma_lop)],
-    ['Ngành học', display(profile?.ten_nganh_hoc)],
-    ['Đơn vị', display(profile?.ten_don_vi)],
-    ['Hệ đào tạo', display(profile?.he_dao_tao)],
-    ['Năm nhập học', display(profile?.nam_nhap_hoc === null || profile?.nam_nhap_hoc === undefined ? null : String(profile.nam_nhap_hoc))],
-    ['Khóa học', display(profile?.khoa_hoc)],
-    ['Số CCCD', display(profile?.so_cccd)],
-    ['Ngày cấp CCCD', display(profile?.ngay_cap_cccd)],
-    ['Nơi cấp CCCD', display(profile?.noi_cap_cccd)],
-    ['Hộ khẩu tỉnh/thành phố', display(profile?.ho_khau_tinh_thanh_pho)],
-    ['Hộ khẩu quận/huyện', display(profile?.ho_khau_quan_huyen)],
-    ['Quê quán', profile?.que_quan || combinePlace(profile?.que_quan_quan_huyen, profile?.que_quan_tinh_thanh_pho)],
-    ['Dân tộc', display(profile?.dan_toc)],
-    ['Tôn giáo', display(profile?.ton_giao)],
-    ['Địa chỉ liên lạc', display(profile?.dia_chi_lien_lac)],
-    ['Số điện thoại gia đình', display(profile?.so_dien_thoai_gia_dinh)],
-    ['Họ tên cha', display(profile?.ho_ten_cha)],
-    ['Ngày sinh cha', display(profile?.ngay_sinh_cha)],
-    ['Quê quán cha', display(profile?.que_quan_cha)],
-    ['Nghề nghiệp cha', display(profile?.nghe_nghiep_cha)],
-    ['Họ tên mẹ', display(profile?.ho_ten_me)],
-    ['Ngày sinh mẹ', display(profile?.ngay_sinh_me)],
-    ['Quê quán mẹ', display(profile?.que_quan_me)],
-    ['Nghề nghiệp mẹ', display(profile?.nghe_nghiep_me)],
-  ]
-}
-
 const studentInfoSections = (student: StudentAccount): Array<{ title: string; fields: Array<[string, string]> }> => {
   const profile = student.profile
   return [
@@ -223,12 +185,6 @@ const studentInfoSections = (student: StudentAccount): Array<{ title: string; fi
       ],
     },
   ]
-}
-
-const accessMeta = {
-  admin: { home: '/quantri', label: 'Quản trị' },
-  training_officer: { home: '/chuyenvien', label: 'Chuyên viên' },
-  manager: { home: '/quanly', label: 'Quản lí' },
 }
 
 export default function AdminStudentInfoPage({ access = 'admin' }: StudentInfoPageProps) {
@@ -467,7 +423,7 @@ export default function AdminStudentInfoPage({ access = 'admin' }: StudentInfoPa
     const rows = sections.flatMap((section) => [
       [section.title, '__SECTION__'] as [string, string],
       ...section.fields,
-    ]).concat(studentInfoFields(student).slice(0, 0))
+    ])
     const printTitle = 'Thông tin sinh viên'
     const html = `<!doctype html><html><head><meta charset="utf-8">${printFaviconLink}<title>${printTitle}</title>
       <style>
@@ -490,15 +446,6 @@ export default function AdminStudentInfoPage({ access = 'admin' }: StudentInfoPa
           ${rows.map(([label, value]) => value === '__SECTION__'
             ? `<tr><th colspan="2" style="background:#e5e7eb;text-align:left">${escapeHtml(label)}</th></tr>`
             : `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}
-          ${false ? `
-          <tr><th>Mã sinh viên</th><td>${escapeHtml(student.username)}</td></tr>
-          <tr><th>Họ tên</th><td>${escapeHtml(display(student.display_name || student.profile?.ten_sinh_vien))}</td></tr>
-          <tr><th>Lớp</th><td>${escapeHtml(display(student.profile?.ma_lop))}</td></tr>
-          <tr><th>Ngành</th><td>${escapeHtml(display(student.profile?.ten_nganh_hoc))}</td></tr>
-          <tr><th>Số điện thoại</th><td>${escapeHtml(display(student.profile?.so_dien_thoai))}</td></tr>
-          <tr><th>Số điện thoại gia đình</th><td>${escapeHtml(display(student.profile?.so_dien_thoai_gia_dinh))}</td></tr>
-          <tr><th>Quê quán</th><td>${escapeHtml(student.profile?.que_quan || combinePlace(student.profile?.que_quan_quan_huyen, student.profile?.que_quan_tinh_thanh_pho))}</td></tr>
-          ` : ''}
         </table>
       </body></html>`
     const printWindow = window.open('', '_blank')
@@ -512,16 +459,6 @@ export default function AdminStudentInfoPage({ access = 'admin' }: StudentInfoPa
   return (
     <main className="asi-main">
       <section className="asi-section">
-        {false && isSimpleLookup && false && (
-          <Breadcrumbs
-            className="asi-breadcrumbs"
-            items={[
-              { label: accessMeta[access].label, href: accessMeta[access].home },
-              { label: 'Thông tin sinh viên' },
-            ]}
-          />
-        )}
-
         {access === 'admin' && <div className="asi-section-header">
           <div>
             <h2 className="asi-section-title">Thông tin sinh viên</h2>
@@ -648,16 +585,6 @@ export default function AdminStudentInfoPage({ access = 'admin' }: StudentInfoPa
                       </div>
                     </section>
                   ))}
-                  {false && selectedStudent && (
-                    <>
-                  <span>Mã sinh viên</span><strong>{selectedStudent!.username}</strong>
-                  <span>Họ tên</span><strong>{display(selectedStudent!.display_name || selectedStudent!.profile?.ten_sinh_vien)}</strong>
-                  <span>Lớp</span><strong>{display(selectedStudent!.profile?.ma_lop)}</strong>
-                  <span>Ngành</span><strong>{display(selectedStudent!.profile?.ten_nganh_hoc)}</strong>
-                  <span>Liên hệ</span><strong>{display(selectedStudent!.profile?.so_dien_thoai)}</strong>
-                  <span>Quê quán</span><strong>{selectedStudent!.profile?.que_quan || combinePlace(selectedStudent!.profile?.que_quan_quan_huyen, selectedStudent!.profile?.que_quan_tinh_thanh_pho)}</strong>
-                    </>
-                  )}
                 </div>
                 <Button type="button" className="asi-print-btn" onClick={printStudentInfo}>
                   In thông tin
